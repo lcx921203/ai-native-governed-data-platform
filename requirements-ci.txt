@@ -2,13 +2,14 @@
 #
 # This intentionally excludes requirements-dbt.txt and requirements-metricflow-compat.txt.
 # The contract-suite imports Dagster integration code, so it uses the Dagster host
-# compatibility runtime (dbt-core 1.11.x). Canonical dbt 1.12.x and MetricFlow
-# compatibility are resolved in their own CI matrix cells. The heavy PyFlink runtime
-# is also resolved independently.
+# compatibility runtime (dbt-core 1.11.x). DataHub is intentionally excluded here:
+# acryl-datahub[dbt] 1.7.0 requires sqlglot 30.12.0 while dagster-dbt 0.29.18
+# requires sqlglot <28.1.0. DataHub remains validated in its own dependency-resolution
+# matrix cell, and its repository contracts use lazy runtime imports. Canonical dbt
+# 1.12.x, MetricFlow compatibility, and the heavy PyFlink runtime are also isolated.
 pytest>=8.4,<9
 -r requirements-agent.txt
 -r requirements-dagster.txt
--r requirements-datahub.txt
 -r requirements-rag.txt
 -r requirements-mcp.txt
 -r requirements-serving.txt

@@ -227,14 +227,14 @@ The repository intentionally uses multiple Python environments because the canon
 requirements-dbt.txt                 canonical dbt 1.12 modeling runtime
 requirements-dagster.txt             Dagster host + dagster-dbt compatible dbt 1.11 runtime
 requirements-metricflow-compat.txt   local open-source MetricFlow compatibility
-requirements-datahub.txt             governance
+requirements-datahub.txt             DataHub governance runtime (isolated sqlglot boundary)
 requirements-rag.txt                 knowledge retrieval
 requirements-mcp.txt                 MCP runtime
 requirements-serving.txt             FastAPI / Trino client
 requirements-streaming.txt           Flink / Kafka path
 ```
 
-Do not collapse these into one environment unless the upstream version constraints are first reconciled.
+Do not collapse these into one environment unless the upstream version constraints are first reconciled. In particular, the Dagster host and DataHub governance runtimes are intentionally isolated because their current dbt integrations require incompatible `sqlglot` versions.
 
 ## GitHub CI and dependency locks
 
@@ -242,7 +242,7 @@ GitHub Actions now provides three independent quality gates:
 
 ```text
 Static quality gate        Python / Shell / YAML / JSON / source-comment contracts
-Full contract suite        all repository pytest contracts in the dedicated CI environment
+Full contract suite        all repository pytest contracts in a lightweight CI environment
 Dependency resolution     10 isolated runtime environments resolved independently
 ```
 

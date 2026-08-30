@@ -45,6 +45,10 @@ def test_ci_is_read_only_and_uses_isolated_python_311_runtime():
     assert "actions/setup-python@v7" in text
     assert "astral-sh/setup-uv@v10.0.1" in text
 
+    ci_requirements = (ROOT / "requirements-ci.txt").read_text(encoding="utf-8")
+    assert "-r requirements-dagster.txt" in ci_requirements
+    assert "-r requirements-datahub.txt" not in ci_requirements
+
 
 def test_lock_policy_covers_every_runtime_environment():
     policy = yaml.safe_load((ROOT / "requirements/locks/LOCK_POLICY.yml").read_text(encoding="utf-8"))

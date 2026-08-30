@@ -6,8 +6,10 @@ set -euo pipefail
 # 输入：组件名（agent / dagster / ... / ci / all）。
 # 输出：完整传递依赖 + SHA-256 wheel/sdist hashes 的 requirements lock。
 #
-# 为什么不把所有组件合成一个 lock：MetricFlow compatibility 与 canonical dbt
-# 对 dbt-core 的版本要求不同，强行合并会抹掉真实的 Runtime Boundary。
+# 为什么不把所有组件合成一个 lock：不同运行时存在真实的依赖边界。
+# 例如 MetricFlow compatibility 与 canonical dbt 的 dbt-core 版本不同，
+# Dagster + dagster-dbt 与 DataHub[dbt] 也要求互不兼容的 sqlglot 版本。
+# 强行合并会制造无法解析的“超级环境”，因此按 Runtime Boundary 独立锁定。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
