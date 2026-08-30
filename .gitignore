@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 .venv-*/
+.env
 dbt/mercaso_dbt/target/
 dbt/mercaso_dbt/logs/
 infra/dagster/history/
