@@ -1,0 +1,144 @@
+# 业务逻辑：把 consumer-facing dbt model 映射到 DataHub Domain / Owner / Tag / Glossary / Structured Property。
+# DataHub API 语义：这里声明的是 Git/static governance expectation；真正写入必须先完成 exact Dataset URN resolution。
+# 工程边界：expected URN ≠ resolved Dataset；REFERENCE_ONLY ≠ semantic-enabled；SEMANTIC_READY ≠ RUNTIME_VERIFIED。
+version: 1
+contract: commerce_consumer_asset_governance
+scope: consumer_facing_dbt_marts
+identity_resolution:
+  selector_type: dbt_model_name
+  physical_urn_resolution: deferred_until_datahub_ingestion
+  do_not_guess_dataset_urns: true
+defaults:
+  owners:
+    business: commerce-analytics
+    technical: data-platform
+  tags:
+  - source-shopify
+  - layer-mart
+  - daily-partitioned
+  structured_properties:
+    commerce.governance.dataClassification: INTERNAL
+    commerce.governance.agentReadiness: SEMANTIC_READY
+assets:
+- model: stores
+  domain: commerce-reference
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-store
+  structured_properties:
+    commerce.governance.criticality: MEDIUM
+- model: items
+  domain: commerce-reference
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-item
+  structured_properties:
+    commerce.governance.criticality: MEDIUM
+- model: orders
+  domain: commerce-order-sales
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-order
+  - commerce-metric-order-count
+  structured_properties:
+    commerce.governance.criticality: HIGH
+# 数据语义：生命周期累计快照已进入 9-Mart Freshness/Recovery，并已批准 Order Lifecycle Conversion Metric Contract。
+- model: order_lifecycle_snapshot
+  domain: commerce-order-sales
+  tags:
+  - lifecycle-snapshot
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-order
+  - commerce-metric-order-to-paid-24h-conversion-rate
+  - commerce-metric-order-to-fulfillment-3d-conversion-rate
+  - commerce-metric-order-to-delivered-7d-conversion-rate
+  structured_properties:
+    commerce.governance.criticality: HIGH
+
+- model: order_items
+  domain: commerce-order-sales
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-order-item
+  - commerce-entity-item
+  - commerce-metric-gross-sales
+  - commerce-metric-discount-amount
+  - commerce-metric-sales-before-reversal
+  - commerce-metric-average-order-value
+  - commerce-metric-activity-net-sales
+  - commerce-metric-order-cohort-net-sales
+  structured_properties:
+    commerce.governance.criticality: HIGH
+- model: payment_transactions
+  domain: commerce-payments
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-payment-transaction
+  - commerce-metric-collected-payment-amount
+  structured_properties:
+    commerce.governance.criticality: HIGH
+- model: refunds
+  domain: commerce-refunds
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-refund
+  - commerce-metric-refund-processed-amount
+  structured_properties:
+    commerce.governance.criticality: HIGH
+- model: refund_items
+  domain: commerce-refunds
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-refund-item
+  - commerce-entity-item
+  - commerce-metric-sales-reversal-amount
+  - commerce-metric-activity-net-sales
+  - commerce-metric-order-cohort-net-sales
+  structured_properties:
+    commerce.governance.criticality: HIGH
+- model: fulfillments
+  domain: commerce-fulfillment
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-fulfillment
+  - commerce-metric-shipment-count
+  - commerce-metric-delivery-count
+  - commerce-metric-average-time-to-ship
+  - commerce-metric-average-delivery-duration
+  structured_properties:
+    commerce.governance.criticality: HIGH
+- model: fulfillment_items
+  domain: commerce-fulfillment
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-fulfillment-item
+  - commerce-entity-item
+  structured_properties:
+    commerce.governance.criticality: MEDIUM
+- model: fulfillment_events
+  domain: commerce-fulfillment
+  tags:
+  - semantic-enabled
+  glossary_terms:
+  - commerce-entity-fulfillment-event
+  structured_properties:
+    commerce.governance.criticality: MEDIUM
+- model: time_spine_daily
+  domain: commerce
+  glossary_terms:
+  - data-time-business-time
+  tags:
+  - layer-mart
+  structured_properties:
+    commerce.governance.criticality: MEDIUM
+    commerce.governance.agentReadiness: REFERENCE_ONLY

@@ -1,0 +1,38 @@
+version: 1
+contract: commerce_live_openai_provider
+mode: constrained_responses_tool_calling
+provider:
+  type: openai_responses
+  model_env: OPENAI_AGENT_MODEL
+  default_model: gpt-5.6
+  api_key_env: OPENAI_API_KEY
+principles:
+  deterministic_router_is_route_authority: true
+  model_is_not_global_tool_router: true
+  tools_must_come_from_governed_registry: true
+  route_allowed_tool_subset_required: true
+  strict_function_schema_required: true
+  parallel_tool_calls: false
+  arbitrary_tool_name: false
+  arbitrary_sql: false
+  shell_tool: false
+  code_interpreter: false
+  web_search: false
+  mcp: false
+  datahub_write: false
+  dagster_launch_run: false
+  dagster_backfill: false
+  dagster_recovery: false
+  final_renderer_has_no_tools: true
+  claim_ledger_is_fact_authority: true
+  model_cannot_upgrade_evidence: true
+limits:
+  max_tool_rounds: 6
+  max_calls_per_round: 1
+  max_provider_retries: 1
+runtime:
+  allow_env: PHASE7A_ALLOW_OPENAI_PROVIDER
+  evidence_output: .runtime/evidence/phase7a/openai_agent_runtime.json
+closure:
+  success_status: OPENAI_AGENT_RUNTIME_VERIFIED
+  runtime_evidence: DEFERRED

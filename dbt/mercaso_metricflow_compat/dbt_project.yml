@@ -1,0 +1,19 @@
+name: mercaso_metricflow_compat
+version: "1.0.0"
+profile: mercaso_metricflow_compat
+
+# dbt-metricflow 0.13.0 currently pins dbt-core <1.12.
+require-dbt-version:
+  - ">=1.10.4"
+  - "<1.12.0"
+
+model-paths:
+  - models
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  mercaso_metricflow_compat:
+    +materialized: view

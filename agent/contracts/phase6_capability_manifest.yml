@@ -1,0 +1,143 @@
+# Chapter 06 · 诊断 / 事件响应 / 审批能力清单。
+# 业务逻辑：Phase 6A–6F 在 Phase 5 受治理查询之上增加异常、归因、诊断、incident drilldown、response planning 与 human approval。
+# 工程边界：Agent 始终没有 production write authority；APPROVED ≠ EXECUTED，真实 Runtime evidence 仍由对应 live gate 与外部系统证明。
+version: 2
+contract: commerce_phase6_capability_manifest
+mode: final_engineering_static_closure
+principles:
+  phase5_closure_remains_prerequisite: true
+  runtime_evidence_must_not_be_inferred_from_static_contracts: true
+  anomaly_detection_does_not_generate_sql: true
+  business_driver_attribution_requires_verified_operational_health: true
+  canonical_phase5_materialization_precedes_phase6_tests: true
+  incident_response_planning_is_advisory_only: true
+  phase3c_recovery_policy_remains_execution_authority: true
+  approval_is_not_execution: true
+  approval_actor_identity_requires_trusted_upstream: true
+  approval_evidence_change_invalidates_authorization: true
+  no_phase6_component_has_agent_production_write_authority: true
+closure:
+  status: STATIC_ENGINEERING_CLOSED
+  frozen_scope:
+    - 6A
+    - 6B
+    - 6C
+    - 6D
+    - 6E
+    - 6F
+  next_phase: PHASE7_REAL_RUNTIME
+  canonical_runner: infra/runtime/run_phase6_static_closure.sh
+  final_closure_test: tests/test_phase6_final_closure.py
+  final_closure_doc: docs/PHASE6_CLOSURE_AUDIT.md
+  runtime_evidence: DEFERRED
+  production_write_authority:
+    semantic_calculation: DBT_METRICFLOW
+    automated_recovery_execution: PHASE3C_DAGSTER_RECOVERY_SENSOR
+    incident_diagnosis: PHASE6_READ_ONLY
+    incident_response_planning: PHASE6E_ADVISORY_ONLY
+    approval_state_and_audit: PHASE6F_APPROVAL_ONLY
+    post_approval_execution: EXTERNAL_AUTHORIZED_OPERATOR_OR_AUTOMATION
+    agent_production_write: NONE
+phases:
+  6A:
+    capability: governed_anomaly_detection_and_driver_planning
+    policy: agent/contracts/anomaly_detection_policy.yml
+    implementation:
+    - agent/anomaly_analysis/contracts.py
+    - agent/anomaly_analysis/detector.py
+    tests:
+    - tests/test_phase6a_governed_anomaly_detection.py
+    static_runner: infra/runtime/run_phase6a_anomaly_static.sh
+    live_runner: infra/runtime/run_phase6a_anomaly_live.sh
+    runtime_gates:
+    - PHASE6A_ALLOW_ANOMALY_QUERY
+    - PHASE5B_ALLOW_METRICFLOW_QUERY
+    runtime_evidence: DEFERRED
+  6B:
+    capability: governed_driver_attribution
+    policy: agent/contracts/driver_attribution_policy.yml
+    implementation:
+    - agent/driver_attribution/contracts.py
+    - agent/driver_attribution/attribution.py
+    - agent/breakdown_analysis/semantics.py
+    tests:
+    - tests/test_phase6b_governed_driver_attribution.py
+    static_runner: infra/runtime/run_phase6b_driver_attribution_static.sh
+    live_runner: infra/runtime/run_phase6b_driver_attribution_live.sh
+    runtime_gates:
+    - PHASE6B_ALLOW_DRIVER_ATTRIBUTION
+    - PHASE6A_ALLOW_ANOMALY_QUERY
+    - PHASE5B_ALLOW_METRICFLOW_QUERY
+    runtime_evidence: DEFERRED
+  6C:
+    capability: governed_diagnostic_orchestration_and_evidence_response
+    policy: agent/contracts/diagnostic_orchestrator_policy.yml
+    implementation:
+    - agent/diagnostic/contracts.py
+    - agent/diagnostic/planner.py
+    - agent/diagnostic/operational_health.py
+    - agent/diagnostic/orchestrator.py
+    - agent/diagnostic/response.py
+    tests:
+    - tests/test_phase6c_governed_diagnostic_orchestrator.py
+    static_runner: infra/runtime/run_phase6c_diagnostic_static.sh
+    live_runner: infra/runtime/run_phase6c_diagnostic_live.sh
+    runtime_gates:
+    - PHASE6C_ALLOW_DIAGNOSTIC
+    - PHASE6B_ALLOW_DRIVER_ATTRIBUTION
+    - PHASE6A_ALLOW_ANOMALY_QUERY
+    - PHASE5B_ALLOW_METRICFLOW_QUERY
+    runtime_evidence: DEFERRED
+  6D:
+    capability: governed_operational_incident_drilldown
+    policy: agent/contracts/operational_incident_policy.yml
+    implementation:
+    - agent/incident_drilldown/contracts.py
+    - agent/incident_drilldown/provider.py
+    - agent/incident_drilldown/drilldown.py
+    - agent/incident_drilldown/response.py
+    - agent/diagnostic/orchestrator.py
+    - agent/diagnostic/response.py
+    tests:
+    - tests/test_phase6d_operational_incident_drilldown.py
+    static_runner: infra/runtime/run_phase6d_incident_static.sh
+    live_runner: infra/runtime/run_phase6d_incident_live.sh
+    runtime_gates:
+    - PHASE6D_ALLOW_INCIDENT_DRILLDOWN
+    - PHASE6C_ALLOW_DIAGNOSTIC
+    runtime_evidence: DEFERRED
+  6E:
+    capability: governed_incident_response_planning_and_human_approval_boundary
+    policy: agent/contracts/incident_response_policy.yml
+    implementation:
+    - agent/incident_response/contracts.py
+    - agent/incident_response/planner.py
+    - agent/incident_response/response.py
+    - agent/diagnostic/contracts.py
+    - agent/diagnostic/orchestrator.py
+    - agent/diagnostic/response.py
+    tests:
+    - tests/test_phase6e_incident_response_planner.py
+    static_runner: infra/runtime/run_phase6e_incident_response_static.sh
+    live_runner: infra/runtime/run_phase6e_incident_response_live.sh
+    runtime_gates:
+    - PHASE6E_ALLOW_INCIDENT_RESPONSE_PLANNING
+    - PHASE6D_ALLOW_INCIDENT_DRILLDOWN
+    - PHASE6C_ALLOW_DIAGNOSTIC
+    runtime_evidence: DEFERRED
+  6F:
+    capability: governed_approval_workflow_and_audit_trail
+    policy: agent/contracts/approval_workflow_policy.yml
+    implementation:
+    - agent/approval_workflow/contracts.py
+    - agent/approval_workflow/workflow.py
+    - agent/approval_workflow/store.py
+    - agent/approval_workflow/response.py
+    tests:
+    - tests/test_phase6f_approval_workflow.py
+    static_runner: infra/runtime/run_phase6f_approval_workflow_static.sh
+    live_runner: infra/runtime/run_phase6f_approval_workflow_live.sh
+    runtime_gates:
+    - PHASE6F_ALLOW_APPROVAL_WORKFLOW
+    - PHASE6E_ALLOW_INCIDENT_RESPONSE_PLANNING
+    runtime_evidence: DEFERRED

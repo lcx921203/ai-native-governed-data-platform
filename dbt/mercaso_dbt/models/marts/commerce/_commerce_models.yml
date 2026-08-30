@@ -1,0 +1,236 @@
+version: 2
+
+models:
+
+  - name: orders
+    description: 一个 Order 一行。
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: store_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stores')
+                field: store_id
+
+  - name: order_lifecycle_snapshot
+    description: >
+      Order Lifecycle Accumulating Snapshot（订单生命周期累计快照）；一个 Order 一行。
+      它保存已真实观察到的支付、退款、履约、运输、送达、取消、关闭等里程碑时间，
+      与 orders Current State 分工：Current State 回答现在怎样，累计快照回答生命周期已经走到哪里。
+      当前源契约没有 picked_at，因此模型不会推断或伪造拣货时间。
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+      - name: store_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stores')
+                field: store_id
+
+      - name: order_time
+        data_tests:
+          - not_null
+
+      - name: paid_flag
+        data_tests:
+          - not_null
+
+      - name: shipped_flag
+        data_tests:
+          - not_null
+
+      - name: delivered_flag
+        data_tests:
+          - not_null
+
+  - name: order_items
+    description: 一个 LineItem 一行，是销售分析核心 Grain。
+
+    columns:
+      - name: line_item_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+      - name: item_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('items')
+                field: item_id
+
+      - name: gross_sales_amount
+        data_tests:
+          - not_null
+
+      - name: discount_amount
+        data_tests:
+          - not_null
+
+  - name: payment_transactions
+    description: 一个 Shopify OrderTransaction 一行。
+
+    columns:
+      - name: payment_transaction_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+  - name: refunds
+    description: 一个 Refund 一行，表示 Shopify 退款业务记录。
+
+    columns:
+      - name: refund_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+  - name: refund_items
+    description: 一个 RefundLineItem 一行，是商品退款/销售冲销的核心 Grain。
+
+    columns:
+      - name: refund_line_item_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: refund_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('refunds')
+                field: refund_id
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+      - name: item_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('items')
+                field: item_id
+
+  - name: fulfillments
+    description: 一个 Fulfillment / Shipment 一行。
+
+    columns:
+      - name: fulfillment_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+  - name: fulfillment_items
+    description: 一个 FulfillmentLineItem 一行。
+
+    columns:
+      - name: fulfillment_line_item_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: fulfillment_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fulfillments')
+                field: fulfillment_id
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id
+
+      - name: item_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('items')
+                field: item_id
+
+  - name: fulfillment_events
+    description: 一个 FulfillmentEvent 一行，event_time 使用 Shopify happenedAt。
+
+    columns:
+      - name: fulfillment_event_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: fulfillment_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fulfillments')
+                field: fulfillment_id
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('orders')
+                field: order_id

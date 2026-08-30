@@ -1,0 +1,4 @@
+store_id,store_name,region,state,country
+STORE001,Market One,West,CA,US
+STORE002,Market Two,West,NV,US
+STORE003,Market Three,South,TX,US

@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: stg_behavior__events
+    description: Canonical behavior event staging；离线 reconciliation 可基于它重算实时窗口结果。
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+      - name: event_time
+        tests: [not_null]

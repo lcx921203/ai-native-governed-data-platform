@@ -1,0 +1,25 @@
+# Source Authority：只有 Manifest 中明确登记的文档才可以进入 Knowledge Corpus。
+# Markdown 继续通过 Front Matter 校验；PDF / DOCX 没有 Front Matter 时必须在 Manifest 写完整治理元数据。
+# 当前 active corpus 仍是 18 份 Markdown；多格式 Parser 是 SOURCE DEFINED，不代表真实 PDF/DOCX 已接入 Runtime。
+version: 2
+corpus: commerce_knowledge
+status: active
+documents:
+  - {id: commerce.business.model, path: knowledge/business/commerce_business_model.md, scope: business}
+  - {id: commerce.shopify.order_semantics, path: knowledge/business/shopify_order_semantics.md, scope: business}
+  - {id: commerce.metric.business_rules, path: knowledge/business/metric_business_rules.md, scope: business}
+  - {id: commerce.architecture.platform, path: knowledge/architecture/platform_architecture.md, scope: architecture}
+  - {id: commerce.architecture.authority_boundaries, path: knowledge/architecture/authority_boundaries.md, scope: architecture}
+  - {id: commerce.architecture.entity_state_event, path: knowledge/architecture/entity_state_event_model.md, scope: architecture}
+  - {id: commerce.architecture.semantic_layer, path: knowledge/architecture/semantic_layer_design.md, scope: architecture}
+  - {id: commerce.modeling.dbt, path: knowledge/modeling/dbt_modeling_guide.md, scope: modeling}
+  - {id: commerce.modeling.order_lifecycle, path: knowledge/modeling/order_lifecycle_model.md, scope: modeling}
+  - {id: commerce.modeling.marts, path: knowledge/modeling/marts_design.md, scope: modeling}
+  - {id: commerce.governance.metric, path: knowledge/governance/metric_governance.md, scope: governance}
+  - {id: commerce.governance.dataset, path: knowledge/governance/dataset_governance.md, scope: governance}
+  - {id: commerce.governance.quality, path: knowledge/governance/data_quality_policy.md, scope: governance}
+  - {id: commerce.runbook.dbt_failure, path: knowledge/runbooks/dbt_failure_runbook.md, scope: runbook}
+  - {id: commerce.runbook.spark_failure, path: knowledge/runbooks/spark_failure_runbook.md, scope: runbook}
+  - {id: commerce.runbook.dagster_recovery, path: knowledge/runbooks/dagster_recovery_runbook.md, scope: runbook}
+  - {id: commerce.runbook.datahub_ingestion, path: knowledge/runbooks/datahub_ingestion_runbook.md, scope: runbook}
+  - {id: commerce.glossary, path: knowledge/glossary/commerce_terms.md, scope: glossary}

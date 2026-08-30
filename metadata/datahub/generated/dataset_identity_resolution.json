@@ -1,0 +1,151 @@
+{
+  "contract": "commerce_dataset_identity_resolution",
+  "mode": "EXPECTED_ONLY",
+  "runtime_verified": false,
+  "identities": [
+    {
+      "model": "stores",
+      "relation_name": "stores",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.stores",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.stores,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "items",
+      "relation_name": "items",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.items",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.items,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "orders",
+      "relation_name": "orders",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.orders",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.orders,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "order_lifecycle_snapshot",
+      "relation_name": "order_lifecycle_snapshot",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.order_lifecycle_snapshot",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.order_lifecycle_snapshot,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "order_items",
+      "relation_name": "order_items",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.order_items",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.order_items,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "payment_transactions",
+      "relation_name": "payment_transactions",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.payment_transactions",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.payment_transactions,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "refunds",
+      "relation_name": "refunds",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.refunds",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.refunds,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "refund_items",
+      "relation_name": "refund_items",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.refund_items",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.refund_items,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "fulfillments",
+      "relation_name": "fulfillments",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.fulfillments",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillments,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "fulfillment_items",
+      "relation_name": "fulfillment_items",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.fulfillment_items",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillment_items,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "fulfillment_events",
+      "relation_name": "fulfillment_events",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.fulfillment_events",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillment_events,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    },
+    {
+      "model": "time_spine_daily",
+      "relation_name": "time_spine_daily",
+      "platform": "iceberg",
+      "platform_instance": "commerce_polaris",
+      "env": "DEV",
+      "namespace": "analytics",
+      "dataset_name": "commerce_polaris.analytics.time_spine_daily",
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.time_spine_daily,DEV)",
+      "status": "UNVERIFIED_EXPECTED",
+      "resolved_urn": null
+    }
+  ]
+}

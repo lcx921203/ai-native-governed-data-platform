@@ -1,0 +1,11 @@
+{
+  "canonical_semantic": "dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml",
+  "canonical_advanced_metrics": [
+    "dbt/mercaso_dbt/models/metrics/lifecycle.yml",
+    "dbt/mercaso_dbt/models/metrics/sales.yml"
+  ],
+  "generated_legacy": "dbt/mercaso_metricflow_compat/models/_generated_semantic_legacy.yml",
+  "semantic_models": 11,
+  "measures": 28,
+  "metrics": 34
+}

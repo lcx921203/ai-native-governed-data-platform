@@ -1,0 +1,48 @@
+# Governed Metric Contract — Order Lifecycle Conversion
+# 业务逻辑：围绕同一个 Order Entity，把下单、支付、履约、运输、送达里程碑定义成受治理 Conversion Metric。
+# 输入：order_lifecycle_snapshot Semantic Model 中已经收敛到 Order Grain 的 Base / Conversion Event simple metrics。
+# 输出：MetricFlow 可解析的 conversion metric contract。
+# MetricFlow API：conversion 使用 entity + base_metric + conversion_metric + window + calculation；窗口按 Base Event 到 Conversion Event 的业务时间约束。
+# 工程边界：这里不直接 Join payment_transactions / fulfillments 明细；多事实先由 dbt 累计快照收敛回 Order Grain，避免 Fanout。
+
+version: 2
+
+metrics:
+
+  - name: order_to_paid_24h_conversion_rate
+    label: Order to Paid Conversion Rate 24h
+    description: >
+      一个订单从 order_time 开始，是否在 24 小时内出现 first_paid_at。
+      Base / Conversion 事件必须属于同一个 Order Entity。
+    type: conversion
+    entity: order
+    calculation: conversion_rate
+    base_metric: lifecycle_order_count
+    conversion_metric: paid_order_count
+    window: 24 hours
+
+
+  - name: order_to_fulfillment_3d_conversion_rate
+    label: Order to Fulfillment Conversion Rate 3d
+    description: >
+      一个订单从 order_time 开始，是否在 3 天内出现 first_fulfillment_at。
+      用于观察订单进入履约阶段的及时转化率。
+    type: conversion
+    entity: order
+    calculation: conversion_rate
+    base_metric: lifecycle_order_count
+    conversion_metric: fulfillment_started_order_count
+    window: 3 days
+
+
+  - name: order_to_delivered_7d_conversion_rate
+    label: Order to Delivered Conversion Rate 7d
+    description: >
+      一个订单从 order_time 开始，是否在 7 天内出现 first_delivered_at。
+      用于观察订单从创建到最终送达的端到端转化率。
+    type: conversion
+    entity: order
+    calculation: conversion_rate
+    base_metric: lifecycle_order_count
+    conversion_metric: delivered_order_count
+    window: 7 days

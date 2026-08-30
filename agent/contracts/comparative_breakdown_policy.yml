@@ -1,0 +1,54 @@
+version: 1
+contract: commerce_governed_comparative_breakdown
+mode: bounded_dimension_comparison
+
+principles:
+  comparison_is_delta_over_frozen_session_state: true
+  exactly_one_non_time_breakdown_dimension: true
+  temporal_display_grain_not_used_for_period_change_math: true
+  current_and_comparison_use_same_dimension_and_filters: true
+  derived_change_requires_both_windows_runtime_verified: true
+  missing_additive_group_may_be_treated_as_zero: true
+  missing_non_additive_group_is_not_zero: true
+  contribution_requires_additive_metric: true
+  contribution_requires_aggregate_reconciliation: true
+  member_limit_hit_fails_closed: true
+  ratio_average_and_count_distinct_are_not_contribution_additive: true
+  fuzzy_dimension_or_metric_selection: false
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+
+limits:
+  max_metrics: 3
+  max_breakdown_members: 50
+  max_top_members: 10
+  max_comparison_window_days: 366
+  reconciliation_tolerance: "0.0001"
+
+runtime:
+  allow_env: PHASE5H_ALLOW_BREAKDOWN_QUERY
+  semantic_query_gate: PHASE5B_ALLOW_METRICFLOW_QUERY
+
+markers:
+  top_absolute_change:
+    - "增长最多"
+    - "增加最多"
+    - "贡献增长最多"
+    - "largest increase"
+    - "largest growth amount"
+  top_growth_rate:
+    - "增速最快"
+    - "增长率最高"
+    - "growth rate"
+    - "fastest growth"
+  contribution:
+    - "贡献"
+    - "主要是谁贡献"
+    - "谁贡献最大"
+    - "contribution"
+    - "contributed most"
+
+sources:
+  semantic_models: dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml
+  derived_metrics: dbt/mercaso_dbt/models/metrics
+  semantic_query_policy: agent/contracts/semantic_query_policy.yml

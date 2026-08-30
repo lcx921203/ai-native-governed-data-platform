@@ -1,0 +1,35 @@
+version: 1
+contract: commerce_governed_driver_attribution
+mode: anomaly_reference_window_attribution
+
+principles:
+  phase6a_runtime_verified_anomaly_required: true
+  verified_healthy_operational_state_required: true
+  exact_phase6a_median_reference_window_required: true
+  metricflow_explain_before_each_driver_query: true
+  additive_contribution_requires_aggregate_reconciliation: true
+  non_additive_metrics_do_not_emit_contribution: true
+  anomaly_direction_controls_driver_ranking: true
+  driver_dimensions_are_independent_lenses: true
+  contributions_must_not_be_summed_across_lenses: true
+  one_failed_lens_may_return_partial_result: true
+  member_limit_hit_fails_closed: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+
+limits:
+  max_driver_dimensions: 3
+  max_members_per_dimension: 50
+  max_ranked_members_per_dimension: 10
+  reconciliation_tolerance: "0.0001"
+
+runtime:
+  allow_env: PHASE6B_ALLOW_DRIVER_ATTRIBUTION
+  requires_anomaly_gate: PHASE6A_ALLOW_ANOMALY_QUERY
+  requires_metricflow_gate: PHASE5B_ALLOW_METRICFLOW_QUERY
+
+sources:
+  anomaly_contract: agent/contracts/anomaly_detection_policy.yml
+  metric_semantics: dbt/mercaso_dbt/models/metrics
+  semantic_model: dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml
+  semantic_query: agent/contracts/semantic_query_policy.yml

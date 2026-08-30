@@ -1,0 +1,311 @@
+{
+  "contract": "commerce_semantic_query_samples",
+  "samples": {
+    "single": {
+      "plan": {
+        "status": "READY",
+        "question": "2026-08-05 activity_net_sales 是多少？",
+        "spec": {
+          "metric": "activity_net_sales",
+          "metrics": [
+            "activity_net_sales"
+          ],
+          "start_time": "2026-08-05T00:00:00Z",
+          "end_time": "2026-08-05T23:59:59Z",
+          "group_by": [],
+          "filters": [],
+          "limit": 20
+        },
+        "warnings": [],
+        "requires_metricflow_explain": true,
+        "command_preview": [
+          "mf",
+          "query",
+          "--metrics",
+          "activity_net_sales",
+          "--start-time",
+          "2026-08-05T00:00:00Z",
+          "--end-time",
+          "2026-08-05T23:59:59Z",
+          "--limit",
+          "20"
+        ],
+        "continuation_spec": null,
+        "clarification": null
+      },
+      "execution": {
+        "status": "DEFERRED",
+        "evidence": "STATIC_CONTRACT",
+        "plan": {
+          "status": "READY",
+          "question": "2026-08-05 activity_net_sales 是多少？",
+          "spec": {
+            "metric": "activity_net_sales",
+            "metrics": [
+              "activity_net_sales"
+            ],
+            "start_time": "2026-08-05T00:00:00Z",
+            "end_time": "2026-08-05T23:59:59Z",
+            "group_by": [],
+            "filters": [],
+            "limit": 20
+          },
+          "warnings": [],
+          "requires_metricflow_explain": true,
+          "command_preview": [
+            "mf",
+            "query",
+            "--metrics",
+            "activity_net_sales",
+            "--start-time",
+            "2026-08-05T00:00:00Z",
+            "--end-time",
+            "2026-08-05T23:59:59Z",
+            "--limit",
+            "20"
+          ],
+          "continuation_spec": null,
+          "clarification": null
+        },
+        "rows": [],
+        "columns": [],
+        "row_count": 0,
+        "warnings": [
+          "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+        ],
+        "validation": "NOT_EXECUTED"
+      }
+    },
+    "missing_time": {
+      "plan": {
+        "status": "CLARIFICATION_REQUIRED",
+        "question": "gross_sales 是多少？",
+        "spec": null,
+        "warnings": [
+          "An explicit calendar date or date range is required before querying business data."
+        ],
+        "requires_metricflow_explain": false,
+        "command_preview": [],
+        "continuation_spec": null,
+        "clarification": null
+      },
+      "execution": {
+        "status": "CLARIFICATION_REQUIRED",
+        "evidence": "STATIC_CONTRACT",
+        "plan": {
+          "status": "CLARIFICATION_REQUIRED",
+          "question": "gross_sales 是多少？",
+          "spec": null,
+          "warnings": [
+            "An explicit calendar date or date range is required before querying business data."
+          ],
+          "requires_metricflow_explain": false,
+          "command_preview": [],
+          "continuation_spec": null,
+          "clarification": null
+        },
+        "rows": [],
+        "columns": [],
+        "row_count": 0,
+        "warnings": [
+          "An explicit calendar date or date range is required before querying business data."
+        ],
+        "validation": ""
+      }
+    },
+    "filtered_multi_metric": {
+      "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+      "route": {
+        "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+        "intent": "METRIC_QUERY",
+        "status": "PLANNED",
+        "target_kind": "metric_set",
+        "target_id": "gross_sales,activity_net_sales,average_order_value",
+        "target_match": "毛销售额,活动净销售额,客单价",
+        "steps": [
+          {
+            "tool": "query_semantic_metrics",
+            "arguments": {
+              "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+              "limit": 20,
+              "metrics": [
+                "gross_sales",
+                "activity_net_sales",
+                "average_order_value"
+              ]
+            },
+            "purpose": "Query governed MetricFlow metric(s) through the bounded semantic-query contract.",
+            "stop_on_status": [
+              "BLOCKED",
+              "ERROR",
+              "DEFERRED",
+              "CLARIFICATION_REQUIRED"
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "execution": {
+        "plan": {
+          "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+          "intent": "METRIC_QUERY",
+          "status": "PLANNED",
+          "target_kind": "metric_set",
+          "target_id": "gross_sales,activity_net_sales,average_order_value",
+          "target_match": "毛销售额,活动净销售额,客单价",
+          "steps": [
+            {
+              "tool": "query_semantic_metrics",
+              "arguments": {
+                "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+                "limit": 20,
+                "metrics": [
+                  "gross_sales",
+                  "activity_net_sales",
+                  "average_order_value"
+                ]
+              },
+              "purpose": "Query governed MetricFlow metric(s) through the bounded semantic-query contract.",
+              "stop_on_status": [
+                "BLOCKED",
+                "ERROR",
+                "DEFERRED",
+                "CLARIFICATION_REQUIRED"
+              ]
+            }
+          ],
+          "warnings": []
+        },
+        "status": "DEFERRED",
+        "results": [
+          {
+            "tool": "query_semantic_metrics",
+            "status": "DEFERRED",
+            "evidence": "STATIC_CONTRACT",
+            "query": {
+              "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+              "limit": 20,
+              "metrics": [
+                "gross_sales",
+                "activity_net_sales",
+                "average_order_value"
+              ]
+            },
+            "payload": {
+              "status": "DEFERRED",
+              "evidence": "STATIC_CONTRACT",
+              "plan": {
+                "status": "READY",
+                "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+                "spec": {
+                  "metric": "gross_sales",
+                  "metrics": [
+                    "gross_sales",
+                    "activity_net_sales",
+                    "average_order_value"
+                  ],
+                  "start_time": "2026-08-01T00:00:00Z",
+                  "end_time": "2026-08-05T23:59:59Z",
+                  "group_by": [
+                    "metric_time__day"
+                  ],
+                  "filters": [
+                    {
+                      "dimension": "store__country",
+                      "operator": "EQ",
+                      "value": "US",
+                      "source": "governed_value_alias"
+                    },
+                    {
+                      "dimension": "store__region",
+                      "operator": "EQ",
+                      "value": "West",
+                      "source": "governed_value_alias"
+                    }
+                  ],
+                  "limit": 20
+                },
+                "warnings": [],
+                "requires_metricflow_explain": true,
+                "command_preview": [
+                  "mf",
+                  "query",
+                  "--metrics",
+                  "gross_sales,activity_net_sales,average_order_value",
+                  "--group-by",
+                  "metric_time__day",
+                  "--where",
+                  "{{ Dimension('store__country') }} = 'US'",
+                  "--where",
+                  "{{ Dimension('store__region') }} = 'West'",
+                  "--start-time",
+                  "2026-08-01T00:00:00Z",
+                  "--end-time",
+                  "2026-08-05T23:59:59Z",
+                  "--limit",
+                  "20"
+                ],
+                "continuation_spec": null,
+                "clarification": null
+              },
+              "rows": [],
+              "columns": [],
+              "row_count": 0,
+              "warnings": [
+                "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+              ],
+              "validation": "NOT_EXECUTED"
+            },
+            "warnings": [
+              "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+            ],
+            "sources": []
+          }
+        ],
+        "warnings": []
+      },
+      "envelope": {
+        "question": "2026-08-01 到 2026-08-05 美国西部地区，按天看 毛销售额、活动净销售额和客单价",
+        "intent": "METRIC_QUERY",
+        "status": "DEFERRED",
+        "subject": {
+          "kind": "metric_set",
+          "id": "gross_sales,activity_net_sales,average_order_value",
+          "matched_alias": "毛销售额,活动净销售额,客单价"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "SEMANTIC_QUERY_PLAN",
+            "text": "Semantic query plan: metrics=gross_sales,activity_net_sales,average_order_value; time=[2026-08-01T00:00:00Z, 2026-08-05T23:59:59Z]; group_by=metric_time__day; filters=store__country EQ US, store__region EQ West; limit=20.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "LIMITATION",
+            "text": "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+        ],
+        "sources": [],
+        "tool_trace": [
+          {
+            "tool": "query_semantic_metrics",
+            "status": "DEFERRED",
+            "evidence": "STATIC_CONTRACT"
+          }
+        ],
+        "evidence_levels": [
+          "STATIC_CONTRACT"
+        ]
+      }
+    }
+  }
+}

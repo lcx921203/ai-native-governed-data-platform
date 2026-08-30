@@ -1,0 +1,39 @@
+# 业务逻辑：Phase 7B 定义 Governed Knowledge 的多格式接入、索引、检索与 Agent Tool 边界。
+# 工程边界：SOURCE DEFINED 不等于真实企业 PDF/DOCX、Qdrant、Embedding 或 Reranker Runtime 已执行。
+version: 2
+contract: commerce_phase7b_knowledge_rag
+status: ENGINEERED_INGESTION_NOT_YET_EXECUTED
+planes:
+  structured_metadata: {authority: datahub}
+  semantic_calculation: {authority: dbt_metricflow}
+  operational_truth: {authority: dagster}
+  explanatory_knowledge: {authority: knowledge_rag}
+document_ingestion:
+  canonical_contract: agent.knowledge.models.KnowledgeDocument
+  supported_formats: [markdown, pdf, docx]
+  markdown_front_matter_required: true
+  binary_manifest_metadata_required: true
+  pdf_text_layer: source_defined
+  pdf_ocr: deferred
+  docx_structure: [heading, paragraph, table]
+  arbitrary_external_document: false
+rag:
+  corpus_root: knowledge
+  vector_store: qdrant
+  collection: commerce_knowledge_v1
+  embedding_provider: configurable
+  retrieval:
+    dense: true
+    payload_filter: true
+    sparse: deferred
+    reranking: engineered
+agent:
+  knowledge_intent: source_defined
+  route: [deterministic_router, search_knowledge, exact_fetch_knowledge, claim_ledger]
+  tools: [search_knowledge, fetch_knowledge]
+  arbitrary_file_read: false
+  runtime_fact_inference: false
+  structured_authority_override: false
+evidence:
+  retrieved: RETRIEVED_KNOWLEDGE
+  runtime_verified: DEFERRED

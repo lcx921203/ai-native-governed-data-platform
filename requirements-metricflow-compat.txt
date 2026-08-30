@@ -1,0 +1,7 @@
+# Temporary local MetricFlow compatibility environment.
+# dbt-metricflow 0.13.0 currently requires dbt-core <1.12,
+# so local `mf` validation runs against a generated legacy semantic spec.
+dbt-core==1.11.13
+dbt-spark[pyhive]==1.11.0
+dbt-metricflow==0.13.0
+PyYAML==6.0.3

@@ -1,0 +1,12 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    container_name: commerce-qdrant
+    ports:
+      - '6333:6333'
+      - '6334:6334'
+    volumes:
+      - commerce_qdrant_data:/qdrant/storage
+    restart: unless-stopped
+volumes:
+  commerce_qdrant_data:

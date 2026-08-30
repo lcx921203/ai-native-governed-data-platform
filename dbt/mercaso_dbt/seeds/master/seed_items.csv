@@ -1,0 +1,4 @@
+item_id,sku,item_name,brand,category,subcategory
+ITEM001,COLA-24,Cola 24 Pack,Coca-Cola,Beverage,Soda
+ITEM002,WATER-24,Water 24 Pack,Generic,Beverage,Water
+ITEM003,CHIPS-12,Chips 12 Pack,Generic,Snack,Chips

@@ -1,0 +1,612 @@
+# GENERATED FILE — DO NOT EDIT BY HAND.
+# Canonical source: ../mercaso_dbt latest dbt Core 1.12 Semantic Layer YAML.
+# Re-run infra/runtime/generate_metricflow_legacy.py after semantic changes.
+
+version: 2
+semantic_models:
+- name: stores
+  model: ref('stores')
+  entities:
+  - name: store
+    type: primary
+    expr: store_id
+  dimensions:
+  - name: store_name
+    type: categorical
+  - name: region
+    type: categorical
+  - name: state
+    type: categorical
+  - name: country
+    type: categorical
+- name: items
+  model: ref('items')
+  entities:
+  - name: item
+    type: primary
+    expr: item_id
+  dimensions:
+  - name: brand
+    type: categorical
+  - name: category
+    type: categorical
+  - name: subcategory
+    type: categorical
+- name: orders
+  model: ref('orders')
+  defaults:
+    agg_time_dimension: order_time
+  entities:
+  - name: order
+    type: primary
+    expr: order_id
+  - name: store
+    type: foreign
+    expr: store_id
+  dimensions:
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: day
+  - name: financial_status
+    type: categorical
+  - name: fulfillment_status
+    type: categorical
+  measures:
+  - name: order_count
+    agg: count_distinct
+    expr: order_id
+    label: Order Count
+- name: order_lifecycle_snapshot
+  model: ref('order_lifecycle_snapshot')
+  defaults:
+    agg_time_dimension: order_time
+  entities:
+  - name: order
+    type: primary
+    expr: order_id
+  - name: store
+    type: foreign
+    expr: store_id
+  dimensions:
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: first_paid_at
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: first_fulfillment_at
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: first_in_transit_at
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: first_delivered_at
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: financial_status
+    type: categorical
+  - name: fulfillment_status
+    type: categorical
+  measures:
+  - name: lifecycle_order_count
+    agg: count_distinct
+    expr: order_id
+    description: '订单生命周期分析的 Base Event 数量；Grain 为一个 Order 一行， Business Time 使用 order_time。
+
+      '
+    label: Lifecycle Order Count
+  - name: paid_order_count
+    agg: sum
+    expr: paid_flag
+    description: '已观察到首次成功 CAPTURE / SALE 的订单数；Business Time 使用 first_paid_at。
+
+      '
+    label: Paid Order Count
+    agg_time_dimension: first_paid_at
+  - name: fulfillment_started_order_count
+    agg: sum
+    expr: fulfillment_started_flag
+    description: '已观察到首次 Fulfillment 的订单数；Business Time 使用 first_fulfillment_at。
+
+      '
+    label: Fulfillment Started Order Count
+    agg_time_dimension: first_fulfillment_at
+  - name: in_transit_order_count
+    agg: sum
+    expr: shipped_flag
+    description: '已观察到首次 IN_TRANSIT 里程碑的订单数；Business Time 使用 first_in_transit_at。
+
+      '
+    label: In Transit Order Count
+    agg_time_dimension: first_in_transit_at
+  - name: delivered_order_count
+    agg: sum
+    expr: delivered_flag
+    description: '已观察到首次 DELIVERED 里程碑的订单数；Business Time 使用 first_delivered_at。
+
+      '
+    label: Delivered Order Count
+    agg_time_dimension: first_delivered_at
+- name: order_items
+  model: ref('order_items')
+  defaults:
+    agg_time_dimension: order_time
+  entities:
+  - name: order_item
+    type: primary
+    expr: line_item_id
+  - name: order
+    type: foreign
+    expr: order_id
+  - name: item
+    type: foreign
+    expr: item_id
+  dimensions:
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: day
+  - name: currency_code
+    type: categorical
+  measures:
+  - name: gross_sales
+    agg: sum
+    expr: gross_sales_amount
+  - name: discount_amount
+    agg: sum
+    expr: discount_amount
+  - name: sales_before_reversal
+    agg: sum
+    expr: sales_before_reversal_amount
+  - name: units_ordered
+    agg: sum
+    expr: ordered_quantity
+  - name: orders_with_item
+    agg: count_distinct
+    expr: order_id
+    description: '包含当前商品维度的去重订单数。 与全局 order_count 是不同业务语义。
+
+      '
+- name: payment_transactions
+  model: ref('payment_transactions')
+  defaults:
+    agg_time_dimension: transaction_processed_at
+  entities:
+  - name: payment_transaction
+    type: primary
+    expr: payment_transaction_id
+  - name: order
+    type: foreign
+    expr: order_id
+  dimensions:
+  - name: transaction_created_at
+    type: time
+    type_params:
+      time_granularity: day
+  - name: transaction_processed_at
+    type: time
+    type_params:
+      time_granularity: day
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: day
+  - name: gateway
+    type: categorical
+  - name: transaction_kind
+    type: categorical
+  - name: transaction_status
+    type: categorical
+  measures:
+  - name: payment_transaction_count
+    agg: count_distinct
+    expr: payment_transaction_id
+    agg_time_dimension: transaction_created_at
+  - name: authorized_payment_amount
+    agg: sum
+    expr: authorized_amount
+  - name: collected_payment_amount
+    agg: sum
+    expr: collected_amount
+  - name: successful_payment_refund_amount
+    agg: sum
+    expr: successful_refund_amount
+  - name: collected_payment_by_order_cohort
+    agg: sum
+    expr: collected_amount
+    agg_time_dimension: order_time
+- name: refunds
+  model: ref('refunds')
+  defaults:
+    agg_time_dimension: refund_time
+  entities:
+  - name: refund
+    type: primary
+    expr: refund_id
+  - name: order
+    type: foreign
+    expr: order_id
+  dimensions:
+  - name: refund_time
+    type: time
+    type_params:
+      time_granularity: day
+  measures:
+  - name: refund_count
+    agg: count_distinct
+    expr: refund_id
+  - name: refund_processed_amount
+    agg: sum
+    expr: total_refunded_amount
+- name: refund_items
+  model: ref('refund_items')
+  defaults:
+    agg_time_dimension: refund_time
+  entities:
+  - name: refund_item
+    type: primary
+    expr: refund_line_item_id
+  - name: order
+    type: foreign
+    expr: order_id
+  - name: item
+    type: foreign
+    expr: item_id
+  dimensions:
+  - name: refund_time
+    type: time
+    type_params:
+      time_granularity: day
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: day
+  measures:
+  - name: sales_reversal_amount
+    agg: sum
+    expr: sales_reversal_amount
+  - name: units_refunded
+    agg: sum
+    expr: refund_quantity
+  - name: sales_reversal_by_order_cohort
+    agg: sum
+    expr: sales_reversal_amount
+    agg_time_dimension: order_time
+- name: fulfillments
+  model: ref('fulfillments')
+  defaults:
+    agg_time_dimension: fulfillment_created_at
+  entities:
+  - name: fulfillment
+    type: primary
+    expr: fulfillment_id
+  - name: order
+    type: foreign
+    expr: order_id
+  dimensions:
+  - name: fulfillment_created_at
+    type: time
+    type_params:
+      time_granularity: day
+  - name: order_time
+    type: time
+    type_params:
+      time_granularity: day
+  - name: in_transit_at
+    type: time
+    type_params:
+      time_granularity: day
+  - name: delivered_at
+    type: time
+    type_params:
+      time_granularity: day
+  measures:
+  - name: shipment_count
+    agg: sum
+    expr: shipped_flag
+    agg_time_dimension: in_transit_at
+  - name: delivery_count
+    agg: sum
+    expr: delivered_flag
+    agg_time_dimension: delivered_at
+  - name: average_time_to_ship_minutes
+    agg: average
+    expr: time_to_ship_minutes
+    agg_time_dimension: order_time
+  - name: average_delivery_duration_minutes
+    agg: average
+    expr: delivery_duration_minutes
+    agg_time_dimension: in_transit_at
+- name: fulfillment_items
+  model: ref('fulfillment_items')
+  defaults:
+    agg_time_dimension: in_transit_at
+  entities:
+  - name: fulfillment_item
+    type: primary
+    expr: fulfillment_line_item_id
+  - name: order
+    type: foreign
+    expr: order_id
+  - name: item
+    type: foreign
+    expr: item_id
+  dimensions:
+  - name: in_transit_at
+    type: time
+    type_params:
+      time_granularity: day
+  - name: delivered_at
+    type: time
+    type_params:
+      time_granularity: day
+  measures:
+  - name: units_shipped
+    agg: sum
+    expr: shipped_quantity
+    agg_time_dimension: in_transit_at
+  - name: units_delivered
+    agg: sum
+    expr: delivered_quantity
+    agg_time_dimension: delivered_at
+- name: fulfillment_events
+  model: ref('fulfillment_events')
+  defaults:
+    agg_time_dimension: event_time
+  entities:
+  - name: fulfillment_event
+    type: primary
+    expr: fulfillment_event_id
+  - name: order
+    type: foreign
+    expr: order_id
+  dimensions:
+  - name: event_time
+    type: time
+    type_params:
+      time_granularity: hour
+  - name: event_status
+    type: categorical
+  measures:
+  - name: fulfillment_event_count
+    agg: sum
+    expr: 1
+metrics:
+- name: order_count
+  label: Order Count
+  type: simple
+  type_params:
+    measure: order_count
+- name: lifecycle_order_count
+  label: Lifecycle Order Count
+  type: simple
+  type_params:
+    measure: lifecycle_order_count
+  description: '订单生命周期分析的 Base Event 数量；Grain 为一个 Order 一行， Business Time 使用 order_time。
+
+    '
+- name: paid_order_count
+  label: Paid Order Count
+  type: simple
+  type_params:
+    measure: paid_order_count
+  description: '已观察到首次成功 CAPTURE / SALE 的订单数；Business Time 使用 first_paid_at。
+
+    '
+- name: fulfillment_started_order_count
+  label: Fulfillment Started Order Count
+  type: simple
+  type_params:
+    measure: fulfillment_started_order_count
+  description: '已观察到首次 Fulfillment 的订单数；Business Time 使用 first_fulfillment_at。
+
+    '
+- name: in_transit_order_count
+  label: In Transit Order Count
+  type: simple
+  type_params:
+    measure: in_transit_order_count
+  description: '已观察到首次 IN_TRANSIT 里程碑的订单数；Business Time 使用 first_in_transit_at。
+
+    '
+- name: delivered_order_count
+  label: Delivered Order Count
+  type: simple
+  type_params:
+    measure: delivered_order_count
+  description: '已观察到首次 DELIVERED 里程碑的订单数；Business Time 使用 first_delivered_at。
+
+    '
+- name: gross_sales
+  label: Gross Sales
+  type: simple
+  type_params:
+    measure: gross_sales
+- name: discount_amount
+  label: Discount Amount
+  type: simple
+  type_params:
+    measure: discount_amount
+- name: sales_before_reversal
+  label: Sales Before Reversal
+  type: simple
+  type_params:
+    measure: sales_before_reversal
+- name: units_ordered
+  label: Units Ordered
+  type: simple
+  type_params:
+    measure: units_ordered
+- name: orders_with_item
+  label: Orders With Item
+  type: simple
+  type_params:
+    measure: orders_with_item
+  description: '包含当前商品维度的去重订单数。 与全局 order_count 是不同业务语义。
+
+    '
+- name: payment_transaction_count
+  label: Payment Transaction Count
+  type: simple
+  type_params:
+    measure: payment_transaction_count
+- name: authorized_payment_amount
+  label: Authorized Payment Amount
+  type: simple
+  type_params:
+    measure: authorized_payment_amount
+- name: collected_payment_amount
+  label: Collected Payment Amount
+  type: simple
+  type_params:
+    measure: collected_payment_amount
+- name: successful_payment_refund_amount
+  label: Successful Payment Refund Amount
+  type: simple
+  type_params:
+    measure: successful_payment_refund_amount
+- name: collected_payment_by_order_cohort
+  label: Collected Payment By Order Cohort
+  type: simple
+  type_params:
+    measure: collected_payment_by_order_cohort
+- name: refund_count
+  label: Refund Count
+  type: simple
+  type_params:
+    measure: refund_count
+- name: refund_processed_amount
+  label: Refund Processed Amount
+  type: simple
+  type_params:
+    measure: refund_processed_amount
+- name: sales_reversal_amount
+  label: Sales Reversal Amount
+  type: simple
+  type_params:
+    measure: sales_reversal_amount
+- name: units_refunded
+  label: Units Refunded
+  type: simple
+  type_params:
+    measure: units_refunded
+- name: sales_reversal_by_order_cohort
+  label: Sales Reversal By Order Cohort
+  type: simple
+  type_params:
+    measure: sales_reversal_by_order_cohort
+- name: shipment_count
+  label: Shipment Count
+  type: simple
+  type_params:
+    measure: shipment_count
+- name: delivery_count
+  label: Delivery Count
+  type: simple
+  type_params:
+    measure: delivery_count
+- name: average_time_to_ship_minutes
+  label: Average Time To Ship Minutes
+  type: simple
+  type_params:
+    measure: average_time_to_ship_minutes
+- name: average_delivery_duration_minutes
+  label: Average Delivery Duration Minutes
+  type: simple
+  type_params:
+    measure: average_delivery_duration_minutes
+- name: units_shipped
+  label: Units Shipped
+  type: simple
+  type_params:
+    measure: units_shipped
+- name: units_delivered
+  label: Units Delivered
+  type: simple
+  type_params:
+    measure: units_delivered
+- name: fulfillment_event_count
+  label: Fulfillment Event Count
+  type: simple
+  type_params:
+    measure: fulfillment_event_count
+- name: order_to_paid_24h_conversion_rate
+  label: Order to Paid Conversion Rate 24h
+  type: conversion
+  description: '一个订单从 order_time 开始，是否在 24 小时内出现 first_paid_at。 Base / Conversion 事件必须属于同一个 Order Entity。
+
+    '
+  type_params:
+    conversion_type_params:
+      entity: order
+      base_measure: lifecycle_order_count
+      conversion_measure: paid_order_count
+      calculation: conversion_rate
+      window: 24 hours
+- name: order_to_fulfillment_3d_conversion_rate
+  label: Order to Fulfillment Conversion Rate 3d
+  type: conversion
+  description: '一个订单从 order_time 开始，是否在 3 天内出现 first_fulfillment_at。 用于观察订单进入履约阶段的及时转化率。
+
+    '
+  type_params:
+    conversion_type_params:
+      entity: order
+      base_measure: lifecycle_order_count
+      conversion_measure: fulfillment_started_order_count
+      calculation: conversion_rate
+      window: 3 days
+- name: order_to_delivered_7d_conversion_rate
+  label: Order to Delivered Conversion Rate 7d
+  type: conversion
+  description: '一个订单从 order_time 开始，是否在 7 天内出现 first_delivered_at。 用于观察订单从创建到最终送达的端到端转化率。
+
+    '
+  type_params:
+    conversion_type_params:
+      entity: order
+      base_measure: lifecycle_order_count
+      conversion_measure: delivered_order_count
+      calculation: conversion_rate
+      window: 7 days
+- name: average_order_value
+  label: Average Order Value
+  type: ratio
+  description: '折扣后、退款冲销前销售金额 / 去重订单数。
+
+    '
+  type_params:
+    numerator: sales_before_reversal
+    denominator: order_count
+- name: activity_net_sales
+  label: Activity Net Sales
+  type: derived
+  description: '按各业务活动实际发生时间观察： 当期 Sales Before Reversal - 当期 Sales Reversal。
+
+    '
+  type_params:
+    expr: 'sales_before_reversal - sales_reversal_amount
+
+      '
+    metrics:
+    - name: sales_before_reversal
+    - name: sales_reversal_amount
+- name: order_cohort_net_sales
+  label: Order Cohort Net Sales
+  type: derived
+  description: '按原订单时间归因： 某批订单 Sales Before Reversal - 这些订单最终发生的 Sales Reversal。
+
+    '
+  type_params:
+    expr: 'sales_before_reversal - sales_reversal_by_order_cohort
+
+      '
+    metrics:
+    - name: sales_before_reversal
+    - name: sales_reversal_by_order_cohort

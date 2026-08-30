@@ -1,0 +1,12 @@
+# Phase 3C control-plane runtime. Versions intentionally pinned as a tested baseline target.
+dagster==1.13.18
+dagster-webserver==1.13.18
+dagster-dbt==0.29.18
+
+# Canonical dbt modeling runtime already documented in infra/runtime/VERSIONS.md.
+dbt-core==1.12.2
+dbt-spark[PyHive]==1.11.0
+PyYAML==6.0.3
+
+# Real Shopify Admin GraphQL extraction executed by the Dagster host process.
+requests>=2.32,<3.0

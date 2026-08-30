@@ -1,0 +1,31 @@
+version: 1
+contract: commerce_governed_operational_incident_drilldown
+mode: exact_partition_run_failure_recovery_drilldown
+
+principles:
+  phase6c_pipeline_suspected_is_primary_entrypoint: true
+  exact_partition_current_truth_precedes_run_status: true
+  structured_failure_tags_only: true
+  free_text_log_cause_inference: false
+  phase3c_failure_classification_is_source_of_truth: true
+  phase3c_recovery_policy_is_source_of_truth: true
+  recovery_policy_decision_is_not_observed_recovery_execution: true
+  no_failed_run_does_not_prove_missed_schedule: true
+  active_run_owner_precedes_replay_budget_interpretation: true
+  unknown_failure_remains_fail_closed: true
+  arbitrary_sql: false
+  llm_has_no_runtime_tool_access: true
+
+limits:
+  max_partitions_per_drilldown: 7
+  max_incomplete_partitions_in_answer: 3
+
+runtime:
+  allow_env: PHASE6D_ALLOW_INCIDENT_DRILLDOWN
+  requires_diagnostic_gate: PHASE6C_ALLOW_DIAGNOSTIC
+
+sources:
+  exact_partition_state: orchestration/dagster/commerce_dagster/recovery_state.py
+  failure_classification: orchestration/dagster/commerce_dagster/failure_classification.py
+  recovery_policy: orchestration/dagster/commerce_dagster/recovery_policy.py
+  automation_policy: orchestration/dagster/commerce_dagster/automation_policy.py

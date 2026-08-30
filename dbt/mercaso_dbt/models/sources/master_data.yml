@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: master_data
+    schema: source
+    description: >
+      内部 MySQL 主数据通过 Flink CDC 捕获，再物化为 Iceberg current-state（当前状态）表。
+      历史 seed CSV 仅保留给既有静态验收 / value-discovery（值发现）契约使用，
+      不再作为生产 Item / Store 数据源。
+    tables:
+      - name: item_current
+        identifier: item_current
+      - name: store_current
+        identifier: store_current

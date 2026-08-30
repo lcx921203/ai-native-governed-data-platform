@@ -1,0 +1,211 @@
+version: 1
+contract: commerce_phase7_source_manifest
+mode: source_integrity_closure
+principles:
+  phase6_canonical_is_base_authority: true
+  phase7_final_handoff_overlay_is_phase7_delta_authority: true
+  runtime_evidence_must_not_be_inferred_from_source_presence: true
+  missing_physical_implementation_must_not_be_hidden_by_contract_only: true
+  reconstructed_source_requires_explicit_provenance: true
+  all_live_runners_are_fail_closed_by_default: true
+capabilities:
+  7A-core-runtime:
+    capability: workstation_core_runtime_bootstrap
+    policy:
+    - infra/contracts/phase7/runtime_bootstrap.yml
+    implementation:
+    - infra/runtime/phase7/phase7a_preflight.py
+    - infra/runtime/phase7/collect_phase7a_evidence.py
+    tests:
+    - tests/test_phase7a_runtime_bootstrap.py
+    static_runner: infra/runtime/run_phase7a_static.sh
+    live_runner: infra/runtime/run_phase7a_core_bootstrap.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_RUNTIME_BOOTSTRAP
+    runtime_evidence: .runtime/evidence/phase7a/core_runtime.json
+  7A-datahub:
+    capability: datahub_metadata_plane_runtime
+    policy:
+    - infra/contracts/phase7/datahub_metadata_bootstrap.yml
+    - infra/contracts/phase7/datahub_runtime_verification.yml
+    implementation:
+    - metadata/datahub/tools/bootstrap_governance_entities.py
+    - metadata/datahub/tools/identity_resolver.py
+    - metadata/datahub/tools/build_governance_projection.py
+    - metadata/datahub/tools/apply_governance_projection.py
+    - metadata/datahub/recipes/phase7a_iceberg.yml
+    - metadata/datahub/recipes/phase7a_dbt.yml
+    - metadata/datahub/tools/phase7_runtime.py
+    tests:
+    - tests/test_phase7a_live_cutover_static.py
+    static_runner: null
+    live_runner: infra/runtime/run_phase7a_datahub_bootstrap.sh
+    acceptance_runner: infra/runtime/run_phase7a_datahub_acceptance.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_DATAHUB_BOOTSTRAP
+    - PHASE7A_ALLOW_DATAHUB_GOVERNANCE_WRITE
+    runtime_evidence: .runtime/evidence/phase7a/datahub/datahub_runtime.json
+  7A-agent-metadata:
+    capability: governed_agent_datahub_runtime_read
+    policy:
+    - agent/contracts/metadata_runtime_cutover_policy.yml
+    implementation:
+    - agent/metadata_runtime.py
+    - agent/adapters/datahub_sdk.py
+    - agent/tools/governed_metadata.py
+    - infra/runtime/phase7/agent_metadata_acceptance.py
+    tests:
+    - tests/test_phase7a_live_cutover_static.py
+    static_runner: null
+    live_runner: infra/runtime/run_phase7a_agent_metadata_live.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_AGENT_DATAHUB_READ
+    runtime_evidence: .runtime/evidence/phase7a/agent_metadata_runtime.json
+  7A-agent-semantic:
+    capability: governed_metricflow_runtime_cutover
+    policy:
+    - agent/contracts/semantic_runtime_cutover_policy.yml
+    - agent/contracts/semantic_query_policy.yml
+    implementation:
+    - agent/semantic_runtime.py
+    - agent/semantic_query/planner.py
+    - agent/semantic_query/executor.py
+    - infra/runtime/phase7/agent_semantic_acceptance.py
+    tests:
+    - tests/test_phase7a_live_cutover_static.py
+    static_runner: null
+    live_runner: infra/runtime/run_phase7a_agent_semantic_live.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_AGENT_SEMANTIC_RUNTIME
+    - PHASE5B_ALLOW_METRICFLOW_QUERY
+    runtime_evidence: .runtime/evidence/phase7a/agent_semantic_runtime.json
+  7A-dagster-operational:
+    capability: read_only_dagster_operational_runtime
+    policy:
+    - agent/contracts/operational_runtime_cutover_policy.yml
+    implementation:
+    - agent/diagnostic/operational_health.py
+    - agent/incident_drilldown/provider.py
+    - orchestration/dagster/commerce_dagster/recovery_state.py
+    - infra/runtime/phase7/dagster_operational_acceptance.py
+    tests:
+    - tests/test_phase7a_live_cutover_static.py
+    static_runner: null
+    live_runner: infra/runtime/run_phase7a_dagster_operational_live.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_AGENT_DAGSTER_READ
+    runtime_evidence: .runtime/evidence/phase7a/dagster_operational_runtime.json
+  7A-openai-agent:
+    capability: constrained_live_openai_agent
+    policy:
+    - agent/contracts/live_provider_policy.yml
+    - agent/contracts/claim_authority.yml
+    implementation:
+    - agent/llm/providers/openai_responses.py
+    - agent/response/validator.py
+    - infra/runtime/phase7/openai_agent_acceptance.py
+    tests:
+    - tests/test_phase7a_live_cutover_static.py
+    static_runner: null
+    live_runner: infra/runtime/run_phase7a_openai_agent_live.sh
+    runtime_gates:
+    - PHASE7A_ALLOW_OPENAI_PROVIDER
+    runtime_evidence: .runtime/evidence/phase7a/openai_agent_runtime.json
+  7B-corpus:
+    capability: governed_knowledge_corpus_and_chunking
+    policy:
+    - agent/contracts/knowledge_policy.yml
+    - metadata/knowledge/corpus_manifest.yml
+    implementation:
+    - agent/knowledge/models.py
+    - agent/knowledge/corpus.py
+    - agent/knowledge/chunking.py
+    tests:
+    - tests/test_phase7b_knowledge_rag.py
+    static_runner: infra/runtime/run_phase7b_static.sh
+    live_runner: null
+    runtime_gates: []
+    runtime_evidence: STATIC_ONLY
+  7B-index:
+    capability: governed_qdrant_vector_index
+    policy:
+    - infra/contracts/phase7/knowledge_rag.yml
+    - agent/contracts/knowledge_retrieval_policy.yml
+    implementation:
+    - agent/knowledge/embeddings.py
+    - agent/knowledge/qdrant_store.py
+    - agent/knowledge/indexer.py
+    tests:
+    - tests/test_phase7b_knowledge_rag.py
+    static_runner: infra/runtime/run_phase7b_static.sh
+    live_runner: infra/runtime/run_phase7b_rag_live.sh
+    runtime_gates:
+    - PHASE7B_ALLOW_KNOWLEDGE_REINDEX
+    runtime_evidence: .runtime/evidence/phase7b/knowledge_index.json
+  7B-retrieval:
+    capability: governed_search_fetch_and_rerank
+    policy:
+    - agent/contracts/knowledge_retrieval_policy.yml
+    implementation:
+    - agent/knowledge/retrieval.py
+    - agent/knowledge/reranker.py
+    - agent/knowledge/tools.py
+    - agent/knowledge/evaluation.py
+    tests:
+    - tests/test_phase7b_knowledge_rag.py
+    static_runner: infra/runtime/run_phase7b_static.sh
+    live_runner: infra/runtime/run_phase7b_retrieval_live.sh
+    runtime_gates:
+    - PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL
+    - PHASE7B_ALLOW_KNOWLEDGE_RERANK
+    runtime_evidence: .runtime/evidence/phase7b/knowledge_retrieval.json
+  7B-hybrid:
+    capability: hybrid_structured_plus_rag_agent
+    policy:
+    - infra/contracts/phase7/hybrid_rag_agent.yml
+    - agent/contracts/hybrid_routing.yml
+    - agent/contracts/claim_authority.yml
+    implementation:
+    - agent/knowledge/hybrid.py
+    tests:
+    - tests/test_phase7b_hybrid_authority.py
+    static_runner: infra/runtime/run_phase7b_static.sh
+    live_runner: infra/runtime/run_phase7b_hybrid_agent_live.sh
+    runtime_gates: []
+    runtime_evidence: .runtime/evidence/phase7b/hybrid_rag_agent.json
+  7C-mcp:
+    capability: read_only_commerce_mcp_server
+    policy:
+    - infra/contracts/phase7/commerce_mcp.yml
+    - infra/contracts/phase7/mcp_security.yml
+    - infra/contracts/phase7/mcp_runtime_acceptance.yml
+    implementation:
+    - mcp_server/models.py
+    - mcp_server/auth/profiles.py
+    - mcp_server/auth/scopes.py
+    - mcp_server/registry.py
+    - mcp_server/resources.py
+    - mcp_server/prompts.py
+    - mcp_server/server.py
+    - mcp_server/auth/jwt.py
+    - infra/runtime/phase7/mcp_runtime_acceptance.py
+    tests:
+    - tests/test_phase7c_mcp_static.py
+    static_runner: infra/runtime/run_phase7c_static.sh
+    live_runner: infra/runtime/run_phase7c_mcp_acceptance.sh
+    runtime_gates:
+    - PHASE7C_ALLOW_MCP_RUNTIME
+    runtime_evidence: .runtime/evidence/phase7c/mcp_runtime.json
+  7D-final:
+    capability: end_to_end_runtime_evidence_closure
+    policy:
+    - infra/contracts/phase7/phase7_final_closure.yml
+    implementation:
+    - infra/runtime/phase7/collect_phase7_final_evidence.py
+    tests:
+    - tests/test_phase7_source_integrity.py
+    static_runner: infra/runtime/run_phase7_source_closure.sh
+    live_runner: infra/runtime/run_phase7_final_runtime_closure.sh
+    runtime_gates:
+    - PHASE7_ALLOW_FINAL_RUNTIME_CLOSURE
+    runtime_evidence: .runtime/evidence/phase7/final_runtime.json

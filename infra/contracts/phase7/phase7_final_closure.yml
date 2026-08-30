@@ -1,0 +1,40 @@
+# 业务逻辑：最终 Runtime Closure 不按“多数通过”闭环，下面 13 份 Runtime Evidence 必须全部 VERIFIED。
+# Evidence API：每个组件都固定 evidence path + expected status；Aggregator 只读取/比对，不凭源码推断。
+# 工程边界：Claim Authority 与各系统 Authority 保持分离；任意 SQL、模糊身份、RAG 编造 Runtime Fact 等最终仍被禁止。
+version: 1
+contract: commerce_phase7_end_to_end_closure
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+required_evidence:
+  core_runtime: {path: .runtime/evidence/phase7a/core_runtime.json, status: RUNTIME_BOOTSTRAP_VERIFIED}
+  datahub_metadata: {path: .runtime/evidence/phase7a/datahub/datahub_runtime.json, status: DATAHUB_METADATA_PLANE_VERIFIED}
+  agent_metadata: {path: .runtime/evidence/phase7a/agent_metadata_runtime.json, status: AGENT_METADATA_RUNTIME_CUTOVER_VERIFIED}
+  semantic_runtime: {path: .runtime/evidence/phase7a/agent_semantic_runtime.json, status: AGENT_SEMANTIC_RUNTIME_CUTOVER_VERIFIED}
+  dagster_operational: {path: .runtime/evidence/phase7a/dagster_operational_runtime.json, status: DAGSTER_OPERATIONAL_RUNTIME_VERIFIED}
+  openai_agent: {path: .runtime/evidence/phase7a/openai_agent_runtime.json, status: OPENAI_AGENT_RUNTIME_VERIFIED}
+  knowledge_index: {path: .runtime/evidence/phase7b/knowledge_index.json, status: KNOWLEDGE_INDEX_RUNTIME_VERIFIED}
+  knowledge_retrieval: {path: .runtime/evidence/phase7b/knowledge_retrieval.json, status: KNOWLEDGE_RETRIEVAL_RUNTIME_VERIFIED}
+  knowledge_reranker: {path: .runtime/evidence/phase7b/knowledge_reranker.json, status: KNOWLEDGE_RERANKER_RUNTIME_VERIFIED}
+  hybrid_rag_agent: {path: .runtime/evidence/phase7b/hybrid_rag_agent.json, status: HYBRID_RAG_AGENT_RUNTIME_VERIFIED}
+  commerce_mcp: {path: .runtime/evidence/phase7c/mcp_runtime.json, status: COMMERCE_MCP_RUNTIME_VERIFIED}
+  serving_runtime: {path: .runtime/evidence/serving/serving_runtime.json, status: SERVING_RUNTIME_VERIFIED}
+  serving_governance: {path: .runtime/evidence/serving/datahub/serving_governance_runtime.json, status: SERVING_GOVERNANCE_RUNTIME_VERIFIED}
+authority_audit:
+  semantic_authority: dbt_metricflow
+  metadata_authority: datahub
+  operational_authority: dagster
+  knowledge_authority: knowledge_rag
+  tool_execution_authority: governed_tool_registry
+  protocol_authority: mcp
+  serving_query_authority: trino
+  serving_projection_authority: metricflow_serving_contract
+  claim_authority: claim_ledger
+forbidden:
+  arbitrary_sql: true
+  llm_generated_where: true
+  fuzzy_runtime_identity: true
+  rag_runtime_fact_invention: true
+  llm_evidence_upgrade: true
+  datahub_agent_write: true
+  dagster_agent_execution: true
+success:
+  status: PHASE7_END_TO_END_RUNTIME_VERIFIED

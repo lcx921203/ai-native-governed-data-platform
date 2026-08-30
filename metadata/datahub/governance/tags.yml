@@ -1,0 +1,47 @@
+version: 1
+contract: commerce_discovery_tags
+tags:
+- id: source-shopify
+  display_name: Shopify
+  description: Technical discovery label for metadata originating from Shopify.
+- id: layer-raw
+  display_name: Raw Layer
+  description: Append-only observation layer.
+- id: layer-structured-source
+  display_name: Structured Source
+  description: Business-version-preserving structured source layer.
+- id: layer-staging
+  display_name: dbt Staging
+  description: Source-aligned dbt staging model.
+- id: layer-intermediate
+  display_name: dbt Intermediate
+  description: Canonical/current-state or affected-key intermediate model.
+- id: layer-mart
+  display_name: Commerce Mart
+  description: Consumer-facing commerce mart.
+- id: semantic-enabled
+  display_name: Semantic Enabled
+  description: Asset participates in the dbt / MetricFlow semantic graph.
+- id: business-version
+  display_name: Business Version
+  description: Asset follows the business-key plus record-hash versioning contract.
+- id: daily-partitioned
+  display_name: Daily Partitioned
+  description: Asset participates in the daily execution responsibility model.
+- id: layer-serving
+  display_name: Serving Layer
+  description: Rebuildable consumer projection materialized from governed semantic
+    metrics.
+- id: metricflow-governed
+  display_name: MetricFlow Governed
+  description: Metric values originate from the governed MetricFlow semantic contract
+    rather than consumer-local formulas.
+- id: consumer-bi
+  display_name: BI Consumer
+  description: Asset participates in a fixed BI or dashboard consumption path.
+- id: consumer-api
+  display_name: API Consumer
+  description: Asset participates in a fixed business API consumption path.
+principles:
+  tags_are_informal_discovery_labels: true
+  governed_classification_must_not_be_encoded_as_tag: true

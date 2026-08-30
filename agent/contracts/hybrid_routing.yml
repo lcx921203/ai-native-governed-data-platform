@@ -1,0 +1,29 @@
+# 业务逻辑：Agent 可以组合结构化权威与 Knowledge RAG，但每类 Claim 仍由唯一 Authority 决定。
+# Agent → RAG：显式 Why / Design / SOP Intent 由 Deterministic Router 生成 search → exact fetch 计划。
+version: 2
+contract: commerce_hybrid_analysis_routing
+route:
+  name: HYBRID_ANALYSIS
+  minimum_capability_families: 2
+  knowledge_intent: KNOWLEDGE_QUERY
+  knowledge_execution: [search_knowledge, fetch_knowledge]
+capability_families:
+  semantic:
+    tools: [get_metric_context, query_semantic_metric, query_semantic_metrics, get_dimension_values, resolve_dimension_value]
+  metadata:
+    tools: [get_dataset_context, get_lineage_context]
+  operational:
+    tools: [get_runtime_context]
+  knowledge:
+    tools: [search_knowledge, fetch_knowledge]
+precedence:
+  structured_authority_before_rag: true
+  runtime_diagnosis_before_knowledge: true
+  metric_definition_before_knowledge: true
+forbidden:
+  arbitrary_sql: true
+  arbitrary_graphql: true
+  arbitrary_file_read: true
+  dagster_execution: true
+  recovery_execution: true
+  datahub_write: true

@@ -1,0 +1,9 @@
+openai==3.2.0
+qdrant-client==1.19.0
+cohere>=5,<6
+PyYAML>=6.0,<7.0
+tiktoken>=0.11,<1.0
+# Multi-format Knowledge Document Ingestion（文本型 PDF；扫描 PDF OCR 仍 DEFERRED）。
+pypdf>=5,<6
+# DOCX heading / paragraph / table 结构解析。
+python-docx>=1.2,<2

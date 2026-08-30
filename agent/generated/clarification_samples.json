@@ -1,0 +1,198 @@
+{
+  "contract": "commerce_clarification_samples",
+  "start": {
+    "continuation_id": "cont_f909dfd955a88328",
+    "contract_version": 1,
+    "original_question": "2026-08-05 美国 品牌为 Coca Colaa 的 gross_sales 是多少？",
+    "base_spec": {
+      "metric": "gross_sales",
+      "metrics": [
+        "gross_sales"
+      ],
+      "start_time": "2026-08-05T00:00:00Z",
+      "end_time": "2026-08-05T23:59:59Z",
+      "group_by": [],
+      "filters": [
+        {
+          "dimension": "store__country",
+          "operator": "EQ",
+          "value": "US",
+          "source": "governed_value_alias"
+        }
+      ],
+      "limit": 20
+    },
+    "raw_value": "Coca Colaa",
+    "dimension_hint": "item__brand",
+    "candidates": [
+      {
+        "id": "CAND01",
+        "dimension": "item__brand",
+        "value": "Coca-Cola",
+        "score": 0.9474,
+        "mode": "FUZZY_CANDIDATE",
+        "evidence": "STATIC_CONTRACT",
+        "source_mode": "STATIC_SEED_FALLBACK"
+      }
+    ],
+    "clarification_prompt": "请确认筛选值 'Coca Colaa'：1. item__brand=Coca-Cola",
+    "evidence": "STATIC_CONTRACT",
+    "source_mode": "CANDIDATE_ONLY",
+    "integrity_checksum": "f909dfd955a88328eef32c4dbafd9d6ad6828350ca71631c17c18b21cb448738"
+  },
+  "confirmed": {
+    "status": "READY",
+    "continuation": {
+      "continuation_id": "cont_f909dfd955a88328",
+      "contract_version": 1,
+      "original_question": "2026-08-05 美国 品牌为 Coca Colaa 的 gross_sales 是多少？",
+      "base_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-05T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [],
+        "filters": [
+          {
+            "dimension": "store__country",
+            "operator": "EQ",
+            "value": "US",
+            "source": "governed_value_alias"
+          }
+        ],
+        "limit": 20
+      },
+      "raw_value": "Coca Colaa",
+      "dimension_hint": "item__brand",
+      "candidates": [
+        {
+          "id": "CAND01",
+          "dimension": "item__brand",
+          "value": "Coca-Cola",
+          "score": 0.9474,
+          "mode": "FUZZY_CANDIDATE",
+          "evidence": "STATIC_CONTRACT",
+          "source_mode": "STATIC_SEED_FALLBACK"
+        }
+      ],
+      "clarification_prompt": "请确认筛选值 'Coca Colaa'：1. item__brand=Coca-Cola",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "CANDIDATE_ONLY",
+      "integrity_checksum": "f909dfd955a88328eef32c4dbafd9d6ad6828350ca71631c17c18b21cb448738"
+    },
+    "user_reply": "对",
+    "selected_candidate": {
+      "id": "CAND01",
+      "dimension": "item__brand",
+      "value": "Coca-Cola",
+      "score": 0.9474,
+      "mode": "FUZZY_CANDIDATE",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "STATIC_SEED_FALLBACK"
+    },
+    "plan": {
+      "status": "READY",
+      "question": "2026-08-05 美国 品牌为 Coca Colaa 的 gross_sales 是多少？",
+      "spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-05T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [],
+        "filters": [
+          {
+            "dimension": "store__country",
+            "operator": "EQ",
+            "value": "US",
+            "source": "governed_value_alias"
+          },
+          {
+            "dimension": "item__brand",
+            "operator": "EQ",
+            "value": "Coca-Cola",
+            "source": "user_confirmed:FUZZY_CANDIDATE:STATIC_CONTRACT"
+          }
+        ],
+        "limit": 20
+      },
+      "warnings": [
+        "Resumed from cont_f909dfd955a88328; user confirmed item__brand=Coca-Cola."
+      ],
+      "requires_metricflow_explain": true,
+      "command_preview": [
+        "mf",
+        "query",
+        "--metrics",
+        "gross_sales",
+        "--where",
+        "{{ Dimension('store__country') }} = 'US'",
+        "--where",
+        "{{ Dimension('item__brand') }} = 'Coca-Cola'",
+        "--start-time",
+        "2026-08-05T00:00:00Z",
+        "--end-time",
+        "2026-08-05T23:59:59Z",
+        "--limit",
+        "20"
+      ],
+      "continuation_spec": null,
+      "clarification": null
+    },
+    "query_result": null,
+    "warnings": []
+  },
+  "rejected": {
+    "status": "REJECTED",
+    "continuation": {
+      "continuation_id": "cont_f909dfd955a88328",
+      "contract_version": 1,
+      "original_question": "2026-08-05 美国 品牌为 Coca Colaa 的 gross_sales 是多少？",
+      "base_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-05T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [],
+        "filters": [
+          {
+            "dimension": "store__country",
+            "operator": "EQ",
+            "value": "US",
+            "source": "governed_value_alias"
+          }
+        ],
+        "limit": 20
+      },
+      "raw_value": "Coca Colaa",
+      "dimension_hint": "item__brand",
+      "candidates": [
+        {
+          "id": "CAND01",
+          "dimension": "item__brand",
+          "value": "Coca-Cola",
+          "score": 0.9474,
+          "mode": "FUZZY_CANDIDATE",
+          "evidence": "STATIC_CONTRACT",
+          "source_mode": "STATIC_SEED_FALLBACK"
+        }
+      ],
+      "clarification_prompt": "请确认筛选值 'Coca Colaa'：1. item__brand=Coca-Cola",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "CANDIDATE_ONLY",
+      "integrity_checksum": "f909dfd955a88328eef32c4dbafd9d6ad6828350ca71631c17c18b21cb448738"
+    },
+    "user_reply": "不是",
+    "selected_candidate": null,
+    "plan": null,
+    "query_result": null,
+    "warnings": [
+      "The candidate was rejected. The original query remains unexecuted; provide a corrected governed filter value."
+    ]
+  }
+}

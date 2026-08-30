@@ -1,0 +1,42 @@
+# Nested Pagination Query · Order.lineItems
+# 输入：Order Node ID + first + after；输出：一页 LineItem nodes + pageInfo。
+# GraphQL API：node(id) 通过全局 ID 回到同一个 Order；after 必须使用这个 Connection 自己的 endCursor。
+# 工程边界：父 Order 的 cursor 不能复用到 lineItems；hasNextPage=true 但无 endCursor 时采集器会 Fail Closed。
+
+query OrderLineItemsPage(
+  $id: ID!
+  $first: Int!
+  $after: String
+) {
+  node(id: $id) {
+    ... on Order {
+      lineItems(first: $first, after: $after) {
+        nodes {
+          id
+          sku
+          title
+          quantity
+          currentQuantity
+          refundableQuantity
+          unfulfilledQuantity
+          product { id }
+          variant { id }
+          originalUnitPriceSet { shopMoney { amount currencyCode } }
+          originalTotalSet { shopMoney { amount currencyCode } }
+          totalDiscountSet { shopMoney { amount currencyCode } }
+          discountAllocations {
+            allocatedAmountSet { shopMoney { amount currencyCode } }
+            discountApplication {
+              __typename
+              index
+              allocationMethod
+              targetSelection
+              targetType
+            }
+          }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}

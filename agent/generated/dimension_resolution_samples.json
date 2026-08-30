@@ -1,0 +1,106 @@
+{
+  "contract": "commerce_dimension_resolution_samples",
+  "samples": {
+    "exact": {
+      "status": "RESOLVED",
+      "raw_value": "South",
+      "metrics": [
+        "gross_sales"
+      ],
+      "dimension_hint": "store__region",
+      "resolved_dimension": "store__region",
+      "resolved_value": "South",
+      "mode": "CANONICAL_EXACT",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "STATIC_SEED_FALLBACK",
+      "candidates": [
+        {
+          "dimension": "store__region",
+          "value": "South",
+          "score": 1.0,
+          "mode": "CANONICAL_EXACT",
+          "evidence": "STATIC_CONTRACT",
+          "source_mode": "STATIC_SEED_FALLBACK"
+        }
+      ],
+      "warnings": [
+        "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+        "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+      ]
+    },
+    "normalized": {
+      "status": "RESOLVED",
+      "raw_value": "coca cola",
+      "metrics": [
+        "gross_sales"
+      ],
+      "dimension_hint": "item__brand",
+      "resolved_dimension": "item__brand",
+      "resolved_value": "Coca-Cola",
+      "mode": "NORMALIZED_EXACT",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "STATIC_SEED_FALLBACK",
+      "candidates": [
+        {
+          "dimension": "item__brand",
+          "value": "Coca-Cola",
+          "score": 1.0,
+          "mode": "NORMALIZED_EXACT",
+          "evidence": "STATIC_CONTRACT",
+          "source_mode": "STATIC_SEED_FALLBACK"
+        }
+      ],
+      "warnings": [
+        "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+        "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+      ]
+    },
+    "fuzzy": {
+      "status": "CLARIFICATION_REQUIRED",
+      "raw_value": "Coca Colaa",
+      "metrics": [
+        "gross_sales"
+      ],
+      "dimension_hint": "item__brand",
+      "resolved_dimension": null,
+      "resolved_value": null,
+      "mode": "FUZZY_CANDIDATE",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "CANDIDATE_ONLY",
+      "candidates": [
+        {
+          "dimension": "item__brand",
+          "value": "Coca-Cola",
+          "score": 0.9474,
+          "mode": "FUZZY_CANDIDATE",
+          "evidence": "STATIC_CONTRACT",
+          "source_mode": "STATIC_SEED_FALLBACK"
+        }
+      ],
+      "warnings": [
+        "Only fuzzy candidates were found. Phase 5D never auto-applies a fuzzy value; the user must confirm the intended canonical value.",
+        "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+        "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+      ]
+    },
+    "not_found": {
+      "status": "NOT_FOUND",
+      "raw_value": "Pepsi",
+      "metrics": [
+        "gross_sales"
+      ],
+      "dimension_hint": "item__brand",
+      "resolved_dimension": null,
+      "resolved_value": null,
+      "mode": "NONE",
+      "evidence": "STATIC_CONTRACT",
+      "source_mode": "",
+      "candidates": [],
+      "warnings": [
+        "No governed dimension value matched 'Pepsi'. Do not drop the requested filter; refresh runtime dimension values or ask the user to clarify.",
+        "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+        "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+      ]
+    }
+  }
+}

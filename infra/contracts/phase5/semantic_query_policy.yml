@@ -1,0 +1,100 @@
+version: 2
+contract: commerce_governed_semantic_query
+mode: metricflow_only
+
+principles:
+  governed_metrics_only: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+  structured_dimension_filters_only: true
+  explicit_time_range_required: true
+  metricflow_explain_before_query: true
+  query_result_requires_runtime_verified_evidence: true
+
+limits:
+  max_metrics: 3
+  default_rows: 20
+  max_rows: 50
+  max_group_by: 2
+  max_filters: 2
+  max_time_range_days: 366
+  command_timeout_seconds: 90
+
+runtime:
+  allow_env: PHASE5B_ALLOW_METRICFLOW_QUERY
+  legacy_allow_env: PHASE5A_ALLOW_METRICFLOW_QUERY
+  metricflow_bin_env: METRICFLOW_BIN
+  default_metricflow_bin: .venv-mf/bin/mf
+  project_dir: dbt/mercaso_metricflow_compat
+  generated_semantic_spec: dbt/mercaso_metricflow_compat/models/_generated_semantic_legacy.yml
+  timezone: UTC
+
+prohibited_free_form_filter_markers:
+  - " where "
+  - "{{ Dimension("
+  - "select "
+  - "delete "
+  - "drop "
+  - "truncate "
+
+filter_intent_markers:
+  - "只看"
+  - "仅看"
+  - "筛选"
+  - "过滤"
+  - "only"
+
+trend_markers:
+  - "趋势"
+  - "trend"
+  - "over time"
+
+group_by_aliases:
+  metric_time__day: ["按天", "每天", "每日", "by day", "daily"]
+  metric_time__week: ["按周", "每周", "by week", "weekly"]
+  metric_time__month: ["按月", "每月", "by month", "monthly"]
+  store__region: ["按地区", "按区域", "按 region", "by region"]
+  store__state: ["按州", "by state"]
+  store__country: ["按国家", "by country"]
+  item__brand: ["按品牌", "by brand"]
+  item__category: ["按品类", "按商品类别", "by category"]
+  item__subcategory: ["按子类", "按子品类", "by subcategory"]
+
+structured_filter_dimensions:
+  store__region:
+    dimension_aliases: ["地区", "区域", "region"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_stores.csv, column: region}
+    value_aliases:
+      West: ["west", "西部", "美国西部"]
+      South: ["south", "南部", "美国南部"]
+  store__state:
+    dimension_aliases: ["州", "state"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_stores.csv, column: state}
+    value_aliases:
+      CA: ["ca", "California", "加州"]
+      NV: ["nv", "Nevada", "内华达州"]
+      TX: ["tx", "Texas", "德州"]
+  store__country:
+    dimension_aliases: ["国家", "country"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_stores.csv, column: country}
+    value_aliases:
+      US: ["us", "usa", "United States", "美国"]
+  item__brand:
+    dimension_aliases: ["品牌", "brand"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_items.csv, column: brand}
+    value_aliases:
+      Coca-Cola: ["coca cola", "cocacola", "可口可乐"]
+      Generic: ["generic", "通用"]
+  item__category:
+    dimension_aliases: ["品类", "商品类别", "category"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_items.csv, column: category}
+    value_aliases:
+      Beverage: ["beverage", "饮料"]
+      Snack: ["snack", "零食"]
+  item__subcategory:
+    dimension_aliases: ["子类", "子品类", "subcategory"]
+    value_source: {type: csv, path: dbt/mercaso_dbt/seeds/master/seed_items.csv, column: subcategory}
+    value_aliases:
+      Soda: ["soda", "汽水"]
+      Water: ["water", "水"]
+      Chips: ["chips", "薯片"]

@@ -1,0 +1,165 @@
+-- =============================================================================
+-- MySQL Item / Store -> Flink CDC -> Iceberg
+--
+-- 这是一份生产 SQL 模板，不包含真实密码。render_sql.py 会从环境变量替换 ${...}。
+-- 设计重点：
+--   1) initial = 第一次快照 + 后续持续 binlog；
+--   2) item / store 使用不同 server-id 范围；
+--   3) MySQL CDC 输出的是 Changelog，而 Iceberg current 表用 UPSERT 接住变化；
+--   4) Checkpoint 负责保存 CDC 读取位点与 Flink 状态，故障恢复后继续而不是从头猜位置。
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Flink 容错：CDC Source Position 与算子 State 都进入 Checkpoint。
+-- MySQL CDC + Iceberg 要形成端到端一致性，不能只配置 Source、不配置 Checkpoint。
+-- Checkpoint 路径必须是 JobManager / TaskManager 都可访问的持久存储。
+-- -----------------------------------------------------------------------------
+SET 'execution.runtime-mode' = 'STREAMING';
+SET 'execution.checkpointing.mode' = 'EXACTLY_ONCE';
+SET 'execution.checkpointing.interval' = '60 s';
+SET 'execution.checkpointing.timeout' = '10 min';
+SET 'execution.checkpointing.min-pause' = '30 s';
+SET 'execution.checkpointing.max-concurrent-checkpoints' = '1';
+SET 'execution.checkpointing.storage' = 'filesystem';
+SET 'execution.checkpointing.dir' = '${FLINK_CHECKPOINT_STORAGE}';
+SET 'state.backend.type' = 'rocksdb';
+SET 'execution.checkpointing.incremental' = 'true';
+SET 'restart-strategy.type' = 'fixed-delay';
+SET 'restart-strategy.fixed-delay.attempts' = '3';
+SET 'restart-strategy.fixed-delay.delay' = '10 s';
+
+CREATE CATALOG polaris WITH (
+  'type' = 'iceberg',
+  'catalog-type' = 'rest',
+  'uri' = '${POLARIS_URI}',
+  'warehouse' = '${POLARIS_CATALOG_NAME}',
+  'credential' = '${POLARIS_CLIENT_ID}:${POLARIS_CLIENT_SECRET}',
+  'scope' = 'PRINCIPAL_ROLE:ALL',
+  'header.X-Iceberg-Access-Delegation' = 'vended-credentials'
+);
+
+CREATE DATABASE IF NOT EXISTS polaris.source;
+
+-- -----------------------------------------------------------------------------
+-- Item 数据源
+-- -----------------------------------------------------------------------------
+CREATE TEMPORARY TABLE mysql_item (
+  item_id STRING NOT NULL,
+  sku STRING,
+  item_name STRING,
+  brand STRING,
+  category STRING,
+  subcategory STRING,
+  price DECIMAL(18, 2),
+  status STRING,
+  updated_at TIMESTAMP(3),
+  PRIMARY KEY (item_id) NOT ENFORCED
+) WITH (
+  'connector' = 'mysql-cdc',
+  'hostname' = '${MYSQL_HOST}',
+  'port' = '${MYSQL_PORT}',
+  'username' = '${MYSQL_CDC_USER}',
+  'password' = '${MYSQL_CDC_PASSWORD}',
+  'database-name' = '${MYSQL_DATABASE}',
+  'table-name' = 'item',
+  'server-time-zone' = '${MYSQL_SERVER_TIME_ZONE}',
+  -- initial：第一次读取表快照，快照完成后无缝继续读取最新 binlog。
+  'scan.startup.mode' = 'initial',
+  -- 增量快照可以并行读取；每个并行 Reader 必须拿到唯一 server id。
+  'server-id' = '5401-5408',
+  'scan.incremental.snapshot.enabled' = 'true'
+);
+
+-- Sink Contract · Item Current State
+-- 输入：mysql_item Changelog；输出：一 item_id 一行的 current Iceberg 表。
+-- Flink SQL：PRIMARY KEY NOT ENFORCED 告诉 Planner 这是 Upsert Key；真正一致性依赖 Source Changelog + Checkpoint + Iceberg Sink Runtime。
+-- 工程边界：这里保存“当前状态”，不是 Item 历史版本表。
+CREATE TABLE IF NOT EXISTS polaris.source.item_current (
+  item_id STRING NOT NULL,
+  sku STRING,
+  item_name STRING,
+  brand STRING,
+  category STRING,
+  subcategory STRING,
+  price DECIMAL(18, 2),
+  status STRING,
+  source_updated_at TIMESTAMP(3),
+  PRIMARY KEY (item_id) NOT ENFORCED
+) WITH (
+  'format-version' = '2',
+  'write.upsert.enabled' = 'true'
+);
+
+-- -----------------------------------------------------------------------------
+-- Store 数据源
+-- -----------------------------------------------------------------------------
+CREATE TEMPORARY TABLE mysql_store (
+  store_id STRING NOT NULL,
+  store_name STRING,
+  region STRING,
+  state STRING,
+  country STRING,
+  status STRING,
+  updated_at TIMESTAMP(3),
+  PRIMARY KEY (store_id) NOT ENFORCED
+) WITH (
+  'connector' = 'mysql-cdc',
+  'hostname' = '${MYSQL_HOST}',
+  'port' = '${MYSQL_PORT}',
+  'username' = '${MYSQL_CDC_USER}',
+  'password' = '${MYSQL_CDC_PASSWORD}',
+  'database-name' = '${MYSQL_DATABASE}',
+  'table-name' = 'store',
+  'server-time-zone' = '${MYSQL_SERVER_TIME_ZONE}',
+  'scan.startup.mode' = 'initial',
+  -- 与 item 的 5401-5408 分开，避免两个并行 CDC Reader 抢同一个 server id。
+  'server-id' = '5411-5418',
+  'scan.incremental.snapshot.enabled' = 'true'
+);
+
+-- Sink Contract · Store Current State
+-- 输入：mysql_store Changelog；输出：一 store_id 一行的 current Iceberg 表。
+-- 数据语义：Store 属于 CDC State 对象，本路径直接接住 INSERT/UPDATE/DELETE 变化，不靠 API Observation 猜变化。
+-- 工程边界：真实 exactly-once 需要 Checkpoint 恢复与 Iceberg commit 的 Runtime Evidence。
+CREATE TABLE IF NOT EXISTS polaris.source.store_current (
+  store_id STRING NOT NULL,
+  store_name STRING,
+  region STRING,
+  state STRING,
+  country STRING,
+  status STRING,
+  source_updated_at TIMESTAMP(3),
+  PRIMARY KEY (store_id) NOT ENFORCED
+) WITH (
+  'format-version' = '2',
+  'write.upsert.enabled' = 'true'
+);
+
+-- 两条 INSERT 放进同一个 Statement Set，让 Flink 统一提交为一个多 Sink Job。
+BEGIN STATEMENT SET;
+
+INSERT INTO polaris.source.item_current
+SELECT
+  item_id,
+  sku,
+  item_name,
+  brand,
+  category,
+  subcategory,
+  price,
+  status,
+  updated_at AS source_updated_at
+FROM mysql_item;
+
+INSERT INTO polaris.source.store_current
+SELECT
+  store_id,
+  store_name,
+  region,
+  state,
+  country,
+  status,
+  updated_at AS source_updated_at
+FROM mysql_store;
+
+END;

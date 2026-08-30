@@ -1,0 +1,38 @@
+# 业务逻辑：Phase 7C 只把既有 Governed Tool 暴露成标准 MCP 协议面，不创建新的数据权威。
+# MCP API：stdio 用于本地开发；Streamable HTTP 用于真实 Runtime；Tool/Resource/Prompt 都保持只读。
+# 工程边界：任意 SQL、Shell、DataHub Write、Dagster Run/Backfill/Recovery、Knowledge Reindex 全部禁止。
+version: 1
+contract: commerce_phase7c_mcp_server
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+protocol:
+  revision: '2026-07-28'
+  sdk: {language: python, major_version: 2}
+  transports: {development: stdio, runtime: streamable-http}
+principles:
+  mcp_is_protocol_adapter: true
+  governed_tool_registry_is_execution_authority: true
+  canonical_tool_schema_remains_agent_contract: true
+  mcp_does_not_reimplement_business_logic: true
+  structured_output_required: true
+  runtime_evidence_preserved: true
+  mcp_may_not_upgrade_evidence: true
+capabilities:
+  tools: {enabled: true, read_only_surface: true}
+  resources: {enabled: true}
+  prompts: {enabled: true}
+forbidden:
+  arbitrary_sql: true
+  arbitrary_shell: true
+  arbitrary_python: true
+  arbitrary_file_read: true
+  arbitrary_graphql: true
+  datahub_write: true
+  dagster_launch_run: true
+  dagster_backfill: true
+  dagster_retry: true
+  dagster_recovery: true
+  knowledge_reindex: true
+evidence:
+  # Runtime Evidence 只允许由真实 MCP Acceptance 写入 .runtime；源码存在不能生成 VERIFIED。
+  output: .runtime/evidence/phase7c/mcp_runtime.json
+  success_status: COMMERCE_MCP_RUNTIME_VERIFIED

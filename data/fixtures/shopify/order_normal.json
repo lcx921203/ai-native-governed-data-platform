@@ -1,0 +1,98 @@
+{
+  "id": "gid://shopify/Order/O100001",
+  "name": "#1001",
+  "createdAt": "2026-08-01T10:00:00Z",
+  "processedAt": "2026-08-01T10:01:00Z",
+  "updatedAt": "2026-08-01T10:01:00Z",
+  "cancelledAt": null,
+  "closedAt": null,
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "UNFULFILLED",
+  "currencyCode": "USD",
+  "customer": {
+    "id": "STORE001"
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/L200001",
+        "sku": "COLA-24",
+        "title": "Cola 24 Pack",
+        "quantity": 2,
+        "currentQuantity": 2,
+        "refundableQuantity": 2,
+        "unfulfilledQuantity": 2,
+        "product": {
+          "id": "ITEM001"
+        },
+        "variant": {
+          "id": "VARIANT001"
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "40.00",
+            "currencyCode": "USD"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "80.00",
+            "currencyCode": "USD"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.00",
+            "currencyCode": "USD"
+          }
+        },
+        "discountAllocations": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/T300001",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "demo_gateway",
+      "createdAt": "2026-08-01T10:01:00Z",
+      "processedAt": "2026-08-01T10:01:00Z",
+      "test": false,
+      "errorCode": null,
+      "parentTransaction": null,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "80.00",
+          "currencyCode": "USD"
+        }
+      }
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [],
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "80.00",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "80.00",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.00",
+      "currencyCode": "USD"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.00",
+      "currencyCode": "USD"
+    }
+  }
+}

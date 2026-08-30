@@ -1,0 +1,402 @@
+{
+  "notice": "Illustrative contract samples only. RUNTIME_VERIFIED labels below describe fake test evidence and are not real production observations.",
+  "cases": {
+    "data_contract_manual": {
+      "incident": {
+        "status": "COMPLETE",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "freshness_overdue": true,
+            "exact_partition_complete": false,
+            "missing_mart_asset_keys": [
+              "orders",
+              "order_items"
+            ],
+            "run_ids": [
+              "run-failed-1"
+            ],
+            "failed_run_ids": [
+              "run-failed-1"
+            ],
+            "successful_run_ids": [],
+            "latest_failed_run": {
+              "run_id": "run-failed-1",
+              "status": "FAILURE",
+              "failure_class": "data_contract",
+              "failure_source": "dbt_artifact",
+              "failure_component": "dbt:build",
+              "failure_reason": "dbt_data_test_failed",
+              "failure_stage": "dbt:build"
+            },
+            "recovery": {
+              "action": "alert_manual",
+              "reason_code": "data_contract_failure",
+              "explanation": "Illustrative Phase 3C policy snapshot.",
+              "observed_auto_replay_attempts": 0,
+              "active_run_ids": [],
+              "active_recovery_run_ids": []
+            },
+            "infrastructure_healthy": true
+          }
+        ],
+        "warnings": [],
+        "validation": "ILLUSTRATIVE_STATIC_SAMPLE_ONLY"
+      },
+      "response_plan": {
+        "status": "HUMAN_ACTION_REQUIRED",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "status": "HUMAN_ACTION_REQUIRED",
+            "policy_action": "alert_manual",
+            "policy_reason": "data_contract_failure",
+            "human_approval_required": true,
+            "steps": [
+              {
+                "sequence": 1,
+                "action": "INVESTIGATE_DATA_CONTRACT",
+                "authority": "HUMAN_DATA_OPERATOR",
+                "approval_boundary": "HUMAN_REQUIRED",
+                "rationale": "Inspect the structured dbt/data-contract failure, correct or quarantine the invalid data, and re-run validation before backfill.",
+                "executable_by_agent": false
+              },
+              {
+                "sequence": 2,
+                "action": "APPROVE_MANUAL_BACKFILL",
+                "authority": "HUMAN_DATA_OPERATOR",
+                "approval_boundary": "HUMAN_REQUIRED",
+                "rationale": "Only after remediation/validation may a human explicitly authorize manual backfill; the Agent does not launch it.",
+                "executable_by_agent": false
+              },
+              {
+                "sequence": 3,
+                "action": "VERIFY_EXACT_PARTITION_COMPLETION",
+                "authority": "HUMAN_DATA_OPERATOR",
+                "approval_boundary": "HUMAN_REQUIRED",
+                "rationale": "Close the incident only after all required consumer marts are complete for the exact partition.",
+                "executable_by_agent": false
+              }
+            ]
+          }
+        ],
+        "warnings": [],
+        "validation": "ADVISORY_RESPONSE_PLAN_BUILT_NO_AGENT_EXECUTION_AUTHORITY"
+      },
+      "response_envelope": {
+        "question": "现在应该怎么处理？",
+        "intent": "INCIDENT_RESPONSE_PLANNING",
+        "status": "PARTIAL",
+        "subject": {
+          "kind": "metric",
+          "id": "gross_sales"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "INCIDENT_RESPONSE_PLAN",
+            "text": "Incident response plan for partition 2026-08-05: status=HUMAN_ACTION_REQUIRED; phase3c_policy_action=alert_manual; policy_reason=data_contract_failure; steps=INVESTIGATE_DATA_CONTRACT, APPROVE_MANUAL_BACKFILL, VERIFY_EXACT_PARTITION_COMPLETION.",
+            "evidence": "RUNTIME_VERIFIED",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml",
+              "agent/incident_response/planner.py",
+              "orchestration/dagster/commerce_dagster/recovery_policy.py"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "ACTION_AUTHORITY",
+            "text": "Action authority for partition 2026-08-05: authorities=HUMAN_DATA_OPERATOR; approval_boundaries=HUMAN_REQUIRED; agent_execution_allowed=false.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C03",
+            "kind": "LIMITATION",
+            "text": "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary."
+        ],
+        "sources": [],
+        "tool_trace": [],
+        "evidence_levels": [
+          "DEFERRED",
+          "RUNTIME_VERIFIED",
+          "STATIC_CONTRACT"
+        ]
+      }
+    },
+    "transient_auto_replay_delegated": {
+      "incident": {
+        "status": "COMPLETE",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "freshness_overdue": true,
+            "exact_partition_complete": false,
+            "missing_mart_asset_keys": [
+              "orders",
+              "order_items"
+            ],
+            "run_ids": [
+              "run-failed-1"
+            ],
+            "failed_run_ids": [
+              "run-failed-1"
+            ],
+            "successful_run_ids": [],
+            "latest_failed_run": {
+              "run_id": "run-failed-1",
+              "status": "FAILURE",
+              "failure_class": "transient_runtime",
+              "failure_source": "runtime",
+              "failure_component": "spark-thrift",
+              "failure_reason": "command_timeout",
+              "failure_stage": "lakehouse/jobs/normalize_shopify_orders.py"
+            },
+            "recovery": {
+              "action": "auto_replay",
+              "reason_code": "transient_failure_after_runtime_recovered",
+              "explanation": "Illustrative Phase 3C policy snapshot.",
+              "observed_auto_replay_attempts": 0,
+              "active_run_ids": [],
+              "active_recovery_run_ids": []
+            },
+            "infrastructure_healthy": true
+          }
+        ],
+        "warnings": [],
+        "validation": "ILLUSTRATIVE_STATIC_SAMPLE_ONLY"
+      },
+      "response_plan": {
+        "status": "DELEGATED",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "status": "DELEGATED",
+            "policy_action": "auto_replay",
+            "policy_reason": "transient_failure_after_runtime_recovered",
+            "human_approval_required": false,
+            "steps": [
+              {
+                "sequence": 1,
+                "action": "DELEGATE_AUTO_REPLAY",
+                "authority": "DAGSTER_RECOVERY_SENSOR",
+                "approval_boundary": "AUTOMATION_POLICY_OWNED",
+                "rationale": "Phase 3C policy permits one bounded replay; the existing Dagster recovery sensor owns execution, not the Agent.",
+                "executable_by_agent": false
+              },
+              {
+                "sequence": 2,
+                "action": "VERIFY_EXACT_PARTITION_COMPLETION",
+                "authority": "DAGSTER_RECOVERY_SENSOR",
+                "approval_boundary": "AUTOMATION_POLICY_OWNED",
+                "rationale": "After replay, require exact consumer partition completion before closing the incident.",
+                "executable_by_agent": false
+              }
+            ]
+          }
+        ],
+        "warnings": [],
+        "validation": "ADVISORY_RESPONSE_PLAN_BUILT_NO_AGENT_EXECUTION_AUTHORITY"
+      },
+      "response_envelope": {
+        "question": "现在应该怎么处理？",
+        "intent": "INCIDENT_RESPONSE_PLANNING",
+        "status": "PARTIAL",
+        "subject": {
+          "kind": "metric",
+          "id": "gross_sales"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "INCIDENT_RESPONSE_PLAN",
+            "text": "Incident response plan for partition 2026-08-05: status=DELEGATED; phase3c_policy_action=auto_replay; policy_reason=transient_failure_after_runtime_recovered; steps=DELEGATE_AUTO_REPLAY, VERIFY_EXACT_PARTITION_COMPLETION.",
+            "evidence": "RUNTIME_VERIFIED",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml",
+              "agent/incident_response/planner.py",
+              "orchestration/dagster/commerce_dagster/recovery_policy.py"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "ACTION_AUTHORITY",
+            "text": "Action authority for partition 2026-08-05: authorities=DAGSTER_RECOVERY_SENSOR; approval_boundaries=AUTOMATION_POLICY_OWNED; agent_execution_allowed=false.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C03",
+            "kind": "LIMITATION",
+            "text": "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary."
+        ],
+        "sources": [],
+        "tool_trace": [],
+        "evidence_levels": [
+          "DEFERRED",
+          "RUNTIME_VERIFIED",
+          "STATIC_CONTRACT"
+        ]
+      }
+    },
+    "active_recovery_wait": {
+      "incident": {
+        "status": "COMPLETE",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "freshness_overdue": true,
+            "exact_partition_complete": false,
+            "missing_mart_asset_keys": [
+              "orders",
+              "order_items"
+            ],
+            "run_ids": [
+              "run-failed-1",
+              "recovery-run-1"
+            ],
+            "failed_run_ids": [
+              "run-failed-1"
+            ],
+            "successful_run_ids": [],
+            "latest_failed_run": {
+              "run_id": "run-failed-1",
+              "status": "FAILURE",
+              "failure_class": "transient_runtime",
+              "failure_source": "runtime",
+              "failure_component": "spark-thrift",
+              "failure_reason": "command_timeout",
+              "failure_stage": "lakehouse/jobs/normalize_shopify_orders.py"
+            },
+            "recovery": {
+              "action": "wait",
+              "reason_code": "active_run_owns_partition",
+              "explanation": "Illustrative Phase 3C policy snapshot.",
+              "observed_auto_replay_attempts": 1,
+              "active_run_ids": [
+                "recovery-run-1"
+              ],
+              "active_recovery_run_ids": [
+                "recovery-run-1"
+              ]
+            },
+            "infrastructure_healthy": true
+          }
+        ],
+        "warnings": [],
+        "validation": "ILLUSTRATIVE_STATIC_SAMPLE_ONLY"
+      },
+      "response_plan": {
+        "status": "WAITING",
+        "evidence": "RUNTIME_VERIFIED",
+        "partitions": [
+          {
+            "partition_key": "2026-08-05",
+            "status": "WAITING",
+            "policy_action": "wait",
+            "policy_reason": "active_run_owns_partition",
+            "human_approval_required": false,
+            "steps": [
+              {
+                "sequence": 1,
+                "action": "WAIT_FOR_ACTIVE_RECOVERY",
+                "authority": "DAGSTER_RECOVERY_SENSOR",
+                "approval_boundary": "AUTOMATION_POLICY_OWNED",
+                "rationale": "An active recovery run already owns this partition; do not create a duplicate replay.",
+                "executable_by_agent": false
+              },
+              {
+                "sequence": 2,
+                "action": "VERIFY_EXACT_PARTITION_COMPLETION",
+                "authority": "DAGSTER_RECOVERY_SENSOR",
+                "approval_boundary": "AUTOMATION_POLICY_OWNED",
+                "rationale": "Re-evaluate exact-partition completeness after the existing recovery run finishes.",
+                "executable_by_agent": false
+              }
+            ]
+          }
+        ],
+        "warnings": [],
+        "validation": "ADVISORY_RESPONSE_PLAN_BUILT_NO_AGENT_EXECUTION_AUTHORITY"
+      },
+      "response_envelope": {
+        "question": "现在应该怎么处理？",
+        "intent": "INCIDENT_RESPONSE_PLANNING",
+        "status": "PARTIAL",
+        "subject": {
+          "kind": "metric",
+          "id": "gross_sales"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "INCIDENT_RESPONSE_PLAN",
+            "text": "Incident response plan for partition 2026-08-05: status=WAITING; phase3c_policy_action=wait; policy_reason=active_run_owns_partition; steps=WAIT_FOR_ACTIVE_RECOVERY, VERIFY_EXACT_PARTITION_COMPLETION.",
+            "evidence": "RUNTIME_VERIFIED",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml",
+              "agent/incident_response/planner.py",
+              "orchestration/dagster/commerce_dagster/recovery_policy.py"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "ACTION_AUTHORITY",
+            "text": "Action authority for partition 2026-08-05: authorities=DAGSTER_RECOVERY_SENSOR; approval_boundaries=AUTOMATION_POLICY_OWNED; agent_execution_allowed=false.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "agent/contracts/incident_response_policy.yml"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C03",
+            "kind": "LIMITATION",
+            "text": "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "The Agent has no production recovery/backfill write authority in Phase 6E; AUTO_REPLAY is delegated to the existing Dagster Recovery Sensor and manual actions stop at a human approval boundary."
+        ],
+        "sources": [],
+        "tool_trace": [],
+        "evidence_levels": [
+          "DEFERRED",
+          "RUNTIME_VERIFIED",
+          "STATIC_CONTRACT"
+        ]
+      }
+    }
+  }
+}

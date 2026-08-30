@@ -1,0 +1,43 @@
+version: 1
+contract: commerce_governed_anomaly_detection
+mode: comparative_median_baseline
+
+principles:
+  governed_metrics_only: true
+  metricflow_only: true
+  arbitrary_sql: false
+  current_and_baseline_require_runtime_verified_evidence: true
+  baseline_windows_are_equal_length_and_non_overlapping: true
+  anomaly_thresholds_are_operational_policy_not_metric_formula: true
+  operational_health_required_before_business_driver_attribution: true
+  driver_dimensions_are_candidates_until_metricflow_explain_accepts_them: true
+  no_business_driver_claim_from_static_contracts: true
+
+baseline:
+  method: median_of_previous_equal_periods
+  periods: 7
+  minimum_periods: 7
+  require_odd_period_count: true
+
+thresholds:
+  default:
+    warning_relative_percent: 20
+    critical_relative_percent: 35
+
+limits:
+  max_metrics: 1
+  max_window_days: 31
+  max_driver_dimensions: 3
+
+# Priority is analytical policy only. MetricFlow still decides whether a dimension is
+# semantically reachable from the selected metric at runtime through Explain.
+driver_dimension_priority:
+  - store__region
+  - item__brand
+  - item__category
+  - store__state
+  - item__subcategory
+
+runtime:
+  allow_env: PHASE6A_ALLOW_ANOMALY_QUERY
+  requires_metricflow_gate: PHASE5B_ALLOW_METRICFLOW_QUERY

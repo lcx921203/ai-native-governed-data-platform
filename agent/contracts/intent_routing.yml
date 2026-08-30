@@ -1,0 +1,82 @@
+# 业务逻辑：先让结构化权威问题命中 MetricFlow / DataHub / Dagster，再让 Why / Design / SOP 类问题进入 Knowledge RAG。
+# Knowledge Intent 边界：裸“为什么”不是 RAG 充分条件；如果问题同时绑定 Dataset Runtime 或 Metric Definition，结构化权威优先。
+version: 3
+contract: commerce_agent_intent_routing
+mode: deterministic_pre_llm
+limits:
+  max_tool_calls: 3
+  lineage_max_hops: 2
+  knowledge_fetch_top_n: 2
+principles:
+  arbitrary_sql: false
+  unknown_target_uses_governed_search: true
+  fuzzy_target_auto_select: false
+  metric_formula_not_owned_here: true
+  runtime_fact_requires_runtime_evidence: true
+  structured_authority_precedes_rag: true
+  knowledge_intent_requires_explicit_marker: true
+
+metric_aliases:
+  order_count: [order_count, order count, 订单数, 订单数量]
+  gross_sales: [gross_sales, gross sales, 毛销售额, 销售毛额]
+  discount_amount: [discount_amount, discount amount, 折扣金额]
+  sales_before_reversal: [sales_before_reversal, sales before reversal, 冲销前销售额]
+  collected_payment_amount: [collected_payment_amount, collected payment amount, 实收金额, 收款金额]
+  refund_processed_amount: [refund_processed_amount, refund processed amount, 退款处理金额]
+  sales_reversal_amount: [sales_reversal_amount, sales reversal amount, 销售冲销金额]
+  shipment_count: [shipment_count, shipment count, 发货数, 发运数]
+  delivery_count: [delivery_count, delivery count, 送达数, 妥投数]
+  average_time_to_ship_minutes: [average_time_to_ship_minutes, average time to ship, 平均发货时长]
+  average_delivery_duration_minutes: [average_delivery_duration_minutes, average delivery duration, 平均配送时长]
+  average_order_value: [average_order_value, average order value, AOV, 客单价]
+  activity_net_sales: [activity_net_sales, activity net sales, 活动净销售额, 净销售额]
+  order_cohort_net_sales: [order_cohort_net_sales, order cohort net sales, 订单队列净销售额, 订单归因净销售额]
+  order_to_paid_24h_conversion_rate: [order_to_paid_24h_conversion_rate, order to paid 24h conversion rate, 24小时支付转化率, 下单到支付转化率]
+  order_to_fulfillment_3d_conversion_rate: [order_to_fulfillment_3d_conversion_rate, order to fulfillment 3d conversion rate, 3天履约转化率, 下单到履约转化率]
+  order_to_delivered_7d_conversion_rate: [order_to_delivered_7d_conversion_rate, order to delivered 7d conversion rate, 7天送达转化率, 下单到送达转化率]
+
+entity_aliases:
+  store: [store, 门店, 店铺实体, 门店实体]
+  item: [item, 商品实体, 商品]
+  order: [order entity, 订单实体]
+  order_item: [order item entity, 订单明细实体]
+  payment_transaction: [payment transaction entity, 支付交易实体]
+  refund: [refund entity, 退款实体]
+  refund_item: [refund item entity, 退款明细实体]
+  fulfillment: [fulfillment entity, 履约实体]
+  fulfillment_item: [fulfillment item entity, 履约明细实体]
+  fulfillment_event: [fulfillment event entity, 履约事件实体]
+
+dataset_aliases:
+  stores: [stores, 门店表]
+  items: [items, 商品表]
+  orders: [orders, order table, 订单表]
+  order_lifecycle_snapshot: [order_lifecycle_snapshot, order lifecycle snapshot, 订单生命周期累计快照]
+  order_items: [order_items, order items table, 订单明细表]
+  payment_transactions: [payment_transactions, 支付交易表]
+  refunds: [refunds, 退款表]
+  refund_items: [refund_items, 退款明细表]
+  fulfillments: [fulfillments, 履约表]
+  fulfillment_items: [fulfillment_items, 履约明细表]
+  fulfillment_events: [fulfillment_events, 履约事件表]
+  time_spine_daily: [time_spine_daily, 时间脊柱表]
+
+dimension_aliases:
+  store__region: [地区, 区域, region]
+  store__state: [州, state]
+  store__country: [国家, country]
+  item__brand: [品牌, brand]
+  item__category: [品类, 商品类别, category]
+  item__subcategory: [子品类, 子类, subcategory]
+
+markers:
+  metric_definition: [什么意思, 定义, 口径, 怎么算, 计算逻辑, definition, formula]
+  entity_context: [实体, entity]
+  dataset_governance: [业务域, 谁负责, owner, ownership, domain, 治理]
+  lineage: [血缘, 上游, 下游, lineage, upstream, downstream]
+  runtime: [没更新, 失败, run, runtime, 昨天, recovery, 恢复, 运行状态, 任务状态]
+  dimension_values: [有哪些, 可选值, 可以筛, 能筛, values, dimension values]
+  metric_query: [多少, 是多少, 查询, 看, 趋势, 按天, 按周, 按月, how much, trend]
+  knowledge_runbook: [runbook, SOP, 运行手册, 操作手册, 故障手册, 排查步骤, 怎么排查, 如何排查, 怎么处理, 如何处理]
+  knowledge_design: [为什么这样设计, 设计原因, 设计取舍, 架构原因, design rationale, design decision, why designed]
+  knowledge_glossary: [知识库里的术语, 文档里的术语, glossary]

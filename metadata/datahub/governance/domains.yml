@@ -1,0 +1,40 @@
+version: 1
+contract: commerce_domain_model
+root:
+  id: commerce
+  name: Commerce
+  description: 'Commerce analytics domain for the Shopify-centered modern data platform.
+    It is the parent governance domain; consumer-facing datasets are assigned to one
+    leaf domain when a more specific business process exists.
+
+    '
+  owners:
+    business: commerce-analytics
+    technical: data-platform
+subdomains:
+- id: commerce-order-sales
+  parent: commerce
+  name: Order & Sales
+  description: Orders, order items, sales amounts, discounts, and order-cohort analysis.
+- id: commerce-payments
+  parent: commerce
+  name: Payments
+  description: Payment authorization, collection, refund transactions, and payment
+    status analysis.
+- id: commerce-refunds
+  parent: commerce
+  name: Refunds
+  description: Refund events, refunded items, sales reversals, and refund analysis.
+- id: commerce-fulfillment
+  parent: commerce
+  name: Fulfillment
+  description: Fulfillment, shipment, delivery, and fulfillment-event analysis.
+- id: commerce-reference
+  parent: commerce
+  name: Commerce Reference
+  description: Shared reference entities such as Stores and Items used across commerce
+    processes.
+principles:
+  one_domain_per_asset: true
+  prefer_leaf_domain_for_consumer_assets: true
+  use_glossary_not_domain_for_cross_cutting_concepts: true

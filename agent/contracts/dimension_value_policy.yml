@@ -1,0 +1,35 @@
+version: 1
+contract: commerce_governed_dimension_value_discovery
+mode: metricflow_dimension_values
+
+principles:
+  governed_metrics_only: true
+  governed_dimensions_only: true
+  metric_context_required: true
+  runtime_values_preferred: true
+  static_seed_fallback_allowed: true
+  static_fallback_must_be_labeled: true
+  no_implicit_cross_metric_value_universe: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+
+limits:
+  max_metrics: 3
+  default_values: 25
+  max_values: 50
+  max_time_range_days: 366
+  command_timeout_seconds: 90
+  max_value_length: 256
+
+runtime:
+  allow_env: PHASE5C_ALLOW_METRICFLOW_DISCOVERY
+  metricflow_bin_env: METRICFLOW_BIN
+  default_metricflow_bin: .venv-mf/bin/mf
+  project_dir: dbt/mercaso_metricflow_compat
+  generated_semantic_spec: dbt/mercaso_metricflow_compat/models/_generated_semantic_legacy.yml
+  timezone: UTC
+
+sources:
+  governed_metrics: metadata/datahub/governance/metric_registry.yml
+  governed_dimensions: agent/contracts/semantic_query_policy.yml
+  semantic_model: dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml

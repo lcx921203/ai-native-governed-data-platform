@@ -1,0 +1,17 @@
+source:
+  type: iceberg
+  config:
+    env: DEV
+    platform_instance: commerce_polaris
+    catalog:
+      commerce_polaris:
+        type: rest
+        uri: http://localhost:8181
+        s3.endpoint: http://localhost:9000
+        s3.access-key-id: ${AWS_ACCESS_KEY_ID}
+        s3.secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+        s3.region: ${AWS_REGION}
+sink:
+  type: datahub-rest
+  config:
+    server: http://localhost:8080

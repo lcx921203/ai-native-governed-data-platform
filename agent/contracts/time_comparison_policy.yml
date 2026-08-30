@@ -1,0 +1,37 @@
+version: 1
+contract: commerce_governed_time_comparison
+mode: bounded_equal_window_comparison
+principles:
+  comparison_is_delta_over_frozen_session_time: true
+  reparse_original_question: false
+  equal_length_previous_period_required: true
+  year_over_year_uses_same_calendar_window: true
+  temporal_display_grain_is_not_used_for_growth_math: true
+  non_time_group_by_requires_clarification: true
+  derived_change_requires_both_windows_runtime_verified: true
+  zero_comparison_value_never_invents_growth_rate: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+limits:
+  max_comparison_window_days: 366
+runtime:
+  allow_env: PHASE5G_ALLOW_COMPARATIVE_QUERY
+  semantic_query_gate: PHASE5B_ALLOW_METRICFLOW_QUERY
+markers:
+  previous_period:
+    - 环比
+    - 和前一期比
+    - 和上一期比
+    - 比上一期
+    - previous period
+  year_over_year:
+    - 同比
+    - 去年同期
+    - year over year
+    - yoy
+  change_request:
+    - 增长了多少
+    - 变化了多少
+    - 差多少
+    - change
+    - growth

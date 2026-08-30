@@ -1,0 +1,19 @@
+# Nested Pagination Query · Refund.transactions
+# 输入：Refund Node ID + first + after；输出：Transaction ID nodes + pageInfo。
+# 数据语义：这里先保存 Refund 与 Transaction 的关系，Transaction 完整业务字段来自 Order.transactions Structured Source。
+# 工程边界：每个 Refund Connection 拥有独立 cursor，不能沿用 Order 或其他 Refund 的游标。
+
+query RefundTransactionsPage(
+  $id: ID!
+  $first: Int!
+  $after: String
+) {
+  node(id: $id) {
+    ... on Refund {
+      transactions(first: $first, after: $after) {
+        nodes { id }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}

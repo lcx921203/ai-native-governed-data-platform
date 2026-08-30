@@ -1,0 +1,19 @@
+mercaso_dbt:
+  target: dev
+
+  outputs:
+    dev:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_THRIFT_HOST', 'localhost') }}"
+      port: "{{ env_var('SPARK_THRIFT_PORT', '10000') | int }}"
+      user: dbt
+
+      # dbt-spark 使用 schema 作为默认命名空间，不设置 database。
+      schema: analytics
+      threads: 4
+
+      # Spark Thrift 刚启动时可能需要等待；按 dbt-spark 官方本地示例增加重试。
+      connect_retries: 5
+      connect_timeout: 60
+      retry_all: true

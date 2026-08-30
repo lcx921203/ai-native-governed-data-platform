@@ -1,0 +1,45 @@
+# 业务逻辑：Knowledge Retrieval 固定采用“Dense Recall → Rerank”的两阶段检索。
+# API 边界：Agent 只能传 query / scope / domain / authority / top_k，不能传任意 Qdrant filter、collection 或模型。
+version: 2
+contract: commerce_knowledge_retrieval
+mode: governed_two_stage_retrieval
+principles:
+  knowledge_manifest_is_source_authority: true
+  vector_index_is_generated_runtime_artifact: true
+  exact_scope_filter_before_retrieval: true
+  arbitrary_file_path_from_agent: false
+  arbitrary_qdrant_filter_from_agent: false
+  arbitrary_collection_from_agent: false
+  structured_authority_override: false
+  runtime_fact_inference: false
+  retrieved_knowledge_is_not_runtime_observation: true
+
+retrieval:
+  # Qdrant Dense Retrieval 先追求召回，返回较大的候选集合。
+  dense:
+    provider: qdrant
+    candidate_top_k: 20
+    max_candidate_top_k: 50
+    minimum_score: 0.35
+  # Cohere Rerank 再对候选做精排；失败时显式降级为 DENSE_FALLBACK。
+  reranking:
+    enabled: true
+    provider: cohere
+    model_env: KNOWLEDGE_RERANK_MODEL
+    default_model: rerank-v4.0-pro
+    final_top_k: 5
+    max_final_top_k: 10
+    failure_mode: DENSE_FALLBACK
+
+# Runtime Gate：真实检索必须先有真实索引 evidence，源码存在不能代替运行证据。
+runtime:
+  allow_env: PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL
+  reranker_gate: PHASE7B_ALLOW_KNOWLEDGE_RERANK
+  index_evidence: .runtime/evidence/phase7b/knowledge_index.json
+  required_index_status: KNOWLEDGE_INDEX_RUNTIME_VERIFIED
+
+forbidden:
+  arbitrary_rerank_model_from_agent: true
+  arbitrary_candidate_documents: true
+  arbitrary_external_document: true
+  model_supplied_rerank_score: true

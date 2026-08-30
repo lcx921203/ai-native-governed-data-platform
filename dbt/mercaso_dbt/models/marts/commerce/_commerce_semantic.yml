@@ -1,0 +1,584 @@
+# Commerce Semantic Contract
+# 业务逻辑：把 Mart Grain 映射成 Entity / Dimension / Measure / Business Time，使 Join Path 可治理。
+# 输入：dbt Marts；输出：MetricFlow Semantic Graph。
+# MetricFlow API：entity.type=primary/foreign 决定关系方向；agg_time_dimension 指定该模型默认聚合时间。
+# Join Safety：语义图允许的路径不等于所有路径都安全，跨 1:N Grain 的指标必须由专门 metric/model 去重或拒绝。
+# 工程边界：Semantic YAML 定义存在不等于 MetricFlow Runtime 已验证。
+#
+# 注意：
+# 这是当前学习阶段采用的新版 Semantic YAML 结构。
+# dbt Semantic Layer / MetricFlow 变化较快，真正运行前先确认 dbt Core、
+# dbt-spark、dbt-metricflow 版本兼容性。
+
+version: 2
+
+models:
+
+  - name: stores
+
+    semantic_model:
+      enabled: true
+
+    columns:
+      - name: store_id
+        entity:
+          name: store
+          type: primary
+
+      - name: store_name
+        dimension:
+          type: categorical
+
+      - name: region
+        dimension:
+          type: categorical
+
+      - name: state
+        dimension:
+          type: categorical
+
+      - name: country
+        dimension:
+          type: categorical
+
+
+  - name: items
+
+    semantic_model:
+      enabled: true
+
+    columns:
+      - name: item_id
+        entity:
+          name: item
+          type: primary
+
+      - name: brand
+        dimension:
+          type: categorical
+
+      - name: category
+        dimension:
+          type: categorical
+
+      - name: subcategory
+        dimension:
+          type: categorical
+
+
+  - name: orders
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: order_time
+
+    columns:
+      - name: order_id
+        entity:
+          name: order
+          type: primary
+
+      - name: store_id
+        entity:
+          name: store
+          type: foreign
+
+      - name: order_time
+        granularity: day
+        dimension:
+          type: time
+
+      - name: financial_status
+        dimension:
+          type: categorical
+
+      - name: fulfillment_status
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: order_count
+        label: Order Count
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+
+  - name: order_lifecycle_snapshot
+
+    semantic_model:
+      enabled: true
+
+    # Lifecycle Conversion 统一以订单创建时间作为 Base Event 默认时间；
+    # 每个后续事件 Metric 再通过 agg_time_dimension 切换到自己的里程碑时间。
+    agg_time_dimension: order_time
+
+    columns:
+      - name: order_id
+        entity:
+          name: order
+          type: primary
+
+      - name: store_id
+        entity:
+          name: store
+          type: foreign
+
+      - name: order_time
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: first_paid_at
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: first_fulfillment_at
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: first_in_transit_at
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: first_delivered_at
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: financial_status
+        dimension:
+          type: categorical
+
+      - name: fulfillment_status
+        dimension:
+          type: categorical
+
+    metrics:
+      # Base Event：一个 Order 在 order_time 进入生命周期。
+      - name: lifecycle_order_count
+        label: Lifecycle Order Count
+        description: >
+          订单生命周期分析的 Base Event 数量；Grain 为一个 Order 一行，
+          Business Time 使用 order_time。
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+      # Conversion Event：首次成功支付。paid_flag 已由累计快照按 Order Grain 收敛。
+      - name: paid_order_count
+        label: Paid Order Count
+        description: >
+          已观察到首次成功 CAPTURE / SALE 的订单数；Business Time 使用 first_paid_at。
+        type: simple
+        agg: sum
+        expr: paid_flag
+        agg_time_dimension: first_paid_at
+
+      # Conversion Event：首次进入 Fulfillment。
+      - name: fulfillment_started_order_count
+        label: Fulfillment Started Order Count
+        description: >
+          已观察到首次 Fulfillment 的订单数；Business Time 使用 first_fulfillment_at。
+        type: simple
+        agg: sum
+        expr: fulfillment_started_flag
+        agg_time_dimension: first_fulfillment_at
+
+      # Conversion Event：首次进入运输状态。
+      - name: in_transit_order_count
+        label: In Transit Order Count
+        description: >
+          已观察到首次 IN_TRANSIT 里程碑的订单数；Business Time 使用 first_in_transit_at。
+        type: simple
+        agg: sum
+        expr: shipped_flag
+        agg_time_dimension: first_in_transit_at
+
+      # Conversion Event：首次送达。
+      - name: delivered_order_count
+        label: Delivered Order Count
+        description: >
+          已观察到首次 DELIVERED 里程碑的订单数；Business Time 使用 first_delivered_at。
+        type: simple
+        agg: sum
+        expr: delivered_flag
+        agg_time_dimension: first_delivered_at
+
+
+  - name: order_items
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: order_time
+
+    columns:
+      - name: line_item_id
+        entity:
+          name: order_item
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: item_id
+        entity:
+          name: item
+          type: foreign
+
+      - name: order_time
+        granularity: day
+        dimension:
+          type: time
+
+      - name: currency_code
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: gross_sales
+        type: simple
+        agg: sum
+        expr: gross_sales_amount
+
+      - name: discount_amount
+        type: simple
+        agg: sum
+        expr: discount_amount
+
+      - name: sales_before_reversal
+        type: simple
+        agg: sum
+        expr: sales_before_reversal_amount
+        fill_nulls_with: 0
+        join_to_timespine: true
+
+      - name: units_ordered
+        type: simple
+        agg: sum
+        expr: ordered_quantity
+
+      - name: orders_with_item
+        description: >
+          包含当前商品维度的去重订单数。
+          与全局 order_count 是不同业务语义。
+        type: simple
+        agg: count_distinct
+        expr: order_id
+
+
+  - name: payment_transactions
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: transaction_processed_at
+
+    columns:
+      - name: payment_transaction_id
+        entity:
+          name: payment_transaction
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: transaction_created_at
+        granularity: day
+        dimension:
+          type: time
+
+      - name: transaction_processed_at
+        granularity: day
+        dimension:
+          type: time
+
+      - name: order_time
+        granularity: day
+        dimension:
+          type: time
+
+      - name: gateway
+        dimension:
+          type: categorical
+
+      - name: transaction_kind
+        dimension:
+          type: categorical
+
+      - name: transaction_status
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: payment_transaction_count
+        type: simple
+        agg: count_distinct
+        expr: payment_transaction_id
+        agg_time_dimension: transaction_created_at
+
+      - name: authorized_payment_amount
+        type: simple
+        agg: sum
+        expr: authorized_amount
+
+      - name: collected_payment_amount
+        type: simple
+        agg: sum
+        expr: collected_amount
+
+      - name: successful_payment_refund_amount
+        type: simple
+        agg: sum
+        expr: successful_refund_amount
+
+      - name: collected_payment_by_order_cohort
+        type: simple
+        agg: sum
+        expr: collected_amount
+        agg_time_dimension: order_time
+
+
+  - name: refunds
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: refund_time
+
+    columns:
+      - name: refund_id
+        entity:
+          name: refund
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: refund_time
+        granularity: day
+        dimension:
+          type: time
+
+    metrics:
+      - name: refund_count
+        type: simple
+        agg: count_distinct
+        expr: refund_id
+
+      - name: refund_processed_amount
+        type: simple
+        agg: sum
+        expr: total_refunded_amount
+
+
+  - name: refund_items
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: refund_time
+
+    columns:
+      - name: refund_line_item_id
+        entity:
+          name: refund_item
+          type: primary
+
+      # 为减少 Semantic Graph 多路径，这里只暴露分析需要的关系。
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: item_id
+        entity:
+          name: item
+          type: foreign
+
+      - name: refund_time
+        granularity: day
+        dimension:
+          type: time
+
+      - name: order_time
+        granularity: day
+        dimension:
+          type: time
+
+    metrics:
+      - name: sales_reversal_amount
+        type: simple
+        agg: sum
+        expr: sales_reversal_amount
+        fill_nulls_with: 0
+        join_to_timespine: true
+
+      - name: units_refunded
+        type: simple
+        agg: sum
+        expr: refund_quantity
+
+      - name: sales_reversal_by_order_cohort
+        type: simple
+        agg: sum
+        expr: sales_reversal_amount
+        agg_time_dimension: order_time
+        fill_nulls_with: 0
+        join_to_timespine: true
+
+
+  - name: fulfillments
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: fulfillment_created_at
+
+    columns:
+      - name: fulfillment_id
+        entity:
+          name: fulfillment
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: fulfillment_created_at
+        granularity: day
+        dimension:
+          type: time
+
+      - name: order_time
+        granularity: day
+        dimension:
+          type: time
+
+      - name: in_transit_at
+        granularity: day
+        dimension:
+          type: time
+
+      - name: delivered_at
+        granularity: day
+        dimension:
+          type: time
+
+    metrics:
+      - name: shipment_count
+        type: simple
+        agg: sum
+        expr: shipped_flag
+        agg_time_dimension: in_transit_at
+
+      - name: delivery_count
+        type: simple
+        agg: sum
+        expr: delivered_flag
+        agg_time_dimension: delivered_at
+
+      - name: average_time_to_ship_minutes
+        type: simple
+        agg: average
+        expr: time_to_ship_minutes
+        agg_time_dimension: order_time
+
+      - name: average_delivery_duration_minutes
+        type: simple
+        agg: average
+        expr: delivery_duration_minutes
+        agg_time_dimension: in_transit_at
+
+
+  - name: fulfillment_items
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: in_transit_at
+
+    columns:
+      - name: fulfillment_line_item_id
+        entity:
+          name: fulfillment_item
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: item_id
+        entity:
+          name: item
+          type: foreign
+
+      - name: in_transit_at
+        granularity: day
+        dimension:
+          type: time
+
+      - name: delivered_at
+        granularity: day
+        dimension:
+          type: time
+
+    metrics:
+      - name: units_shipped
+        type: simple
+        agg: sum
+        expr: shipped_quantity
+        agg_time_dimension: in_transit_at
+
+      - name: units_delivered
+        type: simple
+        agg: sum
+        expr: delivered_quantity
+        agg_time_dimension: delivered_at
+
+
+  - name: fulfillment_events
+
+    semantic_model:
+      enabled: true
+
+    agg_time_dimension: event_time
+
+    columns:
+      - name: fulfillment_event_id
+        entity:
+          name: fulfillment_event
+          type: primary
+
+      - name: order_id
+        entity:
+          name: order
+          type: foreign
+
+      - name: event_time
+        granularity: hour
+        dimension:
+          type: time
+
+      - name: event_status
+        dimension:
+          type: categorical
+
+    metrics:
+      - name: fulfillment_event_count
+        type: simple
+        agg: count
+        expr: 1

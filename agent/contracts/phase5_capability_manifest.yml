@@ -1,0 +1,110 @@
+# Chapter 06 · 受治理分析能力清单。
+# 业务逻辑：Phase 5A–5H 从单指标查询扩展到澄清、Session、时间比较与 Breakdown。
+# 工程边界：这里记录 SOURCE / STATIC closure 与 Runtime gate；runtime_evidence=DEFERRED 不能解释成真实 MetricFlow 已运行。
+version: 1
+contract: commerce_phase5_capability_manifest
+mode: engineering_static_closure
+principles:
+  source_of_truth_is_code_and_contracts_not_generated_samples: true
+  generated_samples_must_be_reproducible: true
+  public_tool_schema_must_match_executable_surface: true
+  runtime_evidence_must_not_be_inferred_from_static_contracts: true
+  arbitrary_sql: false
+  unresolved_filters_must_not_be_dropped: true
+  session_followups_apply_structured_deltas: true
+
+phases:
+  5A:
+    capability: governed_single_metric_query
+    policy: agent/contracts/semantic_query_policy.yml
+    implementation:
+      - agent/semantic_query/planner.py
+      - agent/semantic_query/executor.py
+    tests:
+      - tests/test_phase5a_semantic_query.py
+    static_runner: infra/runtime/run_phase5a_semantic_query_static.sh
+    live_runner: infra/runtime/run_phase5a_metricflow_live.sh
+    runtime_gates: [PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED
+  5B:
+    capability: governed_filters_and_multi_metric
+    policy: agent/contracts/semantic_query_policy.yml
+    implementation:
+      - agent/semantic_query/planner.py
+      - agent/semantic_query/executor.py
+    tests:
+      - tests/test_phase5b_semantic_filters_multi_metric.py
+    static_runner: infra/runtime/run_phase5b_semantic_query_static.sh
+    live_runner: infra/runtime/run_phase5b_metricflow_live.sh
+    runtime_gates: [PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED
+  5C:
+    capability: governed_dimension_value_discovery
+    policy: agent/contracts/dimension_value_policy.yml
+    implementation:
+      - agent/dimension_values/planner.py
+      - agent/dimension_values/executor.py
+    tests:
+      - tests/test_phase5c_dimension_value_discovery.py
+    static_runner: infra/runtime/run_phase5c_dimension_values_static.sh
+    live_runner: infra/runtime/run_phase5c_metricflow_discovery_live.sh
+    runtime_gates: [PHASE5C_ALLOW_METRICFLOW_DISCOVERY]
+    runtime_evidence: DEFERRED
+  5D:
+    capability: governed_dimension_value_resolution
+    policy: agent/contracts/dimension_resolution_policy.yml
+    implementation:
+      - agent/dimension_resolution/resolver.py
+    tests:
+      - tests/test_phase5d_dimension_value_resolution.py
+    static_runner: infra/runtime/run_phase5d_dimension_resolution_static.sh
+    live_runner: infra/runtime/run_phase5d_metricflow_resolution_live.sh
+    runtime_gates: [PHASE5D_ALLOW_DIMENSION_RESOLUTION, PHASE5C_ALLOW_METRICFLOW_DISCOVERY]
+    runtime_evidence: DEFERRED
+  5E:
+    capability: governed_clarification_continuation
+    policy: agent/contracts/clarification_policy.yml
+    implementation:
+      - agent/clarification/continuation.py
+    tests:
+      - tests/test_phase5e_clarification_continuation.py
+    static_runner: infra/runtime/run_phase5e_clarification_static.sh
+    live_runner: infra/runtime/run_phase5e_clarification_live.sh
+    runtime_gates: [PHASE5E_ALLOW_CONTINUATION_EXECUTION, PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED
+  5F:
+    capability: governed_analysis_session
+    policy: agent/contracts/analysis_session_policy.yml
+    implementation:
+      - agent/analysis_session/session.py
+    tests:
+      - tests/test_phase5f_governed_analysis_session.py
+    static_runner: infra/runtime/run_phase5f_analysis_session_static.sh
+    live_runner: infra/runtime/run_phase5f_analysis_session_live.sh
+    runtime_gates: [PHASE5F_ALLOW_SESSION_EXECUTION, PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED
+  5G:
+    capability: governed_time_comparison
+    policy: agent/contracts/time_comparison_policy.yml
+    implementation:
+      - agent/time_context/comparison.py
+      - agent/analysis_session/session.py
+    tests:
+      - tests/test_phase5g_governed_time_comparison.py
+    static_runner: infra/runtime/run_phase5g_time_comparison_static.sh
+    live_runner: infra/runtime/run_phase5g_time_comparison_live.sh
+    runtime_gates: [PHASE5G_ALLOW_COMPARATIVE_QUERY, PHASE5F_ALLOW_SESSION_EXECUTION, PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED
+  5H:
+    capability: governed_comparative_breakdown
+    policy: agent/contracts/comparative_breakdown_policy.yml
+    implementation:
+      - agent/breakdown_analysis/analysis.py
+      - agent/breakdown_analysis/semantics.py
+      - agent/analysis_session/session.py
+    tests:
+      - tests/test_phase5h_comparative_breakdown.py
+    static_runner: infra/runtime/run_phase5h_comparative_breakdown_static.sh
+    live_runner: infra/runtime/run_phase5h_comparative_breakdown_live.sh
+    runtime_gates: [PHASE5H_ALLOW_BREAKDOWN_QUERY, PHASE5F_ALLOW_SESSION_EXECUTION, PHASE5B_ALLOW_METRICFLOW_QUERY]
+    runtime_evidence: DEFERRED

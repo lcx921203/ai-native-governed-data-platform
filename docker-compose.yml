@@ -1,0 +1,165 @@
+services:
+  rustfs:
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-beta.8}
+    container_name: commerce-rustfs
+    ports:
+    - 9000:9000
+    - 9001:9001
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: :9000
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_CONSOLE_ADDRESS: :9001
+    volumes:
+    - rustfs-data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl --fail http://127.0.0.1:9000/health && curl --fail http://127.0.0.1:9001/rustfs/console/health
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+  bucket-setup:
+    image: ${AWS_CLI_IMAGE:-amazon/aws-cli:2.36.8}
+    container_name: commerce-bucket-setup
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      AWS_SECRET_ACCESS_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-west-2}
+      AWS_ENDPOINT_URL: http://rustfs:9000
+      WAREHOUSE_BUCKET: ${WAREHOUSE_BUCKET:-commerce-lakehouse}
+    entrypoint: /bin/sh
+    command:
+    - -c
+    - "set -eu\nif aws s3api head-bucket --bucket \"$${WAREHOUSE_BUCKET}\" >/dev/null\
+      \ 2>&1; then\n  echo \"RustFS bucket already exists: $${WAREHOUSE_BUCKET}\"\n\
+      else\n  echo \"Creating RustFS bucket: $${WAREHOUSE_BUCKET}\"\n  aws s3 mb \"\
+      s3://$${WAREHOUSE_BUCKET}\"\nfi\naws s3 ls\n"
+  polaris:
+    image: ${POLARIS_IMAGE:-apache/polaris:1.7.0}
+    container_name: commerce-polaris
+    ports:
+    - 8181:8181
+    - 8182:8182
+    depends_on:
+      rustfs:
+        condition: service_healthy
+      bucket-setup:
+        condition: service_completed_successfully
+    environment:
+      AWS_REGION: ${S3_REGION:-us-west-2}
+      AWS_ACCESS_KEY_ID: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      AWS_SECRET_ACCESS_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      POLARIS_BOOTSTRAP_CREDENTIALS: ${POLARIS_REALM:-POLARIS},${POLARIS_CLIENT_ID:-root},${POLARIS_CLIENT_SECRET:-s3cr3t}
+      polaris.realm-context.realms: ${POLARIS_REALM:-POLARIS}
+      quarkus.otel.sdk.disabled: 'true'
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - --fail
+      - http://localhost:8182/q/health
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+  polaris-setup:
+    image: ${CURL_IMAGE:-alpine/curl:8.21.0}
+    container_name: commerce-polaris-setup
+    depends_on:
+      polaris:
+        condition: service_healthy
+    environment:
+      POLARIS_REALM: ${POLARIS_REALM:-POLARIS}
+      POLARIS_CLIENT_ID: ${POLARIS_CLIENT_ID:-root}
+      POLARIS_CLIENT_SECRET: ${POLARIS_CLIENT_SECRET:-s3cr3t}
+      POLARIS_CATALOG_NAME: ${POLARIS_CATALOG_NAME:-commerce_catalog}
+      WAREHOUSE_BUCKET: ${WAREHOUSE_BUCKET:-commerce-lakehouse}
+      S3_REGION: ${S3_REGION:-us-west-2}
+    volumes:
+    - ./infra/polaris/scripts:/opt/project/polaris:ro
+    entrypoint: /bin/sh
+    command:
+    - /opt/project/polaris/setup-catalog.sh
+  spark-thrift:
+    image: ${SPARK_IMAGE:-apache/spark:3.5.6-java17}
+    container_name: commerce-spark-thrift
+    depends_on:
+      polaris-setup:
+        condition: service_completed_successfully
+    environment:
+      SPARK_NO_DAEMONIZE: 'true'
+      SPARK_CONF_DIR: /opt/spark/conf/project
+    ports:
+    - 10000:10000
+    - 4040:4040
+    volumes:
+    - ./:/opt/project
+    - ./infra/spark/conf:/opt/spark/conf/project:ro
+    - spark-ivy-cache:/tmp/.ivy2
+    working_dir: /opt/project
+    command:
+    - /bin/bash
+    - /opt/project/infra/spark/scripts/start-thrift-server.sh
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - bash -c '</dev/tcp/127.0.0.1/10000'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  trino:
+    image: ${TRINO_IMAGE:-trinodb/trino:483}
+    container_name: commerce-trino
+    depends_on:
+      polaris-setup:
+        condition: service_completed_successfully
+      rustfs:
+        condition: service_healthy
+    environment:
+      POLARIS_REALM: ${POLARIS_REALM:-POLARIS}
+      POLARIS_CLIENT_ID: ${POLARIS_CLIENT_ID:-root}
+      POLARIS_CLIENT_SECRET: ${POLARIS_CLIENT_SECRET:-s3cr3t}
+      POLARIS_CATALOG_NAME: ${POLARIS_CATALOG_NAME:-commerce_catalog}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      S3_REGION: ${S3_REGION:-us-west-2}
+    ports:
+    - 8088:8080
+    volumes:
+    - ./infra/trino/catalog:/etc/trino/catalog:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - trino --server http://localhost:8080 --execute 'SELECT 1' >/dev/null 2>&1
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+  serving-api:
+    build:
+      context: .
+      dockerfile: infra/serving/Dockerfile
+    container_name: commerce-serving-api
+    depends_on:
+      trino:
+        condition: service_healthy
+    environment:
+      TRINO_HOST: trino
+      TRINO_PORT: 8080
+      TRINO_USER: ${TRINO_USER:-serving_api}
+      TRINO_CATALOG: ${TRINO_CATALOG:-iceberg}
+      TRINO_SCHEMA: ${TRINO_SCHEMA:-serving}
+      TRINO_HTTP_SCHEME: http
+    ports:
+    - ${SERVING_API_PORT:-8081}:8081
+volumes:
+  rustfs-data: null
+  spark-ivy-cache: null

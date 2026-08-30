@@ -1,0 +1,13 @@
+# GitHub CI contract-suite environment.
+#
+# This intentionally excludes requirements-metricflow-compat.txt because
+# dbt-metricflow 0.13.0 requires dbt-core 1.11.x while the canonical dbt/Dagster
+# runtime uses dbt-core 1.12.x. It also excludes the heavy PyFlink runtime: the
+# streaming dependency is resolved in its own CI matrix cell.
+pytest>=8.4,<9
+-r requirements-agent.txt
+-r requirements-dagster.txt
+-r requirements-datahub.txt
+-r requirements-rag.txt
+-r requirements-mcp.txt
+-r requirements-serving.txt

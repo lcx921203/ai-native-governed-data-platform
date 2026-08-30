@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_master__items
+    description: Flink CDC item_current 的字段标准化视图。
+    columns:
+      - name: item_id
+        tests: [not_null, unique]
+  - name: stg_master__stores
+    description: Flink CDC store_current 的字段标准化视图。
+    columns:
+      - name: store_id
+        tests: [not_null, unique]

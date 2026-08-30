@@ -1,0 +1,159 @@
+{
+  "id": "gid://shopify/Order/O100005",
+  "name": "#1005",
+  "createdAt": "2026-08-01T09:00:00Z",
+  "processedAt": "2026-08-01T09:01:00Z",
+  "updatedAt": "2026-08-05T16:00:00Z",
+  "cancelledAt": null,
+  "closedAt": "2026-08-05T16:00:00Z",
+  "displayFinancialStatus": "PAID",
+  "displayFulfillmentStatus": "FULFILLED",
+  "currencyCode": "USD",
+  "customer": {
+    "id": "STORE001"
+  },
+  "originalTotalPriceSet": {
+    "shopMoney": {
+      "amount": "60.00",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalPriceSet": {
+    "shopMoney": {
+      "amount": "60.00",
+      "currencyCode": "USD"
+    }
+  },
+  "currentTotalDiscountsSet": {
+    "shopMoney": {
+      "amount": "0.00",
+      "currencyCode": "USD"
+    }
+  },
+  "totalRefundedSet": {
+    "shopMoney": {
+      "amount": "0.00",
+      "currencyCode": "USD"
+    }
+  },
+  "lineItems": {
+    "nodes": [
+      {
+        "id": "gid://shopify/LineItem/L200030",
+        "sku": "WATER-24",
+        "title": "Water 24 Pack",
+        "quantity": 3,
+        "currentQuantity": 3,
+        "refundableQuantity": 3,
+        "unfulfilledQuantity": 0,
+        "product": {
+          "id": "ITEM002"
+        },
+        "variant": {
+          "id": "VARIANT002"
+        },
+        "originalUnitPriceSet": {
+          "shopMoney": {
+            "amount": "20.00",
+            "currencyCode": "USD"
+          }
+        },
+        "originalTotalSet": {
+          "shopMoney": {
+            "amount": "60.00",
+            "currencyCode": "USD"
+          }
+        },
+        "totalDiscountSet": {
+          "shopMoney": {
+            "amount": "0.00",
+            "currencyCode": "USD"
+          }
+        },
+        "discountAllocations": []
+      }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "gid://shopify/OrderTransaction/T300030",
+      "kind": "SALE",
+      "status": "SUCCESS",
+      "gateway": "demo_gateway",
+      "createdAt": "2026-08-01T09:01:00Z",
+      "processedAt": "2026-08-01T09:01:00Z",
+      "test": false,
+      "errorCode": null,
+      "parentTransaction": null,
+      "amountSet": {
+        "shopMoney": {
+          "amount": "60.00",
+          "currencyCode": "USD"
+        }
+      }
+    }
+  ],
+  "refunds": [],
+  "fulfillments": [
+    {
+      "id": "gid://shopify/Fulfillment/F600001",
+      "name": "#1005.1",
+      "status": "SUCCESS",
+      "displayStatus": "DELIVERED",
+      "createdAt": "2026-08-02T08:00:00Z",
+      "updatedAt": "2026-08-05T16:00:00Z",
+      "inTransitAt": "2026-08-03T08:00:00Z",
+      "deliveredAt": "2026-08-05T15:30:00Z",
+      "estimatedDeliveryAt": "2026-08-05T18:00:00Z",
+      "totalQuantity": 3,
+      "requiresShipping": true,
+      "location": {
+        "id": "gid://shopify/Location/LOC001",
+        "name": "LA Warehouse"
+      },
+      "fulfillmentLineItems": {
+        "nodes": [
+          {
+            "id": "gid://shopify/FulfillmentLineItem/FL800001",
+            "quantity": 3,
+            "lineItem": {
+              "id": "gid://shopify/LineItem/L200030"
+            }
+          }
+        ]
+      },
+      "events": {
+        "nodes": [
+          {
+            "id": "gid://shopify/FulfillmentEvent/E700001",
+            "status": "IN_TRANSIT",
+            "createdAt": "2026-08-03T08:05:00Z",
+            "happenedAt": "2026-08-03T08:00:00Z",
+            "estimatedDeliveryAt": "2026-08-05T18:00:00Z",
+            "message": "Package departed the origin facility",
+            "city": "Los Angeles",
+            "province": "CA",
+            "country": "US",
+            "zip": "90001",
+            "latitude": 34.0522,
+            "longitude": -118.2437
+          },
+          {
+            "id": "gid://shopify/FulfillmentEvent/E700002",
+            "status": "DELIVERED",
+            "createdAt": "2026-08-05T15:35:00Z",
+            "happenedAt": "2026-08-05T15:30:00Z",
+            "estimatedDeliveryAt": "2026-08-05T18:00:00Z",
+            "message": "Package delivered to customer",
+            "city": "San Diego",
+            "province": "CA",
+            "country": "US",
+            "zip": "92101",
+            "latitude": 32.7157,
+            "longitude": -117.1611
+          }
+        ]
+      }
+    }
+  ]
+}

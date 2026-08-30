@@ -1,0 +1,24 @@
+source:
+  type: dbt
+  config:
+    env: DEV
+    platform_instance: mercaso_dbt
+    target_platform: iceberg
+    target_platform_instance: commerce_polaris
+    manifest_path: dbt/mercaso_dbt/target/manifest.json
+    catalog_path: dbt/mercaso_dbt/target/catalog.json
+    run_results_paths:
+      - dbt/mercaso_dbt/target/run_results.json
+    entities_enabled:
+      models: 'YES'
+      sources: 'YES'
+      seeds: 'YES'
+      snapshots: 'YES'
+      test_definitions: 'YES'
+      test_results: 'YES'
+      semantic_models: 'YES'
+    write_semantics: PATCH
+sink:
+  type: datahub-rest
+  config:
+    server: http://localhost:8080

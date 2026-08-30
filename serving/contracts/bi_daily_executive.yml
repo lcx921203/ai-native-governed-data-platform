@@ -1,0 +1,68 @@
+# Serving Contract — Daily Executive Metrics
+# 业务逻辑：把固定 Dashboard / API 高频消费需要的指标组合定义成“消费合同”，但不重新定义指标公式。
+# 输入：MetricFlow 已治理的 Metric + Dimension；Business Date 由 Dagster 日分区注入。
+# 输出：Iceberg `polaris.serving.bi_daily_executive`，供 Trino / BI / FastAPI 稳定读取。
+# 数据语义 / Grain：一行 = business_date × region；Serving Table 是可重建 Projection，不是新的 Business Truth。
+# 工程边界：本合同禁止 raw SQL / 自定义公式；Metric Authority 仍属于 MetricFlow。
+
+version: 1
+name: bi_daily_executive
+description: Daily executive sales metrics by region for BI and fixed business APIs.
+consumers:
+  - bi
+  - api
+
+readiness:
+  required_daily_assets:
+    - orders
+    - order_items
+    - refund_items
+
+semantic_query:
+  metrics:
+    - gross_sales
+    - sales_before_reversal
+    - activity_net_sales
+    - order_count
+    - average_order_value
+  group_by:
+    - metric_time__day
+    - store__region
+  row_limit: 10000
+
+target:
+  table: polaris.serving.bi_daily_executive
+  partition_by:
+    - business_date
+  primary_key:
+    - business_date
+    - region
+  columns:
+    - source: metric_time__day
+      name: business_date
+      spark_type: DATE
+      nullable: false
+    - source: store__region
+      name: region
+      spark_type: STRING
+      nullable: false
+    - source: gross_sales
+      name: gross_sales
+      spark_type: DECIMAL(20,2)
+      nullable: true
+    - source: sales_before_reversal
+      name: sales_before_reversal
+      spark_type: DECIMAL(20,2)
+      nullable: true
+    - source: activity_net_sales
+      name: net_sales
+      spark_type: DECIMAL(20,2)
+      nullable: true
+    - source: order_count
+      name: order_count
+      spark_type: BIGINT
+      nullable: true
+    - source: average_order_value
+      name: average_order_value
+      spark_type: DECIMAL(20,2)
+      nullable: true

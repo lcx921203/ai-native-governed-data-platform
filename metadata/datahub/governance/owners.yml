@@ -1,0 +1,26 @@
+# 业务逻辑：用稳定 group id 表达业务负责人和技术负责人，避免把个人联系方式写进工程仓库。
+# DataHub API 语义：group id 会映射为 CorpGroup URN，Dataset ownership 在治理投影阶段引用这些组。
+# 工程边界：Git 声明 ownership expectation，不证明 DataHub Runtime 已经应用成功。
+version: 1
+contract: commerce_governance_owners
+groups:
+- id: commerce-analytics
+  display_name: Commerce Analytics
+  purpose: 'Business ownership for commerce concepts, metrics, and consumer-facing
+    analytical assets.
+
+    '
+  roles:
+  - BUSINESS_OWNER
+- id: data-platform
+  display_name: Data Platform
+  purpose: 'Technical ownership and stewardship for ingestion, lakehouse, dbt, orchestration,
+    metadata, and governed agent infrastructure.
+
+    '
+  roles:
+  - TECHNICAL_OWNER
+  - DATA_STEWARD
+principles:
+  prefer_group_ownership_over_personal_ownership: true
+  do_not_embed_personal_contact_data_in_repo: true

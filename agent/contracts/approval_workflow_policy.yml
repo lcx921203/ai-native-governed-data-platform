@@ -1,0 +1,50 @@
+# Phase 6F Human Approval 契约。
+# 业务逻辑：只允许 HUMAN_REQUIRED response step 进入 PENDING→APPROVED/REJECTED/EXPIRED 状态机，并绑定 exact evidence fingerprint。
+# 工程边界：approval state 不是 production execution；Agent 不能自批，也没有 Dagster / backfill / SQL write handle。
+version: 1
+contract: commerce_governed_incident_approval_workflow
+mode: human_approval_state_machine_and_audit
+
+principles:
+  phase6e_human_required_steps_only: true
+  runtime_verified_incident_and_response_required: true
+  approval_is_not_execution: true
+  approval_binds_exact_partition_action_and_evidence: true
+  approval_does_not_override_phase3c_recovery_policy: true
+  current_truth_must_be_revalidated_before_external_execution: true
+  evidence_change_invalidates_execution_eligibility: true
+  agent_cannot_self_approve: true
+  agent_cannot_execute_approved_action: true
+  actor_identity_must_come_from_trusted_upstream: true
+  pending_is_the_only_decidable_state: true
+  approved_rejected_expired_are_terminal: true
+  pending_approval_may_expire: true
+  audit_events_are_append_only_and_hash_chained: true
+  audit_hash_chain_is_not_identity_signature: true
+  approval_store_is_not_a_dagster_execution_store: true
+  no_dagster_write_handle: true
+  no_backfill_write_handle: true
+  arbitrary_shell_command: false
+  arbitrary_sql: false
+
+identity:
+  trusted_identity_sources:
+    - AUTHENTICATED_UPSTREAM
+
+limits:
+  default_ttl_minutes: 60
+  max_approval_requests_per_bundle: 20
+  max_approval_claims_in_answer: 8
+
+runtime:
+  allow_env: PHASE6F_ALLOW_APPROVAL_WORKFLOW
+  audit_write_allow_env: PHASE6F_ALLOW_APPROVAL_AUDIT_WRITE
+  requires_response_planning_gate: PHASE6E_ALLOW_INCIDENT_RESPONSE_PLANNING
+  production_action_writes_enabled: false
+  audit_store_writes_require_explicit_gate: true
+
+sources:
+  incident_evidence: agent/incident_drilldown/contracts.py
+  response_plan: agent/incident_response/contracts.py
+  response_policy: agent/contracts/incident_response_policy.yml
+  recovery_policy: orchestration/dagster/commerce_dagster/recovery_policy.py

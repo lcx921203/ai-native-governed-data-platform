@@ -1,0 +1,433 @@
+{
+  "contract": "commerce_agent_context_samples",
+  "samples": {
+    "search": {
+      "tool": "search_metadata",
+      "query": {
+        "query": "activity net sales",
+        "limit": 10
+      },
+      "status": "ANSWERED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "results": [
+          {
+            "kind": "metric",
+            "id": "activity_net_sales",
+            "name": "Activity Net Sales",
+            "score": 100
+          },
+          {
+            "kind": "metric",
+            "id": "order_cohort_net_sales",
+            "name": "Order Cohort Net Sales",
+            "score": 3
+          },
+          {
+            "kind": "dataset",
+            "id": "order_items",
+            "name": "order_items",
+            "score": 1
+          },
+          {
+            "kind": "dataset",
+            "id": "order_lifecycle_snapshot",
+            "name": "order_lifecycle_snapshot",
+            "score": 1
+          },
+          {
+            "kind": "dataset",
+            "id": "orders",
+            "name": "orders",
+            "score": 1
+          },
+          {
+            "kind": "dataset",
+            "id": "refund_items",
+            "name": "refund_items",
+            "score": 1
+          },
+          {
+            "kind": "dataset",
+            "id": "refunds",
+            "name": "refunds",
+            "score": 1
+          },
+          {
+            "kind": "entity",
+            "id": "order_item",
+            "name": "Order Item",
+            "score": 1
+          },
+          {
+            "kind": "entity",
+            "id": "refund_item",
+            "name": "Refund Item",
+            "score": 1
+          },
+          {
+            "kind": "metric",
+            "id": "average_order_value",
+            "name": "Average Order Value",
+            "score": 1
+          }
+        ],
+        "count": 10
+      },
+      "sources": [
+        {
+          "kind": "governance",
+          "location": "metadata/datahub/governance",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        }
+      ],
+      "warnings": []
+    },
+    "metric": {
+      "tool": "get_metric_context",
+      "query": {
+        "metric": "activity_net_sales"
+      },
+      "status": "ANSWERED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "id": "activity_net_sales",
+        "name": "Activity Net Sales",
+        "description": "Net sales viewed by the actual business activity times of sales and reversals.",
+        "definition": {
+          "name": "activity_net_sales",
+          "label": "Activity Net Sales",
+          "description": "按各业务活动实际发生时间观察： 当期 Sales Before Reversal - 当期 Sales Reversal。\n",
+          "type": "derived",
+          "expr": "sales_before_reversal - sales_reversal_amount\n",
+          "input_metrics": [
+            {
+              "name": "sales_before_reversal"
+            },
+            {
+              "name": "sales_reversal_amount"
+            }
+          ],
+          "source_model": null,
+          "source_file": "dbt/mercaso_dbt/models/metrics/sales.yml"
+        },
+        "definition_source_of_truth": "dbt_metricflow",
+        "related_models": [
+          "order_items",
+          "refund_items"
+        ],
+        "glossary_term": "commerce-metric-activity-net-sales"
+      },
+      "sources": [
+        {
+          "kind": "metric_definition",
+          "location": "dbt/mercaso_dbt/models/metrics/sales.yml",
+          "owner": "dbt_metricflow",
+          "runtime_verified": false
+        },
+        {
+          "kind": "governance",
+          "location": "metadata/datahub/governance/metric_registry.yml",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        },
+        {
+          "kind": "glossary",
+          "location": "metadata/datahub/governance/glossary.yml",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        }
+      ],
+      "warnings": []
+    },
+    "entity": {
+      "tool": "get_entity_context",
+      "query": {
+        "entity": "order"
+      },
+      "status": "ANSWERED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "entity": "order",
+        "name": "Order",
+        "description": "A Shopify order representing a customer purchase transaction context.",
+        "semantic_model": "orders",
+        "primary_models": [
+          "orders"
+        ],
+        "referenced_by_models": [
+          "order_items",
+          "payment_transactions",
+          "refunds",
+          "refund_items",
+          "fulfillments",
+          "fulfillment_items",
+          "fulfillment_events"
+        ],
+        "semantic_appearances": [
+          {
+            "semantic_model": "orders",
+            "column": "order_id",
+            "role": "primary",
+            "dimensions": [
+              "order_time",
+              "financial_status",
+              "fulfillment_status"
+            ]
+          },
+          {
+            "semantic_model": "order_items",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "payment_transactions",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "refunds",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "refund_items",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "fulfillments",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "fulfillment_items",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          },
+          {
+            "semantic_model": "fulfillment_events",
+            "column": "order_id",
+            "role": "foreign",
+            "dimensions": []
+          }
+        ],
+        "glossary_term": "commerce-entity-order",
+        "relationship_source_of_truth": "dbt_metricflow"
+      },
+      "sources": [
+        {
+          "kind": "semantic",
+          "location": "dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml",
+          "owner": "dbt_metricflow",
+          "runtime_verified": false
+        },
+        {
+          "kind": "governance",
+          "location": "metadata/datahub/governance/entity_registry.yml",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        },
+        {
+          "kind": "glossary",
+          "location": "metadata/datahub/governance/glossary.yml",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        }
+      ],
+      "warnings": []
+    },
+    "dataset": {
+      "tool": "get_dataset_context",
+      "query": {
+        "dataset": "orders"
+      },
+      "status": "ANSWERED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "model": "orders",
+        "identity": {
+          "model": "orders",
+          "relation_name": "orders",
+          "platform": "iceberg",
+          "platform_instance": "commerce_polaris",
+          "env": "DEV",
+          "namespace": "analytics",
+          "dataset_name": "commerce_polaris.analytics.orders",
+          "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.orders,DEV)",
+          "status": "UNVERIFIED_EXPECTED",
+          "resolved_urn": null
+        },
+        "domain": {
+          "id": "commerce-order-sales",
+          "parent": "commerce",
+          "name": "Order & Sales",
+          "description": "Orders, order items, sales amounts, discounts, and order-cohort analysis."
+        },
+        "owners": {
+          "business": {
+            "id": "commerce-analytics",
+            "display_name": "Commerce Analytics",
+            "purpose": "Business ownership for commerce concepts, metrics, and consumer-facing analytical assets.\n",
+            "roles": [
+              "BUSINESS_OWNER"
+            ]
+          },
+          "technical": {
+            "id": "data-platform",
+            "display_name": "Data Platform",
+            "purpose": "Technical ownership and stewardship for ingestion, lakehouse, dbt, orchestration, metadata, and governed agent infrastructure.\n",
+            "roles": [
+              "TECHNICAL_OWNER",
+              "DATA_STEWARD"
+            ]
+          }
+        },
+        "tags": [
+          {
+            "id": "source-shopify",
+            "display_name": "Shopify",
+            "description": "Technical discovery label for metadata originating from Shopify."
+          },
+          {
+            "id": "layer-mart",
+            "display_name": "Commerce Mart",
+            "description": "Consumer-facing commerce mart."
+          },
+          {
+            "id": "daily-partitioned",
+            "display_name": "Daily Partitioned",
+            "description": "Asset participates in the daily execution responsibility model."
+          },
+          {
+            "id": "semantic-enabled",
+            "display_name": "Semantic Enabled",
+            "description": "Asset participates in the dbt / MetricFlow semantic graph."
+          }
+        ],
+        "glossary_terms": [
+          {
+            "id": "commerce-entity-order",
+            "name": "Order",
+            "description": "A Shopify order representing a customer purchase transaction context."
+          },
+          {
+            "id": "commerce-metric-order-count",
+            "name": "Order Count",
+            "description": "Distinct number of orders in the requested analytical context."
+          }
+        ],
+        "structured_properties": {
+          "commerce.governance.dataClassification": "INTERNAL",
+          "commerce.governance.agentReadiness": "SEMANTIC_READY",
+          "commerce.governance.criticality": "HIGH"
+        },
+        "runtime_dataset": null
+      },
+      "warnings": [
+        "DataHub dataset identity/runtime is not verified; returning labeled Git/static governance context."
+      ],
+      "sources": [
+        {
+          "kind": "governance",
+          "location": "metadata/datahub/governance/asset_policy.yml",
+          "owner": "governed_metadata",
+          "runtime_verified": false
+        },
+        {
+          "kind": "identity",
+          "location": "metadata/datahub/generated/dataset_identity_resolution.json",
+          "owner": "datahub_identity",
+          "runtime_verified": false
+        }
+      ]
+    },
+    "lineage": {
+      "tool": "get_lineage_context",
+      "query": {
+        "dataset": "orders",
+        "direction": "upstream",
+        "max_hops": 2
+      },
+      "status": "ANSWERED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "model": "orders",
+        "direction": "upstream",
+        "max_hops": 2,
+        "edges": [
+          {
+            "from": "orders",
+            "to": "int_shopify__orders_canonical",
+            "hop": 1
+          },
+          {
+            "from": "int_shopify__orders_canonical",
+            "to": "stg_shopify__orders",
+            "hop": 2
+          }
+        ],
+        "lineage_source": "dbt_sql_static"
+      },
+      "warnings": [
+        "Runtime DataHub lineage is unavailable; returning bounded dbt SQL lineage."
+      ],
+      "sources": [
+        {
+          "kind": "dbt_lineage",
+          "location": "dbt/mercaso_dbt/models",
+          "owner": "dbt",
+          "runtime_verified": false
+        }
+      ]
+    },
+    "runtime": {
+      "tool": "get_runtime_context",
+      "query": {
+        "dataset": "orders"
+      },
+      "status": "DEFERRED",
+      "evidence": "STATIC_CONTRACT",
+      "payload": {
+        "automation_contract": {
+          "dataset": "orders",
+          "daily_managed": true,
+          "job": "shopify_daily_partition_job",
+          "timezone": "UTC",
+          "schedule": "00:15 UTC",
+          "freshness_deadline": "01:00 UTC",
+          "freshness_budget_minutes": 45,
+          "recovery_sensor_min_interval_seconds": 300,
+          "recovery_horizon_days": 7
+        },
+        "latest_run": null,
+        "latest_failure": null,
+        "latest_recovery": null
+      },
+      "warnings": [
+        "Real Dagster/DataHub run history is unavailable in the current environment. Automation policy is shown, but no runtime fact is inferred from it."
+      ],
+      "sources": [
+        {
+          "kind": "automation_timing_contract",
+          "location": "orchestration/dagster/commerce_dagster/automation_policy.py",
+          "owner": "dagster",
+          "runtime_verified": false
+        },
+        {
+          "kind": "consumer_sla_contract",
+          "location": "orchestration/dagster/commerce_dagster/consumer_sla.py",
+          "owner": "dagster",
+          "runtime_verified": false
+        }
+      ]
+    }
+  }
+}

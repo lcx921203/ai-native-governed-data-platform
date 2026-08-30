@@ -1,0 +1,37 @@
+version: 1
+contract: commerce_phase7a_datahub_metadata_bootstrap
+mode: workstation_metadata_plane_bootstrap
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+principles:
+  phase7a_core_runtime_is_prerequisite: true
+  datahub_is_metadata_authority: true
+  dbt_metricflow_remain_semantic_calculation_authority: true
+  phase4c_identity_policy_is_reused: true
+  fuzzy_dataset_identity_binding_is_forbidden: true
+  governance_write_requires_resolved_identity: true
+  static_contracts_do_not_upgrade_runtime_evidence: true
+  runtime_evidence_is_written_outside_source_contracts: true
+  datahub_runtime_is_isolated_from_agent_execution: true
+runtime:
+  allow_env: PHASE7A_ALLOW_DATAHUB_BOOTSTRAP
+  datahub_version: '1.7.0'
+  venv: .venv-datahub
+  ui_url: http://localhost:9002
+  gms_url: http://localhost:8080
+  evidence_dir: .runtime/evidence/phase7a/datahub
+identity:
+  platform: iceberg
+  platform_instance: commerce_polaris
+  environment: DEV
+  analytics_namespace: analytics
+  resolution_policy: EXACT_ONLY
+ingestion_order:
+  - iceberg_physical_assets
+  - dbt_metadata_and_lineage
+  - governance_definitions
+  - exact_dataset_identity_resolution
+  - governance_projection
+  - runtime_requery
+closure:
+  runtime_evidence: DEFERRED
+  verified_status: DATAHUB_METADATA_PLANE_VERIFIED

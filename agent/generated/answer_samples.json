@@ -1,0 +1,398 @@
+{
+  "contract": "commerce_agent_answer_samples",
+  "samples": {
+    "metric_definition": {
+      "question": "activity_net_sales 是什么意思？",
+      "envelope": {
+        "question": "activity_net_sales 是什么意思？",
+        "intent": "METRIC_DEFINITION",
+        "status": "ANSWERED",
+        "subject": {
+          "kind": "metric",
+          "id": "activity_net_sales",
+          "matched_alias": "activity_net_sales"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "DEFINITION",
+            "text": "Activity Net Sales: Net sales viewed by the actual business activity times of sales and reversals.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "dbt/mercaso_dbt/models/metrics/sales.yml",
+              "metadata/datahub/governance/metric_registry.yml",
+              "metadata/datahub/governance/glossary.yml"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "FORMULA",
+            "text": "activity_net_sales = sales_before_reversal - sales_reversal_amount",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "dbt/mercaso_dbt/models/metrics/sales.yml"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C03",
+            "kind": "RELATIONSHIP",
+            "text": "Related semantic models: order_items, refund_items",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "dbt/mercaso_dbt/models/metrics/sales.yml",
+              "metadata/datahub/governance/metric_registry.yml",
+              "metadata/datahub/governance/glossary.yml"
+            ],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [],
+        "sources": [
+          {
+            "kind": "metric_definition",
+            "location": "dbt/mercaso_dbt/models/metrics/sales.yml",
+            "owner": "dbt_metricflow",
+            "runtime_verified": false
+          },
+          {
+            "kind": "governance",
+            "location": "metadata/datahub/governance/metric_registry.yml",
+            "owner": "governed_metadata",
+            "runtime_verified": false
+          },
+          {
+            "kind": "glossary",
+            "location": "metadata/datahub/governance/glossary.yml",
+            "owner": "governed_metadata",
+            "runtime_verified": false
+          }
+        ],
+        "tool_trace": [
+          {
+            "tool": "get_metric_context",
+            "status": "ANSWERED",
+            "evidence": "STATIC_CONTRACT"
+          }
+        ],
+        "evidence_levels": [
+          "STATIC_CONTRACT"
+        ]
+      },
+      "draft": {
+        "answer": "Activity Net Sales: Net sales viewed by the actual business activity times of sales and reversals.\n\nactivity_net_sales = sales_before_reversal - sales_reversal_amount\n\nRelated semantic models: order_items, refund_items",
+        "used_claim_ids": [
+          "C01",
+          "C02",
+          "C03"
+        ],
+        "acknowledged_limitations": []
+      }
+    },
+    "runtime_diagnosis": {
+      "question": "为什么 orders 昨天没更新？",
+      "envelope": {
+        "question": "为什么 orders 昨天没更新？",
+        "intent": "RUNTIME_DIAGNOSIS",
+        "status": "DEFERRED",
+        "subject": {
+          "kind": "dataset",
+          "id": "orders",
+          "matched_alias": "orders"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "GOVERNANCE",
+            "text": "orders belongs to Domain: Order & Sales",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "metadata/datahub/governance/asset_policy.yml",
+              "metadata/datahub/generated/dataset_identity_resolution.json"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "GOVERNANCE",
+            "text": "orders ownership: business=Commerce Analytics; technical=Data Platform",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "metadata/datahub/governance/asset_policy.yml",
+              "metadata/datahub/generated/dataset_identity_resolution.json"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C03",
+            "kind": "GOVERNANCE",
+            "text": "orders governance properties: dataClassification=INTERNAL, agentReadiness=SEMANTIC_READY, criticality=HIGH",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "metadata/datahub/governance/asset_policy.yml",
+              "metadata/datahub/generated/dataset_identity_resolution.json"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C04",
+            "kind": "AUTOMATION_CONTRACT",
+            "text": "orders automation contract: job=shopify_daily_partition_job, schedule=00:15 UTC, freshness_deadline=01:00 UTC, freshness_budget_minutes=45.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "orchestration/dagster/commerce_dagster/automation_policy.py",
+              "orchestration/dagster/commerce_dagster/consumer_sla.py"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C05",
+            "kind": "LIMITATION",
+            "text": "DataHub dataset identity/runtime is not verified; returning labeled Git/static governance context.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          },
+          {
+            "id": "C06",
+            "kind": "LIMITATION",
+            "text": "Real Dagster/DataHub run history is unavailable in the current environment. Automation policy is shown, but no runtime fact is inferred from it.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "DataHub dataset identity/runtime is not verified; returning labeled Git/static governance context.",
+          "Real Dagster/DataHub run history is unavailable in the current environment. Automation policy is shown, but no runtime fact is inferred from it."
+        ],
+        "sources": [
+          {
+            "kind": "governance",
+            "location": "metadata/datahub/governance/asset_policy.yml",
+            "owner": "governed_metadata",
+            "runtime_verified": false
+          },
+          {
+            "kind": "identity",
+            "location": "metadata/datahub/generated/dataset_identity_resolution.json",
+            "owner": "datahub_identity",
+            "runtime_verified": false
+          },
+          {
+            "kind": "automation_timing_contract",
+            "location": "orchestration/dagster/commerce_dagster/automation_policy.py",
+            "owner": "dagster",
+            "runtime_verified": false
+          },
+          {
+            "kind": "consumer_sla_contract",
+            "location": "orchestration/dagster/commerce_dagster/consumer_sla.py",
+            "owner": "dagster",
+            "runtime_verified": false
+          }
+        ],
+        "tool_trace": [
+          {
+            "tool": "get_dataset_context",
+            "status": "ANSWERED",
+            "evidence": "STATIC_CONTRACT"
+          },
+          {
+            "tool": "get_runtime_context",
+            "status": "DEFERRED",
+            "evidence": "STATIC_CONTRACT"
+          }
+        ],
+        "evidence_levels": [
+          "STATIC_CONTRACT"
+        ]
+      },
+      "draft": {
+        "answer": "orders belongs to Domain: Order & Sales\n\norders ownership: business=Commerce Analytics; technical=Data Platform\n\norders governance properties: dataClassification=INTERNAL, agentReadiness=SEMANTIC_READY, criticality=HIGH\n\norders automation contract: job=shopify_daily_partition_job, schedule=00:15 UTC, freshness_deadline=01:00 UTC, freshness_budget_minutes=45.\n\nDataHub dataset identity/runtime is not verified; returning labeled Git/static governance context.\n\nReal Dagster/DataHub run history is unavailable in the current environment. Automation policy is shown, but no runtime fact is inferred from it.",
+        "used_claim_ids": [
+          "C01",
+          "C02",
+          "C03",
+          "C04"
+        ],
+        "acknowledged_limitations": [
+          "DataHub dataset identity/runtime is not verified; returning labeled Git/static governance context.",
+          "Real Dagster/DataHub run history is unavailable in the current environment. Automation policy is shown, but no runtime fact is inferred from it."
+        ]
+      }
+    },
+    "metric_query": {
+      "question": "2026-08-05 activity_net_sales 是多少？",
+      "envelope": {
+        "question": "2026-08-05 activity_net_sales 是多少？",
+        "intent": "METRIC_QUERY",
+        "status": "DEFERRED",
+        "subject": {
+          "kind": "metric",
+          "id": "activity_net_sales",
+          "matched_alias": "activity_net_sales"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "SEMANTIC_QUERY_PLAN",
+            "text": "Semantic query plan: metrics=activity_net_sales; time=[2026-08-05T00:00:00Z, 2026-08-05T23:59:59Z]; group_by=(none); filters=(none); limit=20.",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "LIMITATION",
+            "text": "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+        ],
+        "sources": [],
+        "tool_trace": [
+          {
+            "tool": "query_semantic_metric",
+            "status": "DEFERRED",
+            "evidence": "STATIC_CONTRACT"
+          }
+        ],
+        "evidence_levels": [
+          "STATIC_CONTRACT"
+        ]
+      },
+      "draft": {
+        "answer": "Semantic query plan: metrics=activity_net_sales; time=[2026-08-05T00:00:00Z, 2026-08-05T23:59:59Z]; group_by=(none); filters=(none); limit=20.\n\nMetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment.",
+        "used_claim_ids": [
+          "C01"
+        ],
+        "acknowledged_limitations": [
+          "MetricFlow execution is disabled; set PHASE5B_ALLOW_METRICFLOW_QUERY=true only in the intended runtime environment."
+        ]
+      }
+    },
+    "unknown_metric": {
+      "question": "refund_rate 这个指标怎么算？",
+      "envelope": {
+        "question": "refund_rate 这个指标怎么算？",
+        "intent": "METADATA_DISCOVERY",
+        "status": "NEEDS_DISCOVERY",
+        "subject": {
+          "kind": "any",
+          "id": null,
+          "matched_alias": null
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "DISCOVERY",
+            "text": "Governed metadata candidates: dataset:payment_transactions, dataset:refund_items, dataset:refunds, entity:payment_transaction, entity:refund, entity:refund_item, metric:refund_processed_amount, metric:sales_before_reversal, metric:sales_reversal_amount",
+            "evidence": "STATIC_CONTRACT",
+            "source_locations": [
+              "metadata/datahub/governance"
+            ],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "LIMITATION",
+            "text": "No governed target was resolved; do not auto-select an unverified search result.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "No governed target was resolved; do not auto-select an unverified search result."
+        ],
+        "sources": [
+          {
+            "kind": "governance",
+            "location": "metadata/datahub/governance",
+            "owner": "governed_metadata",
+            "runtime_verified": false
+          }
+        ],
+        "tool_trace": [
+          {
+            "tool": "search_metadata",
+            "status": "ANSWERED",
+            "evidence": "STATIC_CONTRACT"
+          }
+        ],
+        "evidence_levels": [
+          "STATIC_CONTRACT"
+        ]
+      },
+      "draft": {
+        "answer": "Governed metadata candidates: dataset:payment_transactions, dataset:refund_items, dataset:refunds, entity:payment_transaction, entity:refund, entity:refund_item, metric:refund_processed_amount, metric:sales_before_reversal, metric:sales_reversal_amount\n\nNo governed target was resolved; do not auto-select an unverified search result.",
+        "used_claim_ids": [
+          "C01"
+        ],
+        "acknowledged_limitations": [
+          "No governed target was resolved; do not auto-select an unverified search result."
+        ]
+      }
+    },
+    "knowledge_design": {
+      "question": "为什么这样设计：MySQL CDC 不先经过 Kafka？",
+      "envelope": {
+        "question": "为什么这样设计：MySQL CDC 不先经过 Kafka？",
+        "intent": "KNOWLEDGE_QUERY",
+        "status": "DEFERRED",
+        "subject": {
+          "kind": "knowledge",
+          "id": "architecture,modeling,governance,business",
+          "matched_alias": "为什么这样设计"
+        },
+        "claims": [
+          {
+            "id": "C01",
+            "kind": "LIMITATION",
+            "text": "REFUSED: set PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL=true explicitly",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          },
+          {
+            "id": "C02",
+            "kind": "LIMITATION",
+            "text": "Runtime evidence is not available; static contracts may be described, but actual runtime facts or numeric business results must not be inferred.",
+            "evidence": "DEFERRED",
+            "source_locations": [],
+            "runtime_observed": false
+          }
+        ],
+        "limitations": [
+          "REFUSED: set PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL=true explicitly",
+          "Runtime evidence is not available; static contracts may be described, but actual runtime facts or numeric business results must not be inferred."
+        ],
+        "sources": [],
+        "tool_trace": [
+          {
+            "tool": "search_knowledge",
+            "status": "DEFERRED",
+            "evidence": "DEFERRED"
+          }
+        ],
+        "evidence_levels": [
+          "DEFERRED"
+        ]
+      },
+      "draft": {
+        "answer": "REFUSED: set PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL=true explicitly\n\nRuntime evidence is not available; static contracts may be described, but actual runtime facts or numeric business results must not be inferred.",
+        "used_claim_ids": [],
+        "acknowledged_limitations": [
+          "REFUSED: set PHASE7B_ALLOW_KNOWLEDGE_RETRIEVAL=true explicitly",
+          "Runtime evidence is not available; static contracts may be described, but actual runtime facts or numeric business results must not be inferred."
+        ]
+      }
+    }
+  }
+}

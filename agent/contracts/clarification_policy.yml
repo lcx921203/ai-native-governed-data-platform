@@ -1,0 +1,43 @@
+version: 1
+contract: commerce_governed_clarification_continuation
+mode: immutable_plan_continuation
+
+principles:
+  original_query_context_immutable: true
+  reparse_original_question_on_resume: false
+  one_pending_clarification_per_continuation: true
+  confirmation_must_select_stored_candidate: true
+  fuzzy_candidate_requires_user_confirmation: true
+  rejected_candidate_must_not_execute: true
+  unknown_reply_must_not_execute: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+
+limits:
+  max_candidates: 5
+
+reply_markers:
+  affirm:
+    - "对"
+    - "是"
+    - "是的"
+    - "确认"
+    - "可以"
+    - "yes"
+    - "y"
+    - "correct"
+  reject:
+    - "不对"
+    - "不是"
+    - "否"
+    - "取消"
+    - "no"
+    - "n"
+    - "cancel"
+
+state:
+  integrity: sha256_checksum
+  note: >
+    The checksum detects accidental or unauthorized in-process mutation of the frozen
+    continuation state. It is not a user-authentication signature; production session
+    storage remains a later runtime concern.

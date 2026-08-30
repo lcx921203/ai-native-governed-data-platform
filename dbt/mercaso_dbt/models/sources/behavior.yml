@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: behavior
+    schema: source
+    description: PyFlink DataStream 去重后写入 Iceberg 的 canonical behavior event。
+    tables:
+      - name: events
+        identifier: behavior_event

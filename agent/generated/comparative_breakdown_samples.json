@@ -1,0 +1,409 @@
+{
+  "contract": "commerce_phase5h_comparative_breakdown_samples",
+  "evidence_boundary": "STATIC_CONTRACT_ONLY; real grouped MetricFlow execution is DEFERRED",
+  "initial_plan": {
+    "status": "READY",
+    "question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+    "spec": {
+      "metric": "gross_sales",
+      "metrics": [
+        "gross_sales"
+      ],
+      "start_time": "2026-08-01T00:00:00Z",
+      "end_time": "2026-08-05T23:59:59Z",
+      "group_by": [
+        "store__region"
+      ],
+      "filters": [],
+      "limit": 20
+    },
+    "warnings": [],
+    "requires_metricflow_explain": true,
+    "command_preview": [
+      "mf",
+      "query",
+      "--metrics",
+      "gross_sales",
+      "--group-by",
+      "store__region",
+      "--start-time",
+      "2026-08-01T00:00:00Z",
+      "--end-time",
+      "2026-08-05T23:59:59Z",
+      "--limit",
+      "20"
+    ],
+    "continuation_spec": null,
+    "clarification": null
+  },
+  "session_start": {
+    "session_id": "sess_eaaff9591974058b",
+    "contract_version": 1,
+    "original_question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+    "current_spec": {
+      "metric": "gross_sales",
+      "metrics": [
+        "gross_sales"
+      ],
+      "start_time": "2026-08-01T00:00:00Z",
+      "end_time": "2026-08-05T23:59:59Z",
+      "group_by": [
+        "store__region"
+      ],
+      "filters": [],
+      "limit": 20
+    },
+    "revision": 1,
+    "turn_count": 1,
+    "last_question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+    "history": [
+      {
+        "revision": 1,
+        "question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+        "delta_kind": "NOOP",
+        "summary": "Initial governed semantic query state"
+      }
+    ],
+    "integrity_checksum": "73c5aadc614f2dca8e5f8f4d1881f488090c5a20d00d8da88c547c064534eb6b",
+    "comparison": null
+  },
+  "yoy_breakdown": {
+    "status": "READY",
+    "state": {
+      "session_id": "sess_eaaff9591974058b",
+      "contract_version": 1,
+      "original_question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 20
+      },
+      "revision": 2,
+      "turn_count": 2,
+      "last_question": "同比呢？",
+      "history": [
+        {
+          "revision": 1,
+          "question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+          "delta_kind": "NOOP",
+          "summary": "Initial governed semantic query state"
+        },
+        {
+          "revision": 2,
+          "question": "同比呢？",
+          "delta_kind": "SET_COMPARISON",
+          "summary": "Set year_over_year comparison context."
+        }
+      ],
+      "integrity_checksum": "23966de01714fe51f972d8218ef2e82c456364655d6943a30983b014aae463bd",
+      "comparison": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      }
+    },
+    "question": "同比呢？",
+    "delta_kind": "SET_COMPARISON",
+    "plan": null,
+    "query_result": null,
+    "comparison_plan": null,
+    "comparison_result": null,
+    "breakdown_plan": {
+      "status": "READY",
+      "question": "同比呢？",
+      "mode": "COMPARE",
+      "context": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      },
+      "dimension": "store__region",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "comparison_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2025-08-01T00:00:00Z",
+        "end_time": "2025-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "warnings": []
+    },
+    "breakdown_result": null,
+    "warnings": []
+  },
+  "top_growth_plan": {
+    "status": "READY",
+    "state": {
+      "session_id": "sess_eaaff9591974058b",
+      "contract_version": 1,
+      "original_question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 20
+      },
+      "revision": 3,
+      "turn_count": 3,
+      "last_question": "哪个地区增长最多？",
+      "history": [
+        {
+          "revision": 1,
+          "question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+          "delta_kind": "NOOP",
+          "summary": "Initial governed semantic query state"
+        },
+        {
+          "revision": 2,
+          "question": "同比呢？",
+          "delta_kind": "SET_COMPARISON",
+          "summary": "Set year_over_year comparison context."
+        },
+        {
+          "revision": 3,
+          "question": "哪个地区增长最多？",
+          "delta_kind": "RANK_BREAKDOWN",
+          "summary": "Prepared governed TOP_ABSOLUTE_CHANGE ranking over existing comparison context."
+        }
+      ],
+      "integrity_checksum": "4d53ff872502ae728fe13d55ff3596da823ba50b3f61e8b016359d5594691f1a",
+      "comparison": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      }
+    },
+    "question": "哪个地区增长最多？",
+    "delta_kind": "RANK_BREAKDOWN",
+    "plan": null,
+    "query_result": null,
+    "comparison_plan": null,
+    "comparison_result": null,
+    "breakdown_plan": {
+      "status": "READY",
+      "question": "哪个地区增长最多？",
+      "mode": "TOP_ABSOLUTE_CHANGE",
+      "context": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      },
+      "dimension": "store__region",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "comparison_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2025-08-01T00:00:00Z",
+        "end_time": "2025-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "warnings": []
+    },
+    "breakdown_result": null,
+    "warnings": []
+  },
+  "contribution_plan": {
+    "status": "READY",
+    "state": {
+      "session_id": "sess_eaaff9591974058b",
+      "contract_version": 1,
+      "original_question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 20
+      },
+      "revision": 4,
+      "turn_count": 4,
+      "last_question": "总增长主要是谁贡献的？",
+      "history": [
+        {
+          "revision": 1,
+          "question": "2026-08-01 到 2026-08-05 按地区看 gross_sales",
+          "delta_kind": "NOOP",
+          "summary": "Initial governed semantic query state"
+        },
+        {
+          "revision": 2,
+          "question": "同比呢？",
+          "delta_kind": "SET_COMPARISON",
+          "summary": "Set year_over_year comparison context."
+        },
+        {
+          "revision": 3,
+          "question": "哪个地区增长最多？",
+          "delta_kind": "RANK_BREAKDOWN",
+          "summary": "Prepared governed TOP_ABSOLUTE_CHANGE ranking over existing comparison context."
+        },
+        {
+          "revision": 4,
+          "question": "总增长主要是谁贡献的？",
+          "delta_kind": "CONTRIBUTION_ANALYSIS",
+          "summary": "Prepared governed contribution analysis over existing comparison context."
+        }
+      ],
+      "integrity_checksum": "fac9751c3b8a5cf6a528aa9b4e1d26fea40b48f531e5dd01e88e190352dbac18",
+      "comparison": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      }
+    },
+    "question": "总增长主要是谁贡献的？",
+    "delta_kind": "CONTRIBUTION_ANALYSIS",
+    "plan": null,
+    "query_result": null,
+    "comparison_plan": null,
+    "comparison_result": null,
+    "breakdown_plan": {
+      "status": "READY",
+      "question": "总增长主要是谁贡献的？",
+      "mode": "CONTRIBUTION",
+      "context": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      },
+      "dimension": "store__region",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "comparison_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2025-08-01T00:00:00Z",
+        "end_time": "2025-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "warnings": []
+    },
+    "breakdown_result": null,
+    "warnings": []
+  },
+  "deferred_contribution_execution": {
+    "status": "DEFERRED",
+    "evidence": "STATIC_CONTRACT",
+    "plan": {
+      "status": "READY",
+      "question": "总增长主要是谁贡献的？",
+      "mode": "CONTRIBUTION",
+      "context": {
+        "mode": "YEAR_OVER_YEAR",
+        "requested_days": null,
+        "label": "year_over_year"
+      },
+      "dimension": "store__region",
+      "current_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-01T00:00:00Z",
+        "end_time": "2026-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "comparison_spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2025-08-01T00:00:00Z",
+        "end_time": "2025-08-05T23:59:59Z",
+        "group_by": [
+          "store__region"
+        ],
+        "filters": [],
+        "limit": 50
+      },
+      "warnings": []
+    },
+    "rows": [],
+    "warnings": [
+      "Breakdown execution is disabled; set PHASE5H_ALLOW_BREAKDOWN_QUERY=true only in the intended runtime environment."
+    ],
+    "validation": "NOT_EXECUTED",
+    "current_result": null,
+    "comparison_result": null,
+    "aggregate_current_result": null,
+    "aggregate_comparison_result": null
+  }
+}

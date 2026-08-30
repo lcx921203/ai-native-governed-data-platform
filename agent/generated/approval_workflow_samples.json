@@ -1,0 +1,295 @@
+{
+  "note": "Static engineering sample. Actor authentication and runtime incident facts are simulated; no production action was executed.",
+  "initial_bundle": {
+    "status": "PENDING",
+    "evidence": "RUNTIME_VERIFIED",
+    "cases": [
+      {
+        "request": {
+          "approval_id": "approval_7dd967c91a25d290d67b",
+          "partition_key": "2026-08-05",
+          "action": "INVESTIGATE_DATA_CONTRACT",
+          "authority": "HUMAN_DATA_OPERATOR",
+          "policy_action": "alert_manual",
+          "policy_reason": "data_contract_failure",
+          "evidence_fingerprint": "7b22200acba2cf37a43f794659c0f3f2be97ff19d152fb7a170e71de00bb76fa",
+          "request_hash": "7f0ebd4177829359dcd4b3fccbc5292ebd03b3d5145ec798098e18afed94655e",
+          "requested_at": "2026-08-18T16:00:00Z",
+          "expires_at": "2026-08-18T17:00:00Z",
+          "execution_authorized_by_agent": false
+        },
+        "status": "PENDING",
+        "events": [
+          {
+            "sequence": 1,
+            "approval_id": "approval_7dd967c91a25d290d67b",
+            "event_type": "REQUESTED",
+            "previous_status": null,
+            "new_status": "PENDING",
+            "occurred_at": "2026-08-18T16:00:00Z",
+            "actor": {
+              "subject_id": "phase6f-approval-workflow",
+              "actor_type": "SYSTEM",
+              "authenticated": true,
+              "identity_source": "SYSTEM_POLICY"
+            },
+            "reason": "human_required_response_step_created",
+            "request_hash": "7f0ebd4177829359dcd4b3fccbc5292ebd03b3d5145ec798098e18afed94655e",
+            "previous_event_hash": "",
+            "event_hash": "e8eb1ab63e9df0dd0baf1e175cbcb2be5594b1137a0a9182e4d423504cde0ee8"
+          }
+        ]
+      },
+      {
+        "request": {
+          "approval_id": "approval_ad5dca2dca38519c1a93",
+          "partition_key": "2026-08-05",
+          "action": "APPROVE_MANUAL_BACKFILL",
+          "authority": "HUMAN_DATA_OPERATOR",
+          "policy_action": "alert_manual",
+          "policy_reason": "data_contract_failure",
+          "evidence_fingerprint": "c9d12c0b2b43ebe6636574d25eae1ec96e5b9a054dd0baeb58bc2e485d227bc8",
+          "request_hash": "b833c590802d92e532ec2c7235e6807296ab3b587af887a8b0d431f26c668092",
+          "requested_at": "2026-08-18T16:00:00Z",
+          "expires_at": "2026-08-18T17:00:00Z",
+          "execution_authorized_by_agent": false
+        },
+        "status": "PENDING",
+        "events": [
+          {
+            "sequence": 1,
+            "approval_id": "approval_ad5dca2dca38519c1a93",
+            "event_type": "REQUESTED",
+            "previous_status": null,
+            "new_status": "PENDING",
+            "occurred_at": "2026-08-18T16:00:00Z",
+            "actor": {
+              "subject_id": "phase6f-approval-workflow",
+              "actor_type": "SYSTEM",
+              "authenticated": true,
+              "identity_source": "SYSTEM_POLICY"
+            },
+            "reason": "human_required_response_step_created",
+            "request_hash": "b833c590802d92e532ec2c7235e6807296ab3b587af887a8b0d431f26c668092",
+            "previous_event_hash": "",
+            "event_hash": "fd45e68da83fc01cf4b2a25317b82f7f9ccb0e7a94ebd92a2711758fe2325d2f"
+          }
+        ]
+      },
+      {
+        "request": {
+          "approval_id": "approval_a06745cff02c1a50361d",
+          "partition_key": "2026-08-05",
+          "action": "VERIFY_EXACT_PARTITION_COMPLETION",
+          "authority": "HUMAN_DATA_OPERATOR",
+          "policy_action": "alert_manual",
+          "policy_reason": "data_contract_failure",
+          "evidence_fingerprint": "86d74574087ddb6e73bad41e261c3fd66e7aed721b1a73db2ab7df14ff286ace",
+          "request_hash": "fa6c3c202d48de19ee75260edd1ee98661e407ebc1d91ca4a556795713c957f4",
+          "requested_at": "2026-08-18T16:00:00Z",
+          "expires_at": "2026-08-18T17:00:00Z",
+          "execution_authorized_by_agent": false
+        },
+        "status": "PENDING",
+        "events": [
+          {
+            "sequence": 1,
+            "approval_id": "approval_a06745cff02c1a50361d",
+            "event_type": "REQUESTED",
+            "previous_status": null,
+            "new_status": "PENDING",
+            "occurred_at": "2026-08-18T16:00:00Z",
+            "actor": {
+              "subject_id": "phase6f-approval-workflow",
+              "actor_type": "SYSTEM",
+              "authenticated": true,
+              "identity_source": "SYSTEM_POLICY"
+            },
+            "reason": "human_required_response_step_created",
+            "request_hash": "fa6c3c202d48de19ee75260edd1ee98661e407ebc1d91ca4a556795713c957f4",
+            "previous_event_hash": "",
+            "event_hash": "3c3e9106219e10e03d6358ba1af5cf42c039e41b4ef41f1ae7302356fef1e2f9"
+          }
+        ]
+      }
+    ],
+    "warnings": [],
+    "validation": "PENDING_APPROVAL_REQUESTS_CREATED_NO_PRODUCTION_ACTION_EXECUTED"
+  },
+  "approved_case": {
+    "request": {
+      "approval_id": "approval_ad5dca2dca38519c1a93",
+      "partition_key": "2026-08-05",
+      "action": "APPROVE_MANUAL_BACKFILL",
+      "authority": "HUMAN_DATA_OPERATOR",
+      "policy_action": "alert_manual",
+      "policy_reason": "data_contract_failure",
+      "evidence_fingerprint": "c9d12c0b2b43ebe6636574d25eae1ec96e5b9a054dd0baeb58bc2e485d227bc8",
+      "request_hash": "b833c590802d92e532ec2c7235e6807296ab3b587af887a8b0d431f26c668092",
+      "requested_at": "2026-08-18T16:00:00Z",
+      "expires_at": "2026-08-18T17:00:00Z",
+      "execution_authorized_by_agent": false
+    },
+    "status": "APPROVED",
+    "events": [
+      {
+        "sequence": 1,
+        "approval_id": "approval_ad5dca2dca38519c1a93",
+        "event_type": "REQUESTED",
+        "previous_status": null,
+        "new_status": "PENDING",
+        "occurred_at": "2026-08-18T16:00:00Z",
+        "actor": {
+          "subject_id": "phase6f-approval-workflow",
+          "actor_type": "SYSTEM",
+          "authenticated": true,
+          "identity_source": "SYSTEM_POLICY"
+        },
+        "reason": "human_required_response_step_created",
+        "request_hash": "b833c590802d92e532ec2c7235e6807296ab3b587af887a8b0d431f26c668092",
+        "previous_event_hash": "",
+        "event_hash": "fd45e68da83fc01cf4b2a25317b82f7f9ccb0e7a94ebd92a2711758fe2325d2f"
+      },
+      {
+        "sequence": 2,
+        "approval_id": "approval_ad5dca2dca38519c1a93",
+        "event_type": "APPROVED",
+        "previous_status": "PENDING",
+        "new_status": "APPROVED",
+        "occurred_at": "2026-08-18T16:05:00Z",
+        "actor": {
+          "subject_id": "demo-data-operator",
+          "actor_type": "HUMAN_OPERATOR",
+          "authenticated": true,
+          "identity_source": "AUTHENTICATED_UPSTREAM"
+        },
+        "reason": "Data contract remediation validated; approve one manual backfill action.",
+        "request_hash": "b833c590802d92e532ec2c7235e6807296ab3b587af887a8b0d431f26c668092",
+        "previous_event_hash": "fd45e68da83fc01cf4b2a25317b82f7f9ccb0e7a94ebd92a2711758fe2325d2f",
+        "event_hash": "3c2efc1e745910196f6e0ab848c77e67d27f1bab4145fc9455e6123d34ba643c"
+      }
+    ]
+  },
+  "rejected_case": {
+    "request": {
+      "approval_id": "approval_7dd967c91a25d290d67b",
+      "partition_key": "2026-08-05",
+      "action": "INVESTIGATE_DATA_CONTRACT",
+      "authority": "HUMAN_DATA_OPERATOR",
+      "policy_action": "alert_manual",
+      "policy_reason": "data_contract_failure",
+      "evidence_fingerprint": "7b22200acba2cf37a43f794659c0f3f2be97ff19d152fb7a170e71de00bb76fa",
+      "request_hash": "7f0ebd4177829359dcd4b3fccbc5292ebd03b3d5145ec798098e18afed94655e",
+      "requested_at": "2026-08-18T16:00:00Z",
+      "expires_at": "2026-08-18T17:00:00Z",
+      "execution_authorized_by_agent": false
+    },
+    "status": "REJECTED",
+    "events": [
+      {
+        "sequence": 1,
+        "approval_id": "approval_7dd967c91a25d290d67b",
+        "event_type": "REQUESTED",
+        "previous_status": null,
+        "new_status": "PENDING",
+        "occurred_at": "2026-08-18T16:00:00Z",
+        "actor": {
+          "subject_id": "phase6f-approval-workflow",
+          "actor_type": "SYSTEM",
+          "authenticated": true,
+          "identity_source": "SYSTEM_POLICY"
+        },
+        "reason": "human_required_response_step_created",
+        "request_hash": "7f0ebd4177829359dcd4b3fccbc5292ebd03b3d5145ec798098e18afed94655e",
+        "previous_event_hash": "",
+        "event_hash": "e8eb1ab63e9df0dd0baf1e175cbcb2be5594b1137a0a9182e4d423504cde0ee8"
+      },
+      {
+        "sequence": 2,
+        "approval_id": "approval_7dd967c91a25d290d67b",
+        "event_type": "REJECTED",
+        "previous_status": "PENDING",
+        "new_status": "REJECTED",
+        "occurred_at": "2026-08-18T16:06:00Z",
+        "actor": {
+          "subject_id": "demo-data-operator",
+          "actor_type": "HUMAN_OPERATOR",
+          "authenticated": true,
+          "identity_source": "AUTHENTICATED_UPSTREAM"
+        },
+        "reason": "Investigation evidence is not sufficient yet.",
+        "request_hash": "7f0ebd4177829359dcd4b3fccbc5292ebd03b3d5145ec798098e18afed94655e",
+        "previous_event_hash": "e8eb1ab63e9df0dd0baf1e175cbcb2be5594b1137a0a9182e4d423504cde0ee8",
+        "event_hash": "c1b6d1eb356d0047158928ce658ae149938b601ad3f96aa0ca528f2f64af3874"
+      }
+    ]
+  },
+  "expired_case": {
+    "request": {
+      "approval_id": "approval_a06745cff02c1a50361d",
+      "partition_key": "2026-08-05",
+      "action": "VERIFY_EXACT_PARTITION_COMPLETION",
+      "authority": "HUMAN_DATA_OPERATOR",
+      "policy_action": "alert_manual",
+      "policy_reason": "data_contract_failure",
+      "evidence_fingerprint": "86d74574087ddb6e73bad41e261c3fd66e7aed721b1a73db2ab7df14ff286ace",
+      "request_hash": "fa6c3c202d48de19ee75260edd1ee98661e407ebc1d91ca4a556795713c957f4",
+      "requested_at": "2026-08-18T16:00:00Z",
+      "expires_at": "2026-08-18T17:00:00Z",
+      "execution_authorized_by_agent": false
+    },
+    "status": "EXPIRED",
+    "events": [
+      {
+        "sequence": 1,
+        "approval_id": "approval_a06745cff02c1a50361d",
+        "event_type": "REQUESTED",
+        "previous_status": null,
+        "new_status": "PENDING",
+        "occurred_at": "2026-08-18T16:00:00Z",
+        "actor": {
+          "subject_id": "phase6f-approval-workflow",
+          "actor_type": "SYSTEM",
+          "authenticated": true,
+          "identity_source": "SYSTEM_POLICY"
+        },
+        "reason": "human_required_response_step_created",
+        "request_hash": "fa6c3c202d48de19ee75260edd1ee98661e407ebc1d91ca4a556795713c957f4",
+        "previous_event_hash": "",
+        "event_hash": "3c3e9106219e10e03d6358ba1af5cf42c039e41b4ef41f1ae7302356fef1e2f9"
+      },
+      {
+        "sequence": 2,
+        "approval_id": "approval_a06745cff02c1a50361d",
+        "event_type": "EXPIRED",
+        "previous_status": "PENDING",
+        "new_status": "EXPIRED",
+        "occurred_at": "2026-08-18T17:01:00Z",
+        "actor": {
+          "subject_id": "phase6f-expiry-policy",
+          "actor_type": "SYSTEM",
+          "authenticated": true,
+          "identity_source": "SYSTEM_POLICY"
+        },
+        "reason": "approval_ttl_expired",
+        "request_hash": "fa6c3c202d48de19ee75260edd1ee98661e407ebc1d91ca4a556795713c957f4",
+        "previous_event_hash": "3c3e9106219e10e03d6358ba1af5cf42c039e41b4ef41f1ae7302356fef1e2f9",
+        "event_hash": "7b4b3d5c65017ff35c99b7d66b9e42c531fd0ff772328e0c65728df0a4a97964"
+      }
+    ]
+  },
+  "authorization_check_same_evidence": {
+    "status": "ELIGIBLE_FOR_EXTERNAL_EXECUTION",
+    "approval_id": "approval_ad5dca2dca38519c1a93",
+    "eligible_for_external_execution": true,
+    "agent_execution_allowed": false,
+    "reason": "Human approval is valid for the unchanged governed action package. External execution authority must still re-read current truth and execute outside the Agent."
+  },
+  "authorization_check_after_evidence_change": {
+    "status": "EVIDENCE_CHANGED",
+    "approval_id": "approval_ad5dca2dca38519c1a93",
+    "eligible_for_external_execution": false,
+    "agent_execution_allowed": false,
+    "reason": "Current incident/response evidence differs from the evidence approved by the human operator."
+  }
+}

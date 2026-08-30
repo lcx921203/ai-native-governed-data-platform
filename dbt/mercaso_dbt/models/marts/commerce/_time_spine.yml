@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: time_spine_daily
+    description: >
+      MetricFlow 日粒度 Time Spine。当前 Demo 覆盖 2020-01-01 到 2030-12-31。
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: MetricFlow 日粒度标准时间列。
+        granularity: day
+        data_tests:
+          - not_null
+          - unique

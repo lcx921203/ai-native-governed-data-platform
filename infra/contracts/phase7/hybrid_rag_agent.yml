@@ -1,0 +1,28 @@
+version: 1
+contract: commerce_phase7b_hybrid_rag_agent
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+required_capabilities:
+  semantic: metricflow
+  metadata: datahub
+  operational: dagster
+  knowledge: qdrant_reranked_rag
+acceptance:
+  multi_source_question: {required: true}
+  structured_authority_precedence: {required: true}
+  knowledge_search_fetch_roundtrip: {required: true}
+  reranked_retrieval: {required: true}
+  claim_evidence_separation: {required: true}
+  authority_conflict_detection: {required: true}
+  runtime_missing_not_filled_by_rag: {required: true}
+  pipeline_failure_blocks_business_inference: {required: true}
+  renderer_preserves_claim_authority: {required: true}
+forbidden:
+  rag_runtime_fact_invention: true
+  rag_metric_override: true
+  rag_owner_override: true
+  rag_failure_override: true
+  arbitrary_sql: true
+  dagster_execution: true
+evidence:
+  output: .runtime/evidence/phase7b/hybrid_rag_agent.json
+  success_status: HYBRID_RAG_AGENT_RUNTIME_VERIFIED

@@ -1,0 +1,49 @@
+# Serving Governance Policy
+# 业务逻辑：治理 Serving Projection 本身，而不是在 DataHub 中复制第二套指标公式。
+# DataHub 语义：Iceberg Serving Table 是 Dataset；Dagster Export 是 DataFlow/DataJob；BI 是 Dashboard；API 由 OpenAPI ingestion 管理。
+# Metric Authority：MetricFlow 继续拥有指标定义权；Serving Dataset 对 Agent 仅 REFERENCE_ONLY。
+# 工程边界：DataHub 只治理身份、Owner、Lineage 与消费关系，不成为第二套 Metric Definition。
+version: 1
+contract: commerce_serving_governance
+metric_authority: metricflow
+
+serving_assets:
+  - id: bi_daily_executive
+    contract_path: serving/contracts/bi_daily_executive.yml
+    dataset:
+      platform: iceberg
+      platform_instance: commerce_polaris
+      env: DEV
+      namespace: serving
+      dataset_name: commerce_polaris.serving.bi_daily_executive
+      expected_urn: urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)
+    domain: commerce-order-sales
+    owners:
+      business: commerce-analytics
+      technical: data-platform
+    tags:
+      - layer-serving
+      - metricflow-governed
+      - consumer-bi
+      - consumer-api
+      - daily-partitioned
+    glossary_terms:
+      - commerce-metric-gross-sales
+      - commerce-metric-sales-before-reversal
+      - commerce-metric-activity-net-sales
+      - commerce-metric-order-count
+      - commerce-metric-average-order-value
+    structured_properties:
+      commerce.governance.dataClassification: INTERNAL
+      commerce.governance.criticality: HIGH
+      commerce.governance.agentReadiness: REFERENCE_ONLY
+      commerce.governance.metricAuthority: METRICFLOW
+      commerce.governance.servingRole: SHARED_BI_API_PROJECTION
+    lineage:
+      # 真正执行变换的是 Dagster Serving Export DataJob；这里列出它依赖的业务 Mart。
+      upstream_models:
+        - orders
+        - order_items
+        - refund_items
+      export_flow_id: commerce_serving_exports
+      export_job_id: bi_daily_executive

@@ -1,0 +1,328 @@
+{
+  "contract": "commerce_governance_projection",
+  "mutates_datahub": false,
+  "items": [
+    {
+      "model": "stores",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.stores,DEV)",
+      "domain": "commerce-reference",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-store"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "MEDIUM"
+      }
+    },
+    {
+      "model": "items",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.items,DEV)",
+      "domain": "commerce-reference",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-item"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "MEDIUM"
+      }
+    },
+    {
+      "model": "orders",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.orders,DEV)",
+      "domain": "commerce-order-sales",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-order",
+        "commerce-metric-order-count"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "order_lifecycle_snapshot",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.order_lifecycle_snapshot,DEV)",
+      "domain": "commerce-order-sales",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "lifecycle-snapshot",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-order",
+        "commerce-metric-order-to-paid-24h-conversion-rate",
+        "commerce-metric-order-to-fulfillment-3d-conversion-rate",
+        "commerce-metric-order-to-delivered-7d-conversion-rate"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "order_items",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.order_items,DEV)",
+      "domain": "commerce-order-sales",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-order-item",
+        "commerce-entity-item",
+        "commerce-metric-gross-sales",
+        "commerce-metric-discount-amount",
+        "commerce-metric-sales-before-reversal",
+        "commerce-metric-average-order-value",
+        "commerce-metric-activity-net-sales",
+        "commerce-metric-order-cohort-net-sales"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "payment_transactions",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.payment_transactions,DEV)",
+      "domain": "commerce-payments",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-payment-transaction",
+        "commerce-metric-collected-payment-amount"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "refunds",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.refunds,DEV)",
+      "domain": "commerce-refunds",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-refund",
+        "commerce-metric-refund-processed-amount"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "refund_items",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.refund_items,DEV)",
+      "domain": "commerce-refunds",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-refund-item",
+        "commerce-entity-item",
+        "commerce-metric-sales-reversal-amount",
+        "commerce-metric-activity-net-sales",
+        "commerce-metric-order-cohort-net-sales"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "fulfillments",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillments,DEV)",
+      "domain": "commerce-fulfillment",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-fulfillment",
+        "commerce-metric-shipment-count",
+        "commerce-metric-delivery-count",
+        "commerce-metric-average-time-to-ship",
+        "commerce-metric-average-delivery-duration"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "HIGH"
+      }
+    },
+    {
+      "model": "fulfillment_items",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillment_items,DEV)",
+      "domain": "commerce-fulfillment",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-fulfillment-item",
+        "commerce-entity-item"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "MEDIUM"
+      }
+    },
+    {
+      "model": "fulfillment_events",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.fulfillment_events,DEV)",
+      "domain": "commerce-fulfillment",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned",
+        "semantic-enabled"
+      ],
+      "glossary_terms": [
+        "commerce-entity-fulfillment-event"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY",
+        "commerce.governance.criticality": "MEDIUM"
+      }
+    },
+    {
+      "model": "time_spine_daily",
+      "status": "BLOCKED_IDENTITY_UNRESOLVED",
+      "dataset_urn": null,
+      "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.time_spine_daily,DEV)",
+      "domain": "commerce",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "daily-partitioned"
+      ],
+      "glossary_terms": [
+        "data-time-business-time"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "REFERENCE_ONLY",
+        "commerce.governance.criticality": "MEDIUM"
+      }
+    }
+  ]
+}

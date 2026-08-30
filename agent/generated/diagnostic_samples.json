@@ -1,0 +1,133 @@
+{
+  "mode": "STATIC_DEFERRED_SAMPLE",
+  "runtime_evidence": "DEFERRED",
+  "plan": {
+    "status": "READY",
+    "question": "为什么今天 Gross Sales 跌了这么多？",
+    "resolved_question": "为什么今天 Gross Sales 跌了这么多？ 2026-08-18",
+    "metric": "gross_sales",
+    "relative_time_resolution": "today->2026-08-18 UTC",
+    "semantic_plan": {
+      "status": "READY",
+      "question": "为什么今天 Gross Sales 跌了这么多？ 2026-08-18",
+      "spec": {
+        "metric": "gross_sales",
+        "metrics": [
+          "gross_sales"
+        ],
+        "start_time": "2026-08-18T00:00:00Z",
+        "end_time": "2026-08-18T23:59:59Z",
+        "group_by": [],
+        "filters": [],
+        "limit": 1
+      },
+      "warnings": [],
+      "requires_metricflow_explain": true,
+      "command_preview": [
+        "mf",
+        "query",
+        "--metrics",
+        "gross_sales",
+        "--start-time",
+        "2026-08-18T00:00:00Z",
+        "--end-time",
+        "2026-08-18T23:59:59Z",
+        "--limit",
+        "1"
+      ],
+      "continuation_spec": null,
+      "clarification": null
+    },
+    "warnings": []
+  },
+  "diagnostic": {
+    "status": "DEFERRED",
+    "evidence": "STATIC_CONTRACT",
+    "plan": {
+      "status": "READY",
+      "question": "为什么今天 Gross Sales 跌了这么多？",
+      "resolved_question": "为什么今天 Gross Sales 跌了这么多？ 2026-08-18",
+      "metric": "gross_sales",
+      "relative_time_resolution": "today->2026-08-18 UTC",
+      "semantic_plan": {
+        "status": "READY",
+        "question": "为什么今天 Gross Sales 跌了这么多？ 2026-08-18",
+        "spec": {
+          "metric": "gross_sales",
+          "metrics": [
+            "gross_sales"
+          ],
+          "start_time": "2026-08-18T00:00:00Z",
+          "end_time": "2026-08-18T23:59:59Z",
+          "group_by": [],
+          "filters": [],
+          "limit": 1
+        },
+        "warnings": [],
+        "requires_metricflow_explain": true,
+        "command_preview": [
+          "mf",
+          "query",
+          "--metrics",
+          "gross_sales",
+          "--start-time",
+          "2026-08-18T00:00:00Z",
+          "--end-time",
+          "2026-08-18T23:59:59Z",
+          "--limit",
+          "1"
+        ],
+        "continuation_spec": null,
+        "clarification": null
+      },
+      "warnings": []
+    },
+    "operational_health": null,
+    "anomaly": null,
+    "attribution": null,
+    "incident": null,
+    "incident_response": null,
+    "trace": [],
+    "warnings": [
+      "Diagnostic execution is disabled; set PHASE6C_ALLOW_DIAGNOSTIC=true only in the intended runtime environment."
+    ],
+    "validation": "NOT_EXECUTED"
+  },
+  "response_envelope": {
+    "question": "为什么今天 Gross Sales 跌了这么多？",
+    "intent": "DIAGNOSTIC_QUERY",
+    "status": "DEFERRED",
+    "subject": {
+      "kind": "metric",
+      "id": "gross_sales"
+    },
+    "claims": [
+      {
+        "id": "C01",
+        "kind": "LIMITATION",
+        "text": "Diagnostic execution is disabled; set PHASE6C_ALLOW_DIAGNOSTIC=true only in the intended runtime environment.",
+        "evidence": "DEFERRED",
+        "source_locations": [],
+        "runtime_observed": false
+      },
+      {
+        "id": "C02",
+        "kind": "LIMITATION",
+        "text": "Real diagnostic runtime evidence is unavailable; no anomaly, operational-health fact, or business driver may be inferred from static contracts.",
+        "evidence": "DEFERRED",
+        "source_locations": [],
+        "runtime_observed": false
+      }
+    ],
+    "limitations": [
+      "Diagnostic execution is disabled; set PHASE6C_ALLOW_DIAGNOSTIC=true only in the intended runtime environment.",
+      "Real diagnostic runtime evidence is unavailable; no anomaly, operational-health fact, or business driver may be inferred from static contracts."
+    ],
+    "sources": [],
+    "tool_trace": [],
+    "evidence_levels": [
+      "DEFERRED"
+    ]
+  },
+  "deterministic_answer": "Diagnostic execution is disabled; set PHASE6C_ALLOW_DIAGNOSTIC=true only in the intended runtime environment.\n\nReal diagnostic runtime evidence is unavailable; no anomaly, operational-health fact, or business driver may be inferred from static contracts."
+}

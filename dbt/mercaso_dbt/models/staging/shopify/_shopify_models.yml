@@ -1,0 +1,112 @@
+version: 2
+
+models:
+  - name: stg_shopify__orders
+    description: Shopify Order Source-conformed staging。保留 Source Version Grain。
+
+  - name: stg_shopify__order_items
+    description: Shopify LineItem Source-conformed staging。保留 Source Version Grain。
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+
+  - name: stg_shopify__line_item_discount_allocations
+    description: Shopify LineItem × DiscountApplication 折扣分配版本。
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+      - name: line_item_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__order_items'), field: line_item_id}
+
+  - name: stg_shopify__transactions
+    description: Shopify OrderTransaction Source-conformed staging。
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+
+  - name: stg_shopify__refunds
+    description: Shopify Refund Source-conformed staging。
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+
+  - name: stg_shopify__refund_items
+    description: Shopify RefundLineItem Source-conformed staging。
+    columns:
+      - name: refund_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__refunds'), field: refund_id}
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+      - name: line_item_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__order_items'), field: line_item_id}
+
+  - name: stg_shopify__refund_transactions
+    description: Refund 与 OrderTransaction 的关联桥；不承载金额指标。
+    columns:
+      - name: refund_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('stg_shopify__refunds'), field: refund_id}
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+      - name: transaction_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('stg_shopify__transactions'), field: transaction_id}
+
+  - name: stg_shopify__fulfillments
+    description: Shopify Fulfillment / Shipment Source-conformed staging。
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+
+  - name: stg_shopify__fulfillment_items
+    description: Shopify FulfillmentLineItem Source-conformed staging。
+    columns:
+      - name: fulfillment_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__fulfillments'), field: fulfillment_id}
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}
+      - name: line_item_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__order_items'), field: line_item_id}
+
+  - name: stg_shopify__fulfillment_events
+    description: Shopify FulfillmentEvent Source-conformed staging；event_time 来自 happenedAt。
+    columns:
+      - name: fulfillment_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__fulfillments'), field: fulfillment_id}
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_shopify__orders'), field: order_id}

@@ -1,0 +1,133 @@
+{
+  "contract": "commerce_serving_governance_projection",
+  "mode": "STATIC_EXPECTATION_ONLY",
+  "mutates_datahub": false,
+  "runtime_verified": false,
+  "principles": {
+    "metric_authority": "MetricFlow",
+    "serving_is_rebuildable_projection": true,
+    "serving_agent_readiness": "REFERENCE_ONLY",
+    "exact_identity_required_before_lineage_write": true,
+    "api_endpoint_urn_guessing_forbidden": true
+  },
+  "items": [
+    {
+      "id": "bi_daily_executive",
+      "dataset": {
+        "platform": "iceberg",
+        "platform_instance": "commerce_polaris",
+        "env": "DEV",
+        "namespace": "serving",
+        "dataset_name": "commerce_polaris.serving.bi_daily_executive",
+        "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)",
+        "status": "UNVERIFIED_EXPECTED",
+        "resolved_urn": null
+      },
+      "governance": {
+        "domain": "commerce-order-sales",
+        "owners": {
+          "business": "commerce-analytics",
+          "technical": "data-platform"
+        },
+        "tags": [
+          "layer-serving",
+          "metricflow-governed",
+          "consumer-bi",
+          "consumer-api",
+          "daily-partitioned"
+        ],
+        "glossary_terms": [
+          "commerce-metric-gross-sales",
+          "commerce-metric-sales-before-reversal",
+          "commerce-metric-activity-net-sales",
+          "commerce-metric-order-count",
+          "commerce-metric-average-order-value"
+        ],
+        "structured_properties": {
+          "commerce.governance.dataClassification": "INTERNAL",
+          "commerce.governance.criticality": "HIGH",
+          "commerce.governance.agentReadiness": "REFERENCE_ONLY",
+          "commerce.governance.metricAuthority": "METRICFLOW",
+          "commerce.governance.servingRole": "SHARED_BI_API_PROJECTION"
+        }
+      },
+      "semantic_contract": {
+        "metric_authority": "metricflow",
+        "metrics": [
+          "gross_sales",
+          "sales_before_reversal",
+          "activity_net_sales",
+          "order_count",
+          "average_order_value"
+        ],
+        "group_by": [
+          "metric_time__day",
+          "store__region"
+        ],
+        "serving_contract": "serving/contracts/bi_daily_executive.yml"
+      },
+      "export_job": {
+        "entity_type": "datajob",
+        "platform": "dagster",
+        "platform_instance": "DEV",
+        "flow_id": "commerce_serving_exports",
+        "job_id": "bi_daily_executive",
+        "upstream_datasets": [
+          {
+            "model": "orders",
+            "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.orders,DEV)"
+          },
+          {
+            "model": "order_items",
+            "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.order_items,DEV)"
+          },
+          {
+            "model": "refund_items",
+            "expected_urn": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.analytics.refund_items,DEV)"
+          }
+        ],
+        "downstream_dataset": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)"
+      },
+      "consumers": {
+        "dashboards": [
+          {
+            "entity_type": "dashboard",
+            "id": "executive_daily",
+            "platform": "commerce_bi",
+            "expected_urn": "urn:li:dashboard:(commerce_bi,executive_daily)",
+            "runtime_mode": "LOGICAL_CONTRACT",
+            "lineage": {
+              "upstream": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)"
+            }
+          }
+        ],
+        "api_endpoints": [
+          {
+            "entity_type": "dataset",
+            "id": "executive_daily",
+            "method": "GET",
+            "path": "/api/v1/executive/daily",
+            "identity_status": "RUNTIME_RESOLVE_AFTER_OPENAPI_INGESTION",
+            "expected_urn": null,
+            "resolved_urn": null,
+            "lineage": {
+              "upstream": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)"
+            }
+          },
+          {
+            "entity_type": "dataset",
+            "id": "region_daily",
+            "method": "GET",
+            "path": "/api/v1/regions/{region}/daily",
+            "identity_status": "RUNTIME_RESOLVE_AFTER_OPENAPI_INGESTION",
+            "expected_urn": null,
+            "resolved_urn": null,
+            "lineage": {
+              "upstream": "urn:li:dataset:(urn:li:dataPlatform:iceberg,commerce_polaris.serving.bi_daily_executive,DEV)"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

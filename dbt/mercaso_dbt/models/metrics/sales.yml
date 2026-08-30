@@ -1,0 +1,47 @@
+# Governed Metric Contract — Sales
+# 业务逻辑：给“销售额/净销售额/AOV”等业务问题提供唯一、可追溯的指标定义。
+# 输入：Semantic Layer 中已经声明好 Grain、Entity、Dimension、Business Time 的模型。
+# 输出：MetricFlow 可解析的 ratio / derived metric contract。
+# MetricFlow API：ratio 用 numerator/denominator；derived 用 expr + input_metrics 组合受治理指标。
+# 工程边界：activity_net_sales 与 order_cohort_net_sales 是两种合法但不同的问题语义，Agent 不得临场互换。
+
+version: 2
+
+metrics:
+
+  - name: average_order_value
+    label: Average Order Value
+    description: >
+      折扣后、退款冲销前销售金额 / 去重订单数。
+    type: ratio
+    numerator: sales_before_reversal
+    denominator: order_count
+
+
+  - name: activity_net_sales
+    label: Activity Net Sales
+    description: >
+      按各业务活动实际发生时间观察：
+      当期 Sales Before Reversal - 当期 Sales Reversal。
+    type: derived
+    expr: >
+      sales_before_reversal
+      - sales_reversal_amount
+    input_metrics:
+      - name: sales_before_reversal
+      - name: sales_reversal_amount
+
+
+  - name: order_cohort_net_sales
+    label: Order Cohort Net Sales
+    description: >
+      按原订单时间归因：
+      某批订单 Sales Before Reversal
+      - 这些订单最终发生的 Sales Reversal。
+    type: derived
+    expr: >
+      sales_before_reversal
+      - sales_reversal_by_order_cohort
+    input_metrics:
+      - name: sales_before_reversal
+      - name: sales_reversal_by_order_cohort

@@ -1,0 +1,38 @@
+version: 1
+contract: commerce_governed_incident_response_planner
+mode: advisory_only_human_approval_boundary
+
+principles:
+  phase6d_runtime_verified_incident_required: true
+  phase3c_recovery_policy_is_execution_authority: true
+  agent_never_launches_recovery_run: true
+  agent_never_launches_manual_backfill: true
+  auto_replay_is_delegated_to_existing_dagster_recovery_sensor: true
+  active_owner_blocks_duplicate_execution: true
+  manual_recovery_requires_human_approval: true
+  deterministic_code_requires_fix_before_backfill: true
+  data_contract_requires_validation_before_backfill: true
+  unknown_failure_remains_fail_closed: true
+  infrastructure_unhealthy_blocks_replay: true
+  exact_partition_completion_closes_incident: true
+  policy_decision_is_not_observed_execution: true
+  advisory_plan_is_not_production_execution: true
+  arbitrary_sql: false
+  arbitrary_shell_command: false
+  free_text_log_cause_inference: false
+  llm_has_no_dagster_write_handle: true
+
+limits:
+  max_partitions_per_plan: 7
+  max_partitions_in_answer: 3
+
+runtime:
+  allow_env: PHASE6E_ALLOW_INCIDENT_RESPONSE_PLANNING
+  requires_incident_gate: PHASE6D_ALLOW_INCIDENT_DRILLDOWN
+  requires_diagnostic_gate: PHASE6C_ALLOW_DIAGNOSTIC
+  writes_enabled: false
+
+sources:
+  incident_evidence: agent/incident_drilldown/contracts.py
+  recovery_policy: orchestration/dagster/commerce_dagster/recovery_policy.py
+  recovery_state: orchestration/dagster/commerce_dagster/recovery_state.py

@@ -1,0 +1,28 @@
+version: 1
+contract: commerce_governed_analysis_session
+mode: immutable_semantic_state_delta
+principles:
+  session_state_is_structured_not_free_chat_memory: true
+  follow_up_applies_delta_to_frozen_spec: true
+  reparse_original_question_on_follow_up: false
+  explicit_time_range_is_inherited: true
+  group_by_is_inherited_until_explicitly_changed: true
+  resolved_filters_are_inherited_until_explicitly_changed: true
+  metric_set_is_inherited_until_explicitly_changed: true
+  same_dimension_filter_update_replaces_not_duplicates: true
+  unresolved_delta_must_not_execute: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+limits:
+  max_turns: 12
+  max_metrics: 3
+  max_filters: 2
+state:
+  integrity: sha256_checksum
+  revision_starts_at: 1
+  note: >
+    The checksum protects the structured session state from accidental mutation. It is
+    not authentication, authorization, or durable production session storage.
+runtime:
+  allow_env: PHASE5F_ALLOW_SESSION_EXECUTION
+  semantic_query_gate: PHASE5B_ALLOW_METRICFLOW_QUERY

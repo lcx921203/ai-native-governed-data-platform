@@ -1,0 +1,37 @@
+# 业务逻辑：Phase 7C Runtime Acceptance 通过真实 Streamable HTTP Client 检查 MCP Server，而不是检查源码文件是否存在。
+# MCP API：必须能 discovery Tool/Resource/Prompt、获得 structured output，并验证 OAuth 未授权请求会被拒绝。
+# 工程边界：Acceptance 不允许调用任何写入、Recovery、任意代码执行能力；Evidence 必须保留原证据等级。
+version: 1
+contract: commerce_phase7c_mcp_runtime_acceptance
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+protocol:
+  required_version: '2026-07-28'
+  sdk: {python: '2.0.0'}
+acceptance:
+  server_discovery: {required: true}
+  tools_list: {required: true}
+  resources_list: {required: true}
+  prompts_list: {required: true}
+  structured_tool_output: {required: true}
+  metadata_tool: {required: true}
+  semantic_tool: {required: true}
+  operational_tool: {required: true}
+  knowledge_search: {required: true}
+  knowledge_fetch: {required: true}
+  resource_read: {required: true}
+  prompt_get: {required: true}
+  oauth_http: {required: true}
+  unauthorized_request_rejected: {required: true}
+  evidence_preservation: {required: true}
+forbidden:
+  execute_sql: true
+  shell: true
+  python_execution: true
+  datahub_write: true
+  dagster_launch_run: true
+  dagster_backfill: true
+  dagster_recovery: true
+  knowledge_reindex: true
+evidence:
+  output: .runtime/evidence/phase7c/mcp_runtime.json
+  success_status: COMMERCE_MCP_RUNTIME_VERIFIED

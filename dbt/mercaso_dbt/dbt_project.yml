@@ -1,0 +1,40 @@
+name: mercaso_dbt
+version: "1.0.0"
+profile: mercaso_dbt
+
+# Latest Semantic Layer YAML spec requires dbt Core 1.12.
+require-dbt-version:
+  - ">=1.12.0"
+  - "<1.13.0"
+
+model-paths:
+  - models
+
+test-paths:
+  - tests
+
+seed-paths:
+  - seeds
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  mercaso_dbt:
+    staging:
+      +materialized: view
+
+    intermediate:
+      # 学习阶段优先 view，方便直接 SELECT / Debug。
+      # 后续简单模型可考虑 ephemeral。
+      +materialized: view
+
+    marts:
+      +materialized: table
+      # 当前 Spark Catalog 指向 Iceberg REST Catalog；Mart 明确物化为 Iceberg。
+      +file_format: iceberg
+
+seeds:
+  mercaso_dbt:
+    +file_format: iceberg

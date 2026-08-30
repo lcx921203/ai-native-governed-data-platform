@@ -1,0 +1,27 @@
+# Golden Retrieval Evaluation：人工标注 query、scope filter 与相关文档等级。
+# Runtime runner 使用 Recall@5 / MRR@5 / NDCG@5 与 latency 验证真实检索质量；静态文件本身不是 Runtime PASS。
+version: 1
+dataset: commerce_knowledge_retrieval_eval
+cases:
+  - id: modeling.order_current_vs_snapshot
+    query: 为什么订单不能只保存 current 状态，而需要生命周期累计快照？
+    filters: {scopes: [modeling, architecture]}
+    relevant:
+      - {document_id: commerce.modeling.order_lifecycle, relevance: 3}
+      - {document_id: commerce.architecture.entity_state_event, relevance: 2}
+  - id: runbook.dbt_failure
+    query: dbt test 失败以后应该怎么排查？
+    filters: {scopes: [runbook]}
+    relevant:
+      - {document_id: commerce.runbook.dbt_failure, relevance: 3}
+  - id: architecture.datahub_metric_authority
+    query: 为什么 DataHub 不能直接作为指标计算口径的权威？
+    filters: {scopes: [architecture, governance]}
+    relevant:
+      - {document_id: commerce.architecture.authority_boundaries, relevance: 3}
+      - {document_id: commerce.architecture.semantic_layer, relevance: 2}
+  - id: business.shopify_processed_at
+    query: Shopify processed_at 在订单语义中表示什么？
+    filters: {scopes: [business, glossary]}
+    relevant:
+      - {document_id: commerce.shopify.order_semantics, relevance: 3}

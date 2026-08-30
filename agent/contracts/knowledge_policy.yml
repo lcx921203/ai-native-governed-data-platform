@@ -1,0 +1,59 @@
+# 业务逻辑：Knowledge RAG 只负责 Why / Design / SOP / Troubleshooting 等解释性知识。
+# 工程边界：MetricFlow / DataHub / Dagster 的结构化权威不能被检索文档覆盖。
+version: 1
+contract: commerce_knowledge_rag
+mode: governed_document_retrieval
+
+
+# Document Ingestion Contract：当前 active corpus 仍为 Markdown；PDF/DOCX 解析入口已 SOURCE DEFINED。
+document_ingestion:
+  supported_formats: [markdown, pdf, docx]
+  canonical_document_contract: KnowledgeDocument
+  pdf_text_layer_supported: true
+  pdf_ocr: DEFERRED
+  docx_blocks: [heading, paragraph, table]
+  arbitrary_external_document: false
+
+# Scope 是 Agent 能选择的受治理检索域，不允许任意文件路径或 secrets 目录。
+allowed_scopes: [business, architecture, modeling, governance, runbook, glossary]
+
+# Authority Contract：明确每类 Claim 的最终权威来源。
+authority:
+  metric_definition: {source: metricflow, rag_can_override: false}
+  semantic_relationship: {source: dbt_metricflow, rag_can_override: false}
+  dataset_identity: {source: datahub, rag_can_override: false}
+  dataset_owner: {source: datahub, rag_can_override: false}
+  runtime_status: {source: dagster, rag_can_override: false}
+  failure_observation: {source: dagster, rag_can_override: false}
+  business_explanation: {source: knowledge_rag}
+  design_rationale: {source: knowledge_rag}
+  operating_procedure: {source: knowledge_rag}
+  troubleshooting_guide: {source: knowledge_rag}
+
+# 安全边界：这些目录/文件即使存在，也不能被纳入 Knowledge Corpus。
+forbidden_corpus:
+  - .runtime/**
+  - agent/generated/**
+  - target/**
+  - logs/**
+  - secrets/**
+  - .env
+  - '*.key'
+  - '*.pem'
+
+# Retrieval Contract：限制 top_k、要求 scope filtering 与来源 provenance。
+retrieval:
+  exact_scope_filtering: true
+  default_top_k: 5
+  max_top_k: 10
+  minimum_score_required: true
+  arbitrary_file_path_from_model: false
+  return_source_provenance: true
+  return_document_hash: true
+
+# Evidence Contract：Retrieved Knowledge 不是 Runtime Observation。
+claims:
+  evidence_level: RETRIEVED_KNOWLEDGE
+  runtime_observed: false
+  may_create_numeric_runtime_claim: false
+  may_override_structured_authority: false

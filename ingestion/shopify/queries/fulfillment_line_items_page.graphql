@@ -1,0 +1,23 @@
+# Nested Pagination Query · Fulfillment.fulfillmentLineItems
+# 输入：Fulfillment Node ID + first + after；输出：一页履约商品 nodes + pageInfo。
+# 数据语义：FulfillmentLineItem 是独立 1:N Grain，保留 fulfillment_id → line_item_id 的关系与履约数量。
+# 工程边界：它与 Fulfillment.events 分别分页、分别 Normalize，避免 1:N × 1:N Fanout。
+
+query FulfillmentLineItemsPage(
+  $id: ID!
+  $first: Int!
+  $after: String
+) {
+  node(id: $id) {
+    ... on Fulfillment {
+      fulfillmentLineItems(first: $first, after: $after) {
+        nodes {
+          id
+          quantity
+          lineItem { id }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}

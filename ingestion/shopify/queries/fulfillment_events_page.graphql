@@ -1,0 +1,32 @@
+# Nested Pagination Query · Fulfillment.events
+# 输入：Fulfillment Node ID + first + after；输出：履约事件 nodes + pageInfo。
+# Business Time：happenedAt 是事件发生时间；sortKey=HAPPENED_AT 只是分页/排序语义，不替代事件 ID 的业务身份。
+# 工程边界：事件是历史事实，后续 Normalize 独立 explode，不与 FulfillmentLineItem 同时展开。
+
+query FulfillmentEventsPage(
+  $id: ID!
+  $first: Int!
+  $after: String
+) {
+  node(id: $id) {
+    ... on Fulfillment {
+      events(first: $first, after: $after, sortKey: HAPPENED_AT) {
+        nodes {
+          id
+          status
+          createdAt
+          happenedAt
+          estimatedDeliveryAt
+          message
+          city
+          province
+          country
+          zip
+          latitude
+          longitude
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}

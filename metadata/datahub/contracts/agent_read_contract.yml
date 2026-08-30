@@ -1,0 +1,22 @@
+# 业务逻辑：限定 Agent 可以读取哪些元数据上下文，并把“Read Tool”与“Source of Truth”分开。
+# DataHub API 语义：Runtime Dataset / Lineage 只允许 exact URN + bounded hops；禁止任意 graph query 和 raw metadata dump。
+# 工程边界：Metric 公式来自 dbt/MetricFlow；Run/Failure/Recovery 来自 Dagster；静态 fallback 必须标 STATIC_CONTRACT。
+version: 1
+contract: commerce_governed_agent_read
+mode: bounded_read_only
+principles:
+  arbitrary_datahub_graph_query: false
+  raw_metadata_dump: false
+  arbitrary_sql: false
+  fuzzy_dataset_runtime_binding: false
+  metric_formula_source: dbt_metricflow
+  entity_relationship_source: dbt_metricflow
+  runtime_fact_requires_runtime_verified: true
+  static_governance_fallback_must_be_labeled: true
+limits:
+  lineage_max_hops: 2
+  search_max_results: 25
+runtime:
+  datahub_dataset_read: deferred
+  datahub_lineage: deferred
+  dagster_run_history: deferred

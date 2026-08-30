@@ -1,0 +1,28 @@
+# Nested Pagination Query · Refund.refundLineItems
+# 输入：Refund Node ID + first + after；输出：一页 RefundLineItem nodes + pageInfo。
+# GraphQL API：每个 Refund 的 refundLineItems Connection 拥有自己的 cursor。
+# 数据语义：保留 refund_line_item_id、line_item_id、quantity、subtotal/tax 等退款商品事实。
+# 工程边界：不能把父 Order/Refund 的 cursor 当成这里的 after。
+
+query RefundLineItemsPage(
+  $id: ID!
+  $first: Int!
+  $after: String
+) {
+  node(id: $id) {
+    ... on Refund {
+      refundLineItems(first: $first, after: $after) {
+        nodes {
+          id
+          quantity
+          restocked
+          restockType
+          lineItem { id }
+          subtotalSet { shopMoney { amount currencyCode } }
+          totalTaxSet { shopMoney { amount currencyCode } }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}

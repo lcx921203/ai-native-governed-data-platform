@@ -1,0 +1,4 @@
+# Governed Agent static/runtime support.
+PyYAML>=6.0,<7.0
+# Optional live renderer provider used only when PHASE4G_ALLOW_OPENAI_CALL=true.
+openai>=3.0,<4.0

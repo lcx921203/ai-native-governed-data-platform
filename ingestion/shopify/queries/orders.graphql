@@ -1,0 +1,237 @@
+# Shopify Admin GraphQL · Incremental Order Observation
+# 业务逻辑：按 updated_at 窗口读取被修改过的 Order，并把顶层/首屏嵌套对象作为一次完整 Observation 返回。
+# 输入：query(updated_at 半开区间)、first、after、nestedFirst；输出：orders Connection + pageInfo。
+# GraphQL API：first 是页大小，after 是游标；Connection 自己的 endCursor 只能服务自己的下一页。
+# 工程边界：嵌套 Connection 首屏不代表完整集合，采集器必须继续独立翻页；HTTP 200 也不代表 GraphQL errors 为空。
+
+# first：顶层 Order 每页最多取多少条；after：上一页 endCursor。
+# nestedFirst：嵌套 Connection 首屏每页大小；后续分页由独立查询文件继续。
+query OrdersIncremental(
+  $first: Int!
+  $after: String
+  $query: String!
+  $nestedFirst: Int!
+) {
+  orders(
+    first: $first
+    after: $after
+    query: $query
+    sortKey: UPDATED_AT
+  ) {
+    nodes {
+      # -------------------------
+      # Order
+      # -------------------------
+      id
+      name
+      createdAt
+      processedAt
+      updatedAt
+      cancelledAt
+      closedAt
+      displayFinancialStatus
+      displayFulfillmentStatus
+      currencyCode
+
+      customer {
+        id
+      }
+
+      originalTotalPriceSet {
+        shopMoney { amount currencyCode }
+      }
+
+      currentTotalPriceSet {
+        shopMoney { amount currencyCode }
+      }
+
+      currentTotalDiscountsSet {
+        shopMoney { amount currencyCode }
+      }
+
+      totalRefundedSet {
+        shopMoney { amount currencyCode }
+      }
+
+      # -------------------------
+      # OrderItem / LineItem：这是 Connection，需要独立检查 pageInfo
+      # -------------------------
+      lineItems(first: $nestedFirst) {
+        nodes {
+          id
+          sku
+          title
+          quantity
+          currentQuantity
+          refundableQuantity
+          unfulfilledQuantity
+
+          product { id }
+          variant { id }
+
+          originalUnitPriceSet {
+            shopMoney { amount currencyCode }
+          }
+
+          originalTotalSet {
+            shopMoney { amount currencyCode }
+          }
+
+          totalDiscountSet {
+            shopMoney { amount currencyCode }
+          }
+
+          # 真正用于计算完整 LineItem 折扣分配。
+          discountAllocations {
+            allocatedAmountSet {
+              shopMoney { amount currencyCode }
+            }
+
+            discountApplication {
+              __typename
+              index
+              allocationMethod
+              targetSelection
+              targetType
+            }
+          }
+        }
+
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+
+      # -------------------------
+      # Payment Transaction：当前这里按数组读取，不走 Cursor Loop
+      # -------------------------
+      transactions {
+        id
+        kind
+        status
+        gateway
+        createdAt
+        processedAt
+        test
+        errorCode
+
+        parentTransaction {
+          id
+        }
+
+        amountSet {
+          shopMoney { amount currencyCode }
+        }
+      }
+
+      # -------------------------
+      # Refund：refunds 本身按数组读取；内部两个 Connection 需要独立分页
+      # -------------------------
+      refunds {
+        id
+        createdAt
+        processedAt
+        updatedAt
+
+        totalRefundedSet {
+          shopMoney { amount currencyCode }
+        }
+
+        refundLineItems(first: $nestedFirst) {
+          nodes {
+            id
+            quantity
+            restocked
+            restockType
+
+            lineItem { id }
+
+            subtotalSet {
+              shopMoney { amount currencyCode }
+            }
+
+            totalTaxSet {
+              shopMoney { amount currencyCode }
+            }
+          }
+
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+
+        transactions(first: $nestedFirst) {
+          nodes { id }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+
+      # -------------------------
+      # Fulfillment：fulfillments 本身按数组读取；内部 Connection 需要独立分页
+      # -------------------------
+      fulfillments {
+        id
+        name
+        status
+        displayStatus
+        createdAt
+        updatedAt
+        inTransitAt
+        deliveredAt
+        estimatedDeliveryAt
+        totalQuantity
+        requiresShipping
+
+        location {
+          id
+          name
+        }
+
+        fulfillmentLineItems(first: $nestedFirst) {
+          nodes {
+            id
+            quantity
+            lineItem { id }
+          }
+
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+
+        events(first: $nestedFirst, sortKey: HAPPENED_AT) {
+          nodes {
+            id
+            status
+            createdAt
+            happenedAt
+            estimatedDeliveryAt
+            message
+            city
+            province
+            country
+            zip
+            latitude
+            longitude
+          }
+
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

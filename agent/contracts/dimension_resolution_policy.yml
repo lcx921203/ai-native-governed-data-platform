@@ -1,0 +1,64 @@
+version: 1
+contract: commerce_governed_dimension_value_resolution
+mode: bounded_value_resolution
+
+principles:
+  governed_metrics_only: true
+  governed_dimensions_only: true
+  metric_context_required: true
+  dimension_hint_optional: true
+  runtime_discovery_preferred: true
+  static_seed_fallback_allowed: true
+  exact_unique_match_may_auto_resolve: true
+  normalized_unique_match_may_auto_resolve: true
+  alias_unique_match_may_auto_resolve: true
+  fuzzy_match_is_candidate_only: true
+  ambiguous_match_fail_closed: true
+  unresolved_filter_must_not_be_dropped: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+
+limits:
+  max_metrics: 3
+  max_candidate_dimensions: 6
+  max_candidates: 3
+  max_discovery_values_per_dimension: 50
+  max_raw_value_length: 128
+  fuzzy_candidate_threshold: 0.82
+  fuzzy_high_confidence_threshold: 0.94
+  fuzzy_min_margin: 0.08
+
+runtime:
+  discovery_gate: PHASE5C_ALLOW_METRICFLOW_DISCOVERY
+  timezone: UTC
+
+prohibited_value_markers:
+  - " where "
+  - "select "
+  - "delete "
+  - "drop "
+  - "truncate "
+  - "{{ Dimension("
+  - "=="
+  - "!="
+  - ">="
+  - "<="
+
+extraction:
+  explicit_filter_markers:
+    - "只看"
+    - "仅看"
+    - "筛选"
+    - "过滤"
+    - "only"
+  assignment_markers:
+    - "为"
+    - "等于"
+    - "是"
+    - ":"
+    - "："
+
+sources:
+  governed_metrics: metadata/datahub/governance/metric_registry.yml
+  governed_dimensions: agent/contracts/semantic_query_policy.yml
+  dimension_discovery: agent/contracts/dimension_value_policy.yml

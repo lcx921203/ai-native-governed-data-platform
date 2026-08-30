@@ -1,0 +1,93 @@
+version: 1
+contract: commerce_phase7a_real_runtime_bootstrap
+mode: workstation_runtime_bootstrap
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+principles:
+  phase6_final_static_closure_is_prerequisite: true
+  static_contracts_do_not_upgrade_runtime_evidence: true
+  bootstrap_is_fail_closed: true
+  pinned_component_set_before_upgrade: true
+  dbt_and_metricflow_python_envs_are_isolated: true
+  runtime_evidence_is_written_outside_source_contracts: true
+  dagster_definition_validation_precedes_daemon_execution: true
+  datahub_bootstrap_is_a_separate_runtime_step: true
+host:
+  required_commands:
+  - bash
+  - docker
+  docker_compose_v2_required: true
+  preferred_python: python3.12
+  accepted_architectures:
+  - x86_64
+  - arm64
+  - aarch64
+  recommended_memory_gb: 16
+  warning_below_memory_gb: 8
+  recommended_free_disk_gb: 30
+ports:
+  core_data_plane:
+  - 9000
+  - 9001
+  - 8181
+  - 8182
+  - 10000
+  - 4040
+  control_plane:
+  - 3000
+  metadata_plane_future:
+  - 9002
+core_services:
+- rustfs
+- bucket-setup
+- polaris
+- polaris-setup
+- spark-thrift
+bootstrap_order:
+- phase6_static_closure
+- workstation_preflight
+- core_data_plane
+- spark_polaris_iceberg_rustfs_acceptance
+- canonical_dbt_build
+- metricflow_compatibility_query_acceptance
+- dagster_runtime_environment
+- dagster_definition_and_phase3c_preflight
+- runtime_evidence_snapshot
+runtime:
+  allow_env: PHASE7A_ALLOW_RUNTIME_BOOTSTRAP
+  env_file: .env
+  evidence_dir: .runtime/evidence/phase7a
+  real_runtime_required_for_verified_evidence: true
+components:
+  rustfs:
+    image_env: RUSTFS_IMAGE
+    status: DEFERRED
+  polaris:
+    image_env: POLARIS_IMAGE
+    status: DEFERRED
+  spark:
+    image_env: SPARK_IMAGE
+    status: DEFERRED
+  iceberg:
+    version_source: infra/runtime/VERSIONS.md
+    status: DEFERRED
+  dbt:
+    requirements: requirements-dbt.txt
+    venv: .venv-dbt
+    status: DEFERRED
+  metricflow:
+    requirements: requirements-metricflow-compat.txt
+    venv: .venv-mf
+    status: DEFERRED
+  dagster:
+    requirements: requirements-dagster.txt
+    venv: .venv-dagster
+    status: DEFERRED
+  datahub:
+    status: PENDING_PHASE7A_METADATA_BOOTSTRAP
+    note: DataHub is intentionally not started by the core bootstrap runner.
+closure:
+  static_runner: infra/runtime/run_phase7a_static.sh
+  real_bootstrap_runner: infra/runtime/run_phase7a_core_bootstrap.sh
+  preflight_runner: infra/runtime/run_phase7a_preflight.sh
+  doc: docs/PHASE7A_REAL_RUNTIME_BOOTSTRAP.md
+  runtime_evidence: DEFERRED

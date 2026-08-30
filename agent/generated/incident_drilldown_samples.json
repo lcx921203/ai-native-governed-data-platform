@@ -1,0 +1,95 @@
+{
+  "notice": "Illustrative contract sample only; values below are not real runtime evidence.",
+  "incident_result": {
+    "status": "COMPLETE",
+    "evidence": "RUNTIME_VERIFIED",
+    "partitions": [
+      {
+        "partition_key": "2026-08-05",
+        "freshness_overdue": true,
+        "exact_partition_complete": false,
+        "missing_mart_asset_keys": [
+          "orders",
+          "order_items"
+        ],
+        "run_ids": [
+          "run-failed-1"
+        ],
+        "failed_run_ids": [
+          "run-failed-1"
+        ],
+        "successful_run_ids": [],
+        "latest_failed_run": {
+          "run_id": "run-failed-1",
+          "status": "FAILURE",
+          "failure_class": "data_contract",
+          "failure_source": "dbt_artifact",
+          "failure_component": "dbt:build",
+          "failure_reason": "dbt_data_test_failed",
+          "failure_stage": "dbt:build"
+        },
+        "recovery": {
+          "action": "alert_manual",
+          "reason_code": "data_contract_failure",
+          "explanation": "Data contract failures require repair.",
+          "observed_auto_replay_attempts": 0,
+          "active_run_ids": [],
+          "active_recovery_run_ids": []
+        },
+        "infrastructure_healthy": true
+      }
+    ],
+    "warnings": [],
+    "validation": "STATIC_EXAMPLE_ONLY_NOT_RUNTIME_EVIDENCE"
+  },
+  "response_envelope": {
+    "question": "为什么 Gross Sales 的数据链路异常？",
+    "intent": "OPERATIONAL_INCIDENT_DRILLDOWN",
+    "status": "ANSWERED",
+    "subject": {
+      "kind": "metric",
+      "id": "gross_sales"
+    },
+    "claims": [
+      {
+        "id": "C01",
+        "kind": "INCIDENT_EVIDENCE",
+        "text": "Partition 2026-08-05 is incomplete; missing_marts=orders,order_items; freshness_overdue=true.",
+        "evidence": "RUNTIME_VERIFIED",
+        "source_locations": [
+          "orchestration/dagster/commerce_dagster/recovery_state.py",
+          "agent/incident_drilldown/provider.py"
+        ],
+        "runtime_observed": true
+      },
+      {
+        "id": "C02",
+        "kind": "INCIDENT_EVIDENCE",
+        "text": "Latest structured failed run for partition 2026-08-05: run_id=run-failed-1; status=FAILURE; failure_class=data_contract; failure_component=dbt:build; failure_reason=dbt_data_test_failed; failure_stage=dbt:build.",
+        "evidence": "RUNTIME_VERIFIED",
+        "source_locations": [
+          "orchestration/dagster/commerce_dagster/failure_classification.py",
+          "agent/incident_drilldown/provider.py"
+        ],
+        "runtime_observed": true
+      },
+      {
+        "id": "C03",
+        "kind": "RECOVERY_STATUS",
+        "text": "Recovery state for partition 2026-08-05: observed_auto_replay_attempts=0; active_runs=none; active_recovery_runs=none; policy_action_if_evaluated_now=alert_manual; policy_reason=data_contract_failure.",
+        "evidence": "RUNTIME_VERIFIED",
+        "source_locations": [
+          "orchestration/dagster/commerce_dagster/recovery_policy.py",
+          "orchestration/dagster/commerce_dagster/recovery_state.py"
+        ],
+        "runtime_observed": true
+      }
+    ],
+    "limitations": [],
+    "sources": [],
+    "tool_trace": [],
+    "evidence_levels": [
+      "RUNTIME_VERIFIED"
+    ]
+  }
+}

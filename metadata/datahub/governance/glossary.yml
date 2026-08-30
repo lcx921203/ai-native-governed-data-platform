@@ -1,0 +1,120 @@
+# 业务逻辑：集中定义可发现、可复用的业务术语；Glossary 解释“是什么意思”，不拥有 Metric 公式或 Entity Join。
+# DataHub API 语义：term id 会映射为稳定 GlossaryTerm URN，由 glossary ingestion / Runtime bootstrap 创建。
+# 工程边界：dbt + MetricFlow 仍是公式与实体关系权威，Glossary 不复制第二套语义计算。
+version: 1
+contract: commerce_business_glossary
+terms:
+- id: commerce-entity-store
+  name: Store
+  description: A customer store or merchant location used as a commerce analysis entity.
+- id: commerce-entity-item
+  name: Item
+  description: A sellable merchandise item used as the canonical product analysis
+    entity.
+- id: commerce-entity-order
+  name: Order
+  description: A Shopify order representing a customer purchase transaction context.
+- id: commerce-entity-order-item
+  name: Order Item
+  description: A line item within an order and the core grain for item-level sales
+    analysis.
+- id: commerce-entity-payment-transaction
+  name: Payment Transaction
+  description: A Shopify payment transaction such as authorization, capture, sale,
+    or refund.
+- id: commerce-entity-refund
+  name: Refund
+  description: A refund business record associated with an order.
+- id: commerce-entity-refund-item
+  name: Refund Item
+  description: An item-level refund record used to attribute sales reversals to merchandise.
+- id: commerce-entity-fulfillment
+  name: Fulfillment
+  description: A shipment or fulfillment record associated with an order.
+- id: commerce-entity-fulfillment-item
+  name: Fulfillment Item
+  description: An item-level quantity associated with a fulfillment.
+- id: commerce-entity-fulfillment-event
+  name: Fulfillment Event
+  description: A timestamped lifecycle event emitted for a fulfillment or shipment.
+- id: commerce-metric-order-count
+  name: Order Count
+  description: Distinct number of orders in the requested analytical context.
+- id: commerce-metric-gross-sales
+  name: Gross Sales
+  description: Gross item sales amount before sales reversals.
+- id: commerce-metric-discount-amount
+  name: Discount Amount
+  description: Discount amount allocated to ordered merchandise.
+- id: commerce-metric-sales-before-reversal
+  name: Sales Before Reversal
+  description: Sales value after discount logic but before refund-driven sales reversals.
+- id: commerce-metric-collected-payment-amount
+  name: Collected Payment Amount
+  description: Successfully collected payment amount in the selected payment-time
+    context.
+- id: commerce-metric-refund-processed-amount
+  name: Refund Processed Amount
+  description: Amount represented by successfully processed refund business records.
+- id: commerce-metric-sales-reversal-amount
+  name: Sales Reversal Amount
+  description: Merchandise sales amount reversed by item-level refunds.
+- id: commerce-metric-shipment-count
+  name: Shipment Count
+  description: Number of fulfillment shipments entering the shipped or in-transit
+    state.
+- id: commerce-metric-delivery-count
+  name: Delivery Count
+  description: Number of fulfillments reaching the delivered state.
+- id: commerce-metric-average-time-to-ship
+  name: Average Time To Ship
+  description: Average elapsed minutes from order time to shipment or in-transit time.
+- id: commerce-metric-average-delivery-duration
+  name: Average Delivery Duration
+  description: Average elapsed minutes from shipment or in-transit time to delivery.
+- id: commerce-metric-average-order-value
+  name: Average Order Value
+  description: Average order value using the governed sales-before-reversal and distinct-order
+    semantics.
+- id: commerce-metric-activity-net-sales
+  name: Activity Net Sales
+  description: Net sales viewed by the actual business activity times of sales and
+    reversals.
+- id: commerce-metric-order-cohort-net-sales
+  name: Order Cohort Net Sales
+  description: Net sales attributed back to the original order cohort rather than
+    the later reversal activity date.
+- id: commerce-metric-order-to-paid-24h-conversion-rate
+  name: Order to Paid Conversion Rate 24h
+  description: Percentage of created orders that reach the first successful paid milestone
+    for the same Order Entity within 24 hours of order creation.
+- id: commerce-metric-order-to-fulfillment-3d-conversion-rate
+  name: Order to Fulfillment Conversion Rate 3d
+  description: Percentage of created orders that enter the first fulfillment milestone
+    for the same Order Entity within 3 days of order creation.
+- id: commerce-metric-order-to-delivered-7d-conversion-rate
+  name: Order to Delivered Conversion Rate 7d
+  description: Percentage of created orders that reach the first delivered milestone
+    for the same Order Entity within 7 days of order creation.
+- id: data-time-business-time
+  name: Business Time
+  description: Time when the business event or state actually occurred.
+- id: data-time-source-updated-time
+  name: Source Updated Time
+  description: Time when the source system states that the business object was last
+    updated.
+- id: data-time-observation-time
+  name: Observation Time
+  description: Time when the data platform observed or ingested the source representation.
+- id: data-model-business-version
+  name: Business Version
+  description: A distinct business-content version identified by business key plus
+    content hash, independent of repeated observations.
+- id: data-model-current-state
+  name: Current State
+  description: The latest canonical business state selected from versioned source
+    history for the required analytical context.
+- id: data-model-exact-partition-completeness
+  name: Exact Partition Completeness
+  description: Whether every required consumer asset for one exact execution partition
+    has materialized successfully.

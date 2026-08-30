@@ -1,0 +1,162 @@
+{
+  "contract": "commerce_dimension_value_samples",
+  "samples": {
+    "region": {
+      "plan": {
+        "status": "READY",
+        "question": "gross_sales 有哪些地区可以筛？",
+        "spec": {
+          "metrics": [
+            "gross_sales"
+          ],
+          "dimension": "store__region",
+          "start_time": null,
+          "end_time": null,
+          "limit": 25
+        },
+        "warnings": [],
+        "command_preview": [
+          "mf",
+          "list",
+          "dimension-values",
+          "--metrics",
+          "gross_sales",
+          "--dimension",
+          "store__region"
+        ]
+      },
+      "execution": {
+        "status": "DEFERRED",
+        "evidence": "STATIC_CONTRACT",
+        "plan": {
+          "status": "READY",
+          "question": "gross_sales 有哪些地区可以筛？",
+          "spec": {
+            "metrics": [
+              "gross_sales"
+            ],
+            "dimension": "store__region",
+            "start_time": null,
+            "end_time": null,
+            "limit": 25
+          },
+          "warnings": [],
+          "command_preview": [
+            "mf",
+            "list",
+            "dimension-values",
+            "--metrics",
+            "gross_sales",
+            "--dimension",
+            "store__region"
+          ]
+        },
+        "values": [
+          "West",
+          "South"
+        ],
+        "source_mode": "STATIC_SEED_FALLBACK",
+        "warnings": [
+          "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+          "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+        ],
+        "truncated": false,
+        "validation": "STATIC_FALLBACK_ONLY"
+      }
+    },
+    "brand": {
+      "plan": {
+        "status": "READY",
+        "question": "gross_sales 有哪些品牌可以筛？",
+        "spec": {
+          "metrics": [
+            "gross_sales"
+          ],
+          "dimension": "item__brand",
+          "start_time": null,
+          "end_time": null,
+          "limit": 25
+        },
+        "warnings": [],
+        "command_preview": [
+          "mf",
+          "list",
+          "dimension-values",
+          "--metrics",
+          "gross_sales",
+          "--dimension",
+          "item__brand"
+        ]
+      },
+      "execution": {
+        "status": "DEFERRED",
+        "evidence": "STATIC_CONTRACT",
+        "plan": {
+          "status": "READY",
+          "question": "gross_sales 有哪些品牌可以筛？",
+          "spec": {
+            "metrics": [
+              "gross_sales"
+            ],
+            "dimension": "item__brand",
+            "start_time": null,
+            "end_time": null,
+            "limit": 25
+          },
+          "warnings": [],
+          "command_preview": [
+            "mf",
+            "list",
+            "dimension-values",
+            "--metrics",
+            "gross_sales",
+            "--dimension",
+            "item__brand"
+          ]
+        },
+        "values": [
+          "Coca-Cola",
+          "Generic"
+        ],
+        "source_mode": "STATIC_SEED_FALLBACK",
+        "warnings": [
+          "MetricFlow dimension-value runtime is disabled; set PHASE5C_ALLOW_METRICFLOW_DISCOVERY=true only in the intended workstation runtime.",
+          "Returned values are repo-managed seed reference values, not a runtime-observed MetricFlow value universe."
+        ],
+        "truncated": false,
+        "validation": "STATIC_FALLBACK_ONLY"
+      }
+    },
+    "missing_metric": {
+      "plan": {
+        "status": "CLARIFICATION_REQUIRED",
+        "question": "有哪些地区可以筛？",
+        "spec": null,
+        "warnings": [
+          "Dimension-value discovery requires at least one governed metric context because available dimensions/values are metric-path dependent."
+        ],
+        "command_preview": []
+      },
+      "execution": {
+        "status": "CLARIFICATION_REQUIRED",
+        "evidence": "STATIC_CONTRACT",
+        "plan": {
+          "status": "CLARIFICATION_REQUIRED",
+          "question": "有哪些地区可以筛？",
+          "spec": null,
+          "warnings": [
+            "Dimension-value discovery requires at least one governed metric context because available dimensions/values are metric-path dependent."
+          ],
+          "command_preview": []
+        },
+        "values": [],
+        "source_mode": "",
+        "warnings": [
+          "Dimension-value discovery requires at least one governed metric context because available dimensions/values are metric-path dependent."
+        ],
+        "truncated": false,
+        "validation": "PLAN_NOT_READY"
+      }
+    }
+  }
+}

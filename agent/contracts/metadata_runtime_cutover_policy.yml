@@ -1,0 +1,34 @@
+# 业务逻辑：控制 Agent 何时允许从 Git/static metadata fallback 切到真实 DataHub Runtime read。
+# DataHub API 语义：live read 必须同时满足 env gate、Phase 7A metadata evidence、exact resolved identity。
+# 工程边界：任何证据缺失或 expected/resolved URN 不一致都 fail closed，不做 fuzzy runtime binding。
+version: 1
+contract: commerce_agent_metadata_runtime_cutover
+mode: dual_mode_read_only
+principles:
+  governed_dataset_name_required: true
+  exact_datahub_identity_only: true
+  fuzzy_runtime_binding: false
+  phase7a_verified_evidence_required: true
+  live_datahub_read_required_for_runtime_claim: true
+  static_fallback_is_allowed: true
+  fallback_must_be_labeled_static_contract: true
+  runtime_failure_must_not_invent_metadata: true
+  arbitrary_graphql_from_agent: false
+  raw_metadata_dump: false
+  datahub_mutation: false
+  governance_write: false
+runtime:
+  allow_env: PHASE7A_ALLOW_AGENT_DATAHUB_READ
+  datahub_server_env: DATAHUB_GMS_URL
+  default_datahub_server: http://localhost:8080
+  metadata_plane_evidence: .runtime/evidence/phase7a/datahub/datahub_runtime.json
+  identity_evidence: .runtime/evidence/phase7a/datahub/dataset_identity_resolution.json
+  required_metadata_status: DATAHUB_METADATA_PLANE_VERIFIED
+  allowed_identity_statuses: [RESOLVED_EXPECTED, RESOLVED_SEARCH_EXACT]
+limits:
+  max_lineage_hops: 2
+  allowed_lineage_directions: [upstream, downstream]
+fallback:
+  dataset_context: git_governance_contract
+  lineage_context: dbt_static_lineage
+  evidence: STATIC_CONTRACT

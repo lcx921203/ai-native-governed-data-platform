@@ -1,0 +1,15 @@
+mercaso_metricflow_compat:
+  target: dev
+
+  outputs:
+    dev:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_THRIFT_HOST', 'localhost') }}"
+      port: "{{ env_var('SPARK_THRIFT_PORT', '10000') | int }}"
+      user: dbt
+      schema: semantic_compat
+      threads: 4
+      connect_retries: 5
+      connect_timeout: 60
+      retry_all: true

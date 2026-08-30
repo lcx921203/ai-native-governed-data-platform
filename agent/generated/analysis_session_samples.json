@@ -1,0 +1,281 @@
+{
+  "contract": "commerce_phase5f_analysis_session_samples",
+  "initial_plan": {
+    "status": "READY",
+    "question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+    "spec": {
+      "metric": "gross_sales",
+      "metrics": [
+        "gross_sales"
+      ],
+      "start_time": "2026-08-01T00:00:00Z",
+      "end_time": "2026-08-05T23:59:59Z",
+      "group_by": [
+        "metric_time__day"
+      ],
+      "filters": [],
+      "limit": 20
+    },
+    "warnings": [],
+    "requires_metricflow_explain": true,
+    "command_preview": [
+      "mf",
+      "query",
+      "--metrics",
+      "gross_sales",
+      "--group-by",
+      "metric_time__day",
+      "--start-time",
+      "2026-08-01T00:00:00Z",
+      "--end-time",
+      "2026-08-05T23:59:59Z",
+      "--limit",
+      "20"
+    ],
+    "continuation_spec": null,
+    "clarification": null
+  },
+  "session_start": {
+    "session_id": "sess_1aac4ed45d890ca1",
+    "contract_version": 1,
+    "original_question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+    "current_spec": {
+      "metric": "gross_sales",
+      "metrics": [
+        "gross_sales"
+      ],
+      "start_time": "2026-08-01T00:00:00Z",
+      "end_time": "2026-08-05T23:59:59Z",
+      "group_by": [
+        "metric_time__day"
+      ],
+      "filters": [],
+      "limit": 20
+    },
+    "revision": 1,
+    "turn_count": 1,
+    "last_question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+    "history": [
+      {
+        "revision": 1,
+        "question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+        "delta_kind": "NOOP",
+        "summary": "Initial governed semantic query state"
+      }
+    ],
+    "integrity_checksum": "07190ca9b806e9dead612539bf410b87559f536f20124c11f0fbb7932e3f16a5",
+    "comparison": null
+  },
+  "turns": [
+    {
+      "status": "READY",
+      "state": {
+        "session_id": "sess_1aac4ed45d890ca1",
+        "contract_version": 1,
+        "original_question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+        "current_spec": {
+          "metric": "gross_sales",
+          "metrics": [
+            "gross_sales"
+          ],
+          "start_time": "2026-08-01T00:00:00Z",
+          "end_time": "2026-08-05T23:59:59Z",
+          "group_by": [
+            "metric_time__day"
+          ],
+          "filters": [
+            {
+              "dimension": "store__region",
+              "operator": "EQ",
+              "value": "West",
+              "source": "session_followup:CANONICAL_EXACT:STATIC_CONTRACT"
+            }
+          ],
+          "limit": 20
+        },
+        "revision": 2,
+        "turn_count": 2,
+        "last_question": "那只看 West 呢？",
+        "history": [
+          {
+            "revision": 1,
+            "question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+            "delta_kind": "NOOP",
+            "summary": "Initial governed semantic query state"
+          },
+          {
+            "revision": 2,
+            "question": "那只看 West 呢？",
+            "delta_kind": "ADD_FILTER",
+            "summary": "Added filter store__region=West while preserving metric/time/grain."
+          }
+        ],
+        "integrity_checksum": "1c5bc9d8e30ff30f7dd310251809ae7f90b2e8b918e68c04a1d43af82eccdd92",
+        "comparison": null
+      },
+      "question": "那只看 West 呢？",
+      "delta_kind": "ADD_FILTER",
+      "plan": {
+        "status": "READY",
+        "question": "那只看 West 呢？",
+        "spec": {
+          "metric": "gross_sales",
+          "metrics": [
+            "gross_sales"
+          ],
+          "start_time": "2026-08-01T00:00:00Z",
+          "end_time": "2026-08-05T23:59:59Z",
+          "group_by": [
+            "metric_time__day"
+          ],
+          "filters": [
+            {
+              "dimension": "store__region",
+              "operator": "EQ",
+              "value": "West",
+              "source": "session_followup:CANONICAL_EXACT:STATIC_CONTRACT"
+            }
+          ],
+          "limit": 20
+        },
+        "warnings": [
+          "Analysis session sess_1aac4ed45d890ca1 revision 2: Added filter store__region=West while preserving metric/time/grain."
+        ],
+        "requires_metricflow_explain": true,
+        "command_preview": [
+          "mf",
+          "query",
+          "--metrics",
+          "gross_sales",
+          "--group-by",
+          "metric_time__day",
+          "--where",
+          "{{ Dimension('store__region') }} = 'West'",
+          "--start-time",
+          "2026-08-01T00:00:00Z",
+          "--end-time",
+          "2026-08-05T23:59:59Z",
+          "--limit",
+          "20"
+        ],
+        "continuation_spec": null,
+        "clarification": null
+      },
+      "query_result": null,
+      "comparison_plan": null,
+      "comparison_result": null,
+      "breakdown_plan": null,
+      "breakdown_result": null,
+      "warnings": []
+    },
+    {
+      "status": "READY",
+      "state": {
+        "session_id": "sess_1aac4ed45d890ca1",
+        "contract_version": 1,
+        "original_question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+        "current_spec": {
+          "metric": "gross_sales",
+          "metrics": [
+            "gross_sales",
+            "average_order_value"
+          ],
+          "start_time": "2026-08-01T00:00:00Z",
+          "end_time": "2026-08-05T23:59:59Z",
+          "group_by": [
+            "metric_time__day"
+          ],
+          "filters": [
+            {
+              "dimension": "store__region",
+              "operator": "EQ",
+              "value": "West",
+              "source": "session_followup:CANONICAL_EXACT:STATIC_CONTRACT"
+            }
+          ],
+          "limit": 20
+        },
+        "revision": 3,
+        "turn_count": 3,
+        "last_question": "那再加上 AOV",
+        "history": [
+          {
+            "revision": 1,
+            "question": "2026-08-01 到 2026-08-05 按天看 gross_sales",
+            "delta_kind": "NOOP",
+            "summary": "Initial governed semantic query state"
+          },
+          {
+            "revision": 2,
+            "question": "那只看 West 呢？",
+            "delta_kind": "ADD_FILTER",
+            "summary": "Added filter store__region=West while preserving metric/time/grain."
+          },
+          {
+            "revision": 3,
+            "question": "那再加上 AOV",
+            "delta_kind": "ADD_METRIC",
+            "summary": "Added governed metric average_order_value while preserving time/grain/filters."
+          }
+        ],
+        "integrity_checksum": "03131632da886ed902033a169dab06e62e84015f58c17a4814db310d81fdbad9",
+        "comparison": null
+      },
+      "question": "那再加上 AOV",
+      "delta_kind": "ADD_METRIC",
+      "plan": {
+        "status": "READY",
+        "question": "那再加上 AOV",
+        "spec": {
+          "metric": "gross_sales",
+          "metrics": [
+            "gross_sales",
+            "average_order_value"
+          ],
+          "start_time": "2026-08-01T00:00:00Z",
+          "end_time": "2026-08-05T23:59:59Z",
+          "group_by": [
+            "metric_time__day"
+          ],
+          "filters": [
+            {
+              "dimension": "store__region",
+              "operator": "EQ",
+              "value": "West",
+              "source": "session_followup:CANONICAL_EXACT:STATIC_CONTRACT"
+            }
+          ],
+          "limit": 20
+        },
+        "warnings": [
+          "Analysis session sess_1aac4ed45d890ca1 revision 3: Added governed metric average_order_value while preserving time/grain/filters."
+        ],
+        "requires_metricflow_explain": true,
+        "command_preview": [
+          "mf",
+          "query",
+          "--metrics",
+          "gross_sales,average_order_value",
+          "--group-by",
+          "metric_time__day",
+          "--where",
+          "{{ Dimension('store__region') }} = 'West'",
+          "--start-time",
+          "2026-08-01T00:00:00Z",
+          "--end-time",
+          "2026-08-05T23:59:59Z",
+          "--limit",
+          "20"
+        ],
+        "continuation_spec": null,
+        "clarification": null
+      },
+      "query_result": null,
+      "comparison_plan": null,
+      "comparison_result": null,
+      "breakdown_plan": null,
+      "breakdown_result": null,
+      "warnings": []
+    }
+  ]
+}

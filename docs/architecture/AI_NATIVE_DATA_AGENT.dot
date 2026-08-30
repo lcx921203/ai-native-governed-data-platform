@@ -1,0 +1,66 @@
+digraph AINativeDataAgent {
+  graph [rankdir=TB, bgcolor="white", pad="0.35", nodesep="0.45", ranksep="0.60", splines=ortho, fontname="Arial"];
+  node [shape=box, style="rounded", fontname="Arial", fontsize=11, margin="0.16,0.10"];
+  edge [fontname="Arial", fontsize=9, arrowsize=0.7];
+
+  subgraph cluster_sources {
+    label="Commerce Sources";
+    style="rounded";
+    Shopify [label="Shopify Admin API"];
+    MySQL [label="MySQL Item / Store"];
+    Behavior [label="Web / App Behavior"];
+  }
+
+  Shopify -> ApiObs [label=" Observation"];
+  MySQL -> CDC [label=" Changelog"];
+  Behavior -> Kafka;
+  Kafka -> Stream;
+
+  ApiObs [label="GraphQL Observation\nIngestion"];
+  CDC [label="Flink CDC / SQL"];
+  Kafka [label="Kafka"];
+  Stream [label="PyFlink Event-Time\nProcessing"];
+
+  Iceberg [label="Iceberg + Polaris\nStorage Truth", shape=cylinder];
+  ApiObs -> Iceberg;
+  CDC -> Iceberg;
+  Stream -> Iceberg;
+
+  dbt [label="dbt Marts\nBusiness Facts / State / Entity"];
+  MetricFlow [label="MetricFlow\nMetric Authority"];
+  Iceberg -> dbt -> MetricFlow;
+
+  Agent [label="Governed Data Agent\nQ&A / Comparison / Attribution / Diagnosis"];
+  MetricFlow -> Agent [label=" Dynamic semantic query"];
+
+  Contract [label="Fixed Serving Contract\nMetrics + Dimensions only"];
+  Dagster [label="Dagster\nExport Orchestration"];
+  Serving [label="Iceberg Serving Tables\nRebuildable Projection", shape=cylinder];
+  Trino [label="Trino\nQuery Serving Engine"];
+  BI [label="BI / Dashboard"];
+  API [label="FastAPI\nStable Business API"];
+  Apps [label="Business Apps"];
+
+  MetricFlow -> Contract -> Dagster -> Serving -> Trino;
+  Trino -> BI;
+  Trino -> API -> Apps;
+
+  DataHub [label="DataHub\nGovernance Context"];
+  Runtime [label="Dagster Runtime\nExecution / Recovery Evidence"];
+  RAG [label="Knowledge RAG\nWhy / SOP / Troubleshooting"];
+  MCP [label="MCP Runtime\nAuthority-preserving Adapter"];
+
+  dbt -> DataHub;
+  Dagster -> Runtime;
+  Dagster -> DataHub [style=dashed, label=" DataFlow / DataJob lineage"];
+  Serving -> DataHub [style=dashed, label=" Serving Dataset governance"];
+  BI -> DataHub [style=dashed, label=" Dashboard lineage"];
+  API -> DataHub [style=dashed, label=" OpenAPI endpoint metadata"];
+  DataHub -> Agent;
+  Runtime -> Agent;
+  RAG -> Agent;
+  Agent -> MCP;
+
+  {rank=same; Shopify; MySQL; Behavior}
+  {rank=same; BI; API}
+}

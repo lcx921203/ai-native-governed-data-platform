@@ -1,0 +1,50 @@
+# Shopify dbt Source Contract
+# 业务逻辑：声明 Normalize 后的 Structured Source 物理身份，让下游统一通过 source('shopify', ...) 引用。
+# 输入：polaris.source 下 10 张按 Business Version Grain 保存的 Shopify 表。
+# 输出：dbt Source 元数据；本文件不执行去重、latest 选择或指标计算。
+# dbt API：identifier 是实际物理表名，name 是 dbt 项目内部稳定引用名。
+# 工程边界：Staging 保留多版本；Current State 必须在 Intermediate 决定。
+
+version: 2
+
+sources:
+
+  - name: shopify
+    schema: source
+
+    description: >
+      Shopify Structured Source。
+      一张表可以存在同一个业务对象的多个不同内容版本；
+      Staging 不负责取 latest。
+
+    tables:
+
+      - name: orders
+        identifier: shopify_order
+
+      - name: order_items
+        identifier: shopify_order_item
+
+      - name: line_item_discount_allocations
+        identifier: shopify_line_item_discount_allocation
+
+      - name: transactions
+        identifier: shopify_transaction
+
+      - name: refunds
+        identifier: shopify_refund
+
+      - name: refund_items
+        identifier: shopify_refund_item
+
+      - name: refund_transactions
+        identifier: shopify_refund_transaction
+
+      - name: fulfillments
+        identifier: shopify_fulfillment
+
+      - name: fulfillment_items
+        identifier: shopify_fulfillment_item
+
+      - name: fulfillment_events
+        identifier: shopify_fulfillment_event

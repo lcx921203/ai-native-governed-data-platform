@@ -1,0 +1,40 @@
+version: 1
+contract: commerce_governed_diagnostic_orchestrator
+mode: anomaly_health_driver_evidence_chain
+
+principles:
+  one_governed_metric_per_diagnosis: true
+  phase6a_anomaly_detection_runs_before_driver_attribution: true
+  operational_health_uses_exact_partition_current_truth: true
+  latest_run_status_is_not_operational_health_truth: true
+  unhealthy_pipeline_blocks_business_driver_attribution: true
+  unresolved_operational_health_blocks_business_driver_attribution: true
+  business_driver_attribution_requires_business_signal_suspected: true
+  driver_lenses_remain_independent: true
+  cross_lens_contributions_must_not_be_summed: true
+  claim_ledger_required_before_llm_rendering: true
+  runtime_observation_requires_runtime_verified_evidence: true
+  arbitrary_sql: false
+  arbitrary_where_clause: false
+  llm_has_no_tool_access: true
+
+relative_time:
+  timezone: UTC
+  today: [今天, 今日, today]
+  yesterday: [昨天, yesterday]
+
+limits:
+  max_runtime_driver_claims: 3
+  max_diagnostic_claims: 12
+
+runtime:
+  allow_env: PHASE6C_ALLOW_DIAGNOSTIC
+  requires_driver_gate: PHASE6B_ALLOW_DRIVER_ATTRIBUTION
+  requires_anomaly_gate: PHASE6A_ALLOW_ANOMALY_QUERY
+  requires_metricflow_gate: PHASE5B_ALLOW_METRICFLOW_QUERY
+
+sources:
+  anomaly_policy: agent/contracts/anomaly_detection_policy.yml
+  driver_policy: agent/contracts/driver_attribution_policy.yml
+  response_policy: agent/contracts/answer_policy.yml
+  dagster_partition_truth: orchestration/dagster/commerce_dagster/recovery_state.py

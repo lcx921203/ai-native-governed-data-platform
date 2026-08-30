@@ -1,0 +1,632 @@
+{
+  "contract": "commerce_governance_context",
+  "generated_from": [
+    "domains.yml",
+    "owners.yml",
+    "tags.yml",
+    "glossary.yml",
+    "entity_registry.yml",
+    "metric_registry.yml",
+    "asset_policy.yml",
+    "structured_properties.yml"
+  ],
+  "domain_model": {
+    "version": 1,
+    "contract": "commerce_domain_model",
+    "root": {
+      "id": "commerce",
+      "name": "Commerce",
+      "description": "Commerce analytics domain for the Shopify-centered modern data platform. It is the parent governance domain; consumer-facing datasets are assigned to one leaf domain when a more specific business process exists.\n",
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      }
+    },
+    "subdomains": [
+      {
+        "id": "commerce-order-sales",
+        "parent": "commerce",
+        "name": "Order & Sales",
+        "description": "Orders, order items, sales amounts, discounts, and order-cohort analysis."
+      },
+      {
+        "id": "commerce-payments",
+        "parent": "commerce",
+        "name": "Payments",
+        "description": "Payment authorization, collection, refund transactions, and payment status analysis."
+      },
+      {
+        "id": "commerce-refunds",
+        "parent": "commerce",
+        "name": "Refunds",
+        "description": "Refund events, refunded items, sales reversals, and refund analysis."
+      },
+      {
+        "id": "commerce-fulfillment",
+        "parent": "commerce",
+        "name": "Fulfillment",
+        "description": "Fulfillment, shipment, delivery, and fulfillment-event analysis."
+      },
+      {
+        "id": "commerce-reference",
+        "parent": "commerce",
+        "name": "Commerce Reference",
+        "description": "Shared reference entities such as Stores and Items used across commerce processes."
+      }
+    ],
+    "principles": {
+      "one_domain_per_asset": true,
+      "prefer_leaf_domain_for_consumer_assets": true,
+      "use_glossary_not_domain_for_cross_cutting_concepts": true
+    }
+  },
+  "owners": {
+    "version": 1,
+    "contract": "commerce_governance_owners",
+    "groups": [
+      {
+        "id": "commerce-analytics",
+        "display_name": "Commerce Analytics",
+        "purpose": "Business ownership for commerce concepts, metrics, and consumer-facing analytical assets.\n",
+        "roles": [
+          "BUSINESS_OWNER"
+        ]
+      },
+      {
+        "id": "data-platform",
+        "display_name": "Data Platform",
+        "purpose": "Technical ownership and stewardship for ingestion, lakehouse, dbt, orchestration, metadata, and governed agent infrastructure.\n",
+        "roles": [
+          "TECHNICAL_OWNER",
+          "DATA_STEWARD"
+        ]
+      }
+    ],
+    "principles": {
+      "prefer_group_ownership_over_personal_ownership": true,
+      "do_not_embed_personal_contact_data_in_repo": true
+    }
+  },
+  "tags": {
+    "version": 1,
+    "contract": "commerce_discovery_tags",
+    "tags": [
+      {
+        "id": "source-shopify",
+        "display_name": "Shopify",
+        "description": "Technical discovery label for metadata originating from Shopify."
+      },
+      {
+        "id": "layer-raw",
+        "display_name": "Raw Layer",
+        "description": "Append-only observation layer."
+      },
+      {
+        "id": "layer-structured-source",
+        "display_name": "Structured Source",
+        "description": "Business-version-preserving structured source layer."
+      },
+      {
+        "id": "layer-staging",
+        "display_name": "dbt Staging",
+        "description": "Source-aligned dbt staging model."
+      },
+      {
+        "id": "layer-intermediate",
+        "display_name": "dbt Intermediate",
+        "description": "Canonical/current-state or affected-key intermediate model."
+      },
+      {
+        "id": "layer-mart",
+        "display_name": "Commerce Mart",
+        "description": "Consumer-facing commerce mart."
+      },
+      {
+        "id": "semantic-enabled",
+        "display_name": "Semantic Enabled",
+        "description": "Asset participates in the dbt / MetricFlow semantic graph."
+      },
+      {
+        "id": "business-version",
+        "display_name": "Business Version",
+        "description": "Asset follows the business-key plus record-hash versioning contract."
+      },
+      {
+        "id": "daily-partitioned",
+        "display_name": "Daily Partitioned",
+        "description": "Asset participates in the daily execution responsibility model."
+      }
+    ],
+    "principles": {
+      "tags_are_informal_discovery_labels": true,
+      "governed_classification_must_not_be_encoded_as_tag": true
+    }
+  },
+  "glossary_terms": {
+    "commerce-entity-store": {
+      "name": "Store",
+      "description": "A customer store or merchant location used as a commerce analysis entity."
+    },
+    "commerce-entity-item": {
+      "name": "Item",
+      "description": "A sellable merchandise item used as the canonical product analysis entity."
+    },
+    "commerce-entity-order": {
+      "name": "Order",
+      "description": "A Shopify order representing a customer purchase transaction context."
+    },
+    "commerce-entity-order-item": {
+      "name": "Order Item",
+      "description": "A line item within an order and the core grain for item-level sales analysis."
+    },
+    "commerce-entity-payment-transaction": {
+      "name": "Payment Transaction",
+      "description": "A Shopify payment transaction such as authorization, capture, sale, or refund."
+    },
+    "commerce-entity-refund": {
+      "name": "Refund",
+      "description": "A refund business record associated with an order."
+    },
+    "commerce-entity-refund-item": {
+      "name": "Refund Item",
+      "description": "An item-level refund record used to attribute sales reversals to merchandise."
+    },
+    "commerce-entity-fulfillment": {
+      "name": "Fulfillment",
+      "description": "A shipment or fulfillment record associated with an order."
+    },
+    "commerce-entity-fulfillment-item": {
+      "name": "Fulfillment Item",
+      "description": "An item-level quantity associated with a fulfillment."
+    },
+    "commerce-entity-fulfillment-event": {
+      "name": "Fulfillment Event",
+      "description": "A timestamped lifecycle event emitted for a fulfillment or shipment."
+    },
+    "commerce-metric-order-count": {
+      "name": "Order Count",
+      "description": "Distinct number of orders in the requested analytical context."
+    },
+    "commerce-metric-gross-sales": {
+      "name": "Gross Sales",
+      "description": "Gross item sales amount before sales reversals."
+    },
+    "commerce-metric-discount-amount": {
+      "name": "Discount Amount",
+      "description": "Discount amount allocated to ordered merchandise."
+    },
+    "commerce-metric-sales-before-reversal": {
+      "name": "Sales Before Reversal",
+      "description": "Sales value after discount logic but before refund-driven sales reversals."
+    },
+    "commerce-metric-collected-payment-amount": {
+      "name": "Collected Payment Amount",
+      "description": "Successfully collected payment amount in the selected payment-time context."
+    },
+    "commerce-metric-refund-processed-amount": {
+      "name": "Refund Processed Amount",
+      "description": "Amount represented by successfully processed refund business records."
+    },
+    "commerce-metric-sales-reversal-amount": {
+      "name": "Sales Reversal Amount",
+      "description": "Merchandise sales amount reversed by item-level refunds."
+    },
+    "commerce-metric-shipment-count": {
+      "name": "Shipment Count",
+      "description": "Number of fulfillment shipments entering the shipped or in-transit state."
+    },
+    "commerce-metric-delivery-count": {
+      "name": "Delivery Count",
+      "description": "Number of fulfillments reaching the delivered state."
+    },
+    "commerce-metric-average-time-to-ship": {
+      "name": "Average Time To Ship",
+      "description": "Average elapsed minutes from order time to shipment or in-transit time."
+    },
+    "commerce-metric-average-delivery-duration": {
+      "name": "Average Delivery Duration",
+      "description": "Average elapsed minutes from shipment or in-transit time to delivery."
+    },
+    "commerce-metric-average-order-value": {
+      "name": "Average Order Value",
+      "description": "Average order value using the governed sales-before-reversal and distinct-order semantics."
+    },
+    "commerce-metric-activity-net-sales": {
+      "name": "Activity Net Sales",
+      "description": "Net sales viewed by the actual business activity times of sales and reversals."
+    },
+    "commerce-metric-order-cohort-net-sales": {
+      "name": "Order Cohort Net Sales",
+      "description": "Net sales attributed back to the original order cohort rather than the later reversal activity date."
+    },
+    "data-time-business-time": {
+      "name": "Business Time",
+      "description": "Time when the business event or state actually occurred."
+    },
+    "data-time-source-updated-time": {
+      "name": "Source Updated Time",
+      "description": "Time when the source system states that the business object was last updated."
+    },
+    "data-time-observation-time": {
+      "name": "Observation Time",
+      "description": "Time when the data platform observed or ingested the source representation."
+    },
+    "data-model-business-version": {
+      "name": "Business Version",
+      "description": "A distinct business-content version identified by business key plus content hash, independent of repeated observations."
+    },
+    "data-model-current-state": {
+      "name": "Current State",
+      "description": "The latest canonical business state selected from versioned source history for the required analytical context."
+    },
+    "data-model-exact-partition-completeness": {
+      "name": "Exact Partition Completeness",
+      "description": "Whether every required consumer asset for one exact execution partition has materialized successfully."
+    }
+  },
+  "semantic_entities": [
+    {
+      "id": "store",
+      "semantic_model": "stores",
+      "glossary_term": "commerce-entity-store"
+    },
+    {
+      "id": "item",
+      "semantic_model": "items",
+      "glossary_term": "commerce-entity-item"
+    },
+    {
+      "id": "order",
+      "semantic_model": "orders",
+      "glossary_term": "commerce-entity-order"
+    },
+    {
+      "id": "order_item",
+      "semantic_model": "order_items",
+      "glossary_term": "commerce-entity-order-item"
+    },
+    {
+      "id": "payment_transaction",
+      "semantic_model": "payment_transactions",
+      "glossary_term": "commerce-entity-payment-transaction"
+    },
+    {
+      "id": "refund",
+      "semantic_model": "refunds",
+      "glossary_term": "commerce-entity-refund"
+    },
+    {
+      "id": "refund_item",
+      "semantic_model": "refund_items",
+      "glossary_term": "commerce-entity-refund-item"
+    },
+    {
+      "id": "fulfillment",
+      "semantic_model": "fulfillments",
+      "glossary_term": "commerce-entity-fulfillment"
+    },
+    {
+      "id": "fulfillment_item",
+      "semantic_model": "fulfillment_items",
+      "glossary_term": "commerce-entity-fulfillment-item"
+    },
+    {
+      "id": "fulfillment_event",
+      "semantic_model": "fulfillment_events",
+      "glossary_term": "commerce-entity-fulfillment-event"
+    }
+  ],
+  "governed_metrics": [
+    {
+      "id": "order_count",
+      "glossary_term": "commerce-metric-order-count"
+    },
+    {
+      "id": "gross_sales",
+      "glossary_term": "commerce-metric-gross-sales"
+    },
+    {
+      "id": "discount_amount",
+      "glossary_term": "commerce-metric-discount-amount"
+    },
+    {
+      "id": "sales_before_reversal",
+      "glossary_term": "commerce-metric-sales-before-reversal"
+    },
+    {
+      "id": "collected_payment_amount",
+      "glossary_term": "commerce-metric-collected-payment-amount"
+    },
+    {
+      "id": "refund_processed_amount",
+      "glossary_term": "commerce-metric-refund-processed-amount"
+    },
+    {
+      "id": "sales_reversal_amount",
+      "glossary_term": "commerce-metric-sales-reversal-amount"
+    },
+    {
+      "id": "shipment_count",
+      "glossary_term": "commerce-metric-shipment-count"
+    },
+    {
+      "id": "delivery_count",
+      "glossary_term": "commerce-metric-delivery-count"
+    },
+    {
+      "id": "average_time_to_ship_minutes",
+      "glossary_term": "commerce-metric-average-time-to-ship"
+    },
+    {
+      "id": "average_delivery_duration_minutes",
+      "glossary_term": "commerce-metric-average-delivery-duration"
+    },
+    {
+      "id": "average_order_value",
+      "glossary_term": "commerce-metric-average-order-value"
+    },
+    {
+      "id": "activity_net_sales",
+      "glossary_term": "commerce-metric-activity-net-sales"
+    },
+    {
+      "id": "order_cohort_net_sales",
+      "glossary_term": "commerce-metric-order-cohort-net-sales"
+    }
+  ],
+  "consumer_asset_policy": {
+    "version": 1,
+    "contract": "commerce_consumer_asset_governance",
+    "scope": "consumer_facing_dbt_marts",
+    "identity_resolution": {
+      "selector_type": "dbt_model_name",
+      "physical_urn_resolution": "deferred_until_datahub_ingestion",
+      "do_not_guess_dataset_urns": true
+    },
+    "defaults": {
+      "owners": {
+        "business": "commerce-analytics",
+        "technical": "data-platform"
+      },
+      "tags": [
+        "source-shopify",
+        "layer-mart",
+        "semantic-enabled",
+        "daily-partitioned"
+      ],
+      "structured_properties": {
+        "commerce.governance.dataClassification": "INTERNAL",
+        "commerce.governance.agentReadiness": "SEMANTIC_READY"
+      }
+    },
+    "assets": [
+      {
+        "model": "stores",
+        "domain": "commerce-reference",
+        "glossary_terms": [
+          "commerce-entity-store"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "MEDIUM"
+        }
+      },
+      {
+        "model": "items",
+        "domain": "commerce-reference",
+        "glossary_terms": [
+          "commerce-entity-item"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "MEDIUM"
+        }
+      },
+      {
+        "model": "orders",
+        "domain": "commerce-order-sales",
+        "glossary_terms": [
+          "commerce-entity-order",
+          "commerce-metric-order-count"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "order_items",
+        "domain": "commerce-order-sales",
+        "glossary_terms": [
+          "commerce-entity-order-item",
+          "commerce-entity-item",
+          "commerce-metric-gross-sales",
+          "commerce-metric-discount-amount",
+          "commerce-metric-sales-before-reversal",
+          "commerce-metric-average-order-value",
+          "commerce-metric-activity-net-sales",
+          "commerce-metric-order-cohort-net-sales"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "payment_transactions",
+        "domain": "commerce-payments",
+        "glossary_terms": [
+          "commerce-entity-payment-transaction",
+          "commerce-metric-collected-payment-amount"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "refunds",
+        "domain": "commerce-refunds",
+        "glossary_terms": [
+          "commerce-entity-refund",
+          "commerce-metric-refund-processed-amount"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "refund_items",
+        "domain": "commerce-refunds",
+        "glossary_terms": [
+          "commerce-entity-refund-item",
+          "commerce-entity-item",
+          "commerce-metric-sales-reversal-amount",
+          "commerce-metric-activity-net-sales",
+          "commerce-metric-order-cohort-net-sales"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "fulfillments",
+        "domain": "commerce-fulfillment",
+        "glossary_terms": [
+          "commerce-entity-fulfillment",
+          "commerce-metric-shipment-count",
+          "commerce-metric-delivery-count",
+          "commerce-metric-average-time-to-ship",
+          "commerce-metric-average-delivery-duration"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "HIGH"
+        }
+      },
+      {
+        "model": "fulfillment_items",
+        "domain": "commerce-fulfillment",
+        "glossary_terms": [
+          "commerce-entity-fulfillment-item",
+          "commerce-entity-item"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "MEDIUM"
+        }
+      },
+      {
+        "model": "fulfillment_events",
+        "domain": "commerce-fulfillment",
+        "glossary_terms": [
+          "commerce-entity-fulfillment-event"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "MEDIUM"
+        }
+      },
+      {
+        "model": "time_spine_daily",
+        "domain": "commerce",
+        "glossary_terms": [
+          "data-time-business-time"
+        ],
+        "tags": [
+          "layer-mart"
+        ],
+        "structured_properties": {
+          "commerce.governance.criticality": "MEDIUM",
+          "commerce.governance.agentReadiness": "REFERENCE_ONLY"
+        }
+      }
+    ]
+  },
+  "structured_properties": [
+    {
+      "id": "commerce.governance.dataClassification",
+      "qualified_name": "commerce.governance.dataClassification",
+      "type": "string",
+      "display_name": "Data Classification",
+      "description": "Governed handling classification for commerce datasets.",
+      "entity_types": [
+        "urn:li:entityType:datahub.dataset"
+      ],
+      "cardinality": "SINGLE",
+      "allowed_values": [
+        {
+          "value": "PUBLIC",
+          "description": "Intentionally public information."
+        },
+        {
+          "value": "INTERNAL",
+          "description": "Internal business data with standard access controls."
+        },
+        {
+          "value": "CONFIDENTIAL",
+          "description": "Sensitive business data requiring tighter access controls."
+        },
+        {
+          "value": "RESTRICTED",
+          "description": "Highly restricted data requiring explicit authorization."
+        }
+      ]
+    },
+    {
+      "id": "commerce.governance.criticality",
+      "qualified_name": "commerce.governance.criticality",
+      "type": "string",
+      "display_name": "Business Criticality",
+      "description": "Business impact tier used for governance, incident prioritization, and discovery.",
+      "entity_types": [
+        "urn:li:entityType:datahub.dataset"
+      ],
+      "cardinality": "SINGLE",
+      "allowed_values": [
+        {
+          "value": "LOW",
+          "description": "Low business impact if stale or unavailable."
+        },
+        {
+          "value": "MEDIUM",
+          "description": "Useful analytical asset with moderate business impact."
+        },
+        {
+          "value": "HIGH",
+          "description": "Important consumer-facing asset supporting core commerce analysis."
+        },
+        {
+          "value": "CRITICAL",
+          "description": "Mission-critical asset with explicit operational obligations."
+        }
+      ]
+    },
+    {
+      "id": "commerce.governance.agentReadiness",
+      "qualified_name": "commerce.governance.agentReadiness",
+      "type": "string",
+      "display_name": "Agent Readiness",
+      "description": "Governance state controlling how strongly an AI/Data Agent may rely on this dataset. Runtime verification is intentionally stronger than semantic readiness.\n",
+      "entity_types": [
+        "urn:li:entityType:datahub.dataset"
+      ],
+      "cardinality": "SINGLE",
+      "allowed_values": [
+        {
+          "value": "REFERENCE_ONLY",
+          "description": "Discoverable context; not approved as a primary analytical answer source."
+        },
+        {
+          "value": "SEMANTIC_READY",
+          "description": "Modeled and semantically governed, but real Runtime evidence may still be deferred."
+        },
+        {
+          "value": "RUNTIME_VERIFIED",
+          "description": "Semantic contract plus required real Runtime evidence has been verified."
+        },
+        {
+          "value": "BLOCKED",
+          "description": "Agent should not use this asset for analytical answers."
+        }
+      ]
+    }
+  ],
+  "runtime_boundary": {
+    "datahub_urn_resolution": "deferred",
+    "datahub_write": "deferred",
+    "dagster_runtime": "deferred"
+  }
+}

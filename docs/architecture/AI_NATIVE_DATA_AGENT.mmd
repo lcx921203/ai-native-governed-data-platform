@@ -1,0 +1,40 @@
+flowchart TB
+    subgraph Sources[Commerce Sources]
+      Shopify[Shopify Admin API]
+      MySQL[MySQL Item / Store]
+      Behavior[Web / App Behavior]
+    end
+
+    Shopify --> ApiObs[GraphQL Observation Ingestion]
+    MySQL --> CDC[Flink CDC / Changelog]
+    Behavior --> Kafka[Kafka] --> Stream[PyFlink Event-Time Processing]
+
+    ApiObs --> Iceberg[(Iceberg + Polaris)]
+    CDC --> Iceberg
+    Stream --> Iceberg
+
+    Iceberg --> dbt[dbt Marts<br/>Business Facts / State / Entity]
+    dbt --> MF[MetricFlow<br/>Metric Authority]
+
+    MF --> Agent[Governed Data Agent<br/>Q&A / Comparison / Attribution / Diagnosis]
+    MF --> Contract[Fixed Serving Contract]
+    Contract --> Dagster[Dagster Export Orchestration]
+    Dagster --> Serving[(Iceberg Serving Tables)]
+    Serving --> Trino[Trino<br/>Serving Query Engine]
+    Trino --> BI[BI / Dashboard]
+    Trino --> API[FastAPI<br/>Stable Business API]
+    API --> Apps[Business Apps]
+
+    dbt --> DataHub[DataHub<br/>Governance Context]
+    Dagster --> Runtime[Runtime / Recovery Evidence]
+    Dagster -. DataFlow / DataJob Lineage .-> DataHub
+    Serving -. Serving Dataset Governance .-> DataHub
+    BI -. Dashboard Lineage .-> DataHub
+    API -. OpenAPI Endpoint Metadata .-> DataHub
+    DataHub --> Agent
+    Runtime --> Agent
+
+    Docs[Governed Knowledge Corpus] --> RAG[Knowledge RAG]
+    RAG --> Agent
+
+    Agent --> MCP[MCP Runtime<br/>Authority-preserving Adapter]

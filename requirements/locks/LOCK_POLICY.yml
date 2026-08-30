@@ -1,0 +1,24 @@
+lock_schema_version: 1
+python_version: "3.11"
+python_platform: x86_64-unknown-linux-gnu
+resolver: uv
+resolver_version: "0.12.1"
+exclude_newer: "2026-08-21T00:00:00Z"
+generate_hashes: true
+resolution: highest
+
+components:
+  agent: requirements-agent.txt
+  dagster: requirements-dagster.txt
+  datahub: requirements-datahub.txt
+  dbt: requirements-dbt.txt
+  mcp: requirements-mcp.txt
+  metricflow-compat: requirements-metricflow-compat.txt
+  rag: requirements-rag.txt
+  serving: requirements-serving.txt
+  streaming: requirements-streaming.txt
+  ci: requirements-ci.txt
+
+# Full transitive lock files are generated online by scripts/lock_dependencies.sh
+# or the dependency-locks GitHub Actions workflow. They are intentionally not
+# fabricated from top-level pins when PyPI resolution is unavailable.

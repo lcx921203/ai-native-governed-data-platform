@@ -1,0 +1,39 @@
+# Serving Consumer Registry
+# 业务逻辑：登记固定消费面，便于 DataHub 把 Serving Dataset 的下游影响范围延伸到 BI / API。
+# Dashboard：未接真实 BI 产品前使用 repository-owned logical Dashboard contract。
+# OpenAPI：FastAPI Endpoint 由 OpenAPI ingestion 进入 DataHub，之后再精确解析 Dataset URN。
+# 工程边界：这里是 Git/static contract，不证明任何外部 BI 或 DataHub Runtime 实体已经创建。
+version: 1
+contract: commerce_serving_consumers
+
+bi:
+  dashboards:
+    - id: executive_daily
+      name: Commerce Executive Daily
+      platform: commerce_bi
+      description: Repository-owned logical dashboard contract over the governed daily executive Serving projection.
+      input_serving_asset: bi_daily_executive
+      runtime_mode: LOGICAL_CONTRACT
+      migration_rule: replace_with_native_bi_dashboard_urn_when_a_real_bi_platform_is_connected
+
+api:
+  service:
+    id: commerce_serving_api
+    name: Commerce Serving API
+    openapi_spec: serving/api/openapi.json
+    datahub_recipe: metadata/datahub/recipes/serving_api_openapi.yml
+  endpoints:
+    - id: executive_daily
+      method: GET
+      path: /api/v1/executive/daily
+      input_serving_asset: bi_daily_executive
+    - id: region_daily
+      method: GET
+      path: /api/v1/regions/{region}/daily
+      input_serving_asset: bi_daily_executive
+  identity_policy:
+    endpoint_entity_type: dataset
+    source: datahub_openapi_ingestion
+    resolve_after_ingestion: true
+    fuzzy_binding_forbidden: true
+    guessed_urn_forbidden: true

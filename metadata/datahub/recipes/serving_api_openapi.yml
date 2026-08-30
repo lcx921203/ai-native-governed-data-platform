@@ -1,0 +1,18 @@
+# Serving API OpenAPI → DataHub ingestion recipe。
+# 业务逻辑：把固定 FastAPI Endpoint 纳入 DataHub，Endpoint 会作为 Dataset 类实体参与下游 Lineage。
+# OpenAPI：swagger_file 是仓库内确定性 Schema；url 只声明本地 Serving API Base URL，不开启在线 Schema 推断。
+# 工程边界：ingestion 只创建/更新 API 元数据；Serving → Endpoint Lineage 仍需 exact URN Runtime 验证后单独写入。
+source:
+  type: openapi
+  config:
+    name: commerce_serving_api
+    url: http://localhost:8081
+    swagger_file: serving/api/openapi.json
+    enable_api_calls_for_schema_extraction: false
+    ignore_endpoints:
+      - /health/live
+      - /health/ready
+sink:
+  type: datahub-rest
+  config:
+    server: http://localhost:8080

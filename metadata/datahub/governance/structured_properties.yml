@@ -1,0 +1,90 @@
+version: 1
+contract: commerce_structured_properties
+properties:
+- id: commerce.governance.dataClassification
+  qualified_name: commerce.governance.dataClassification
+  type: string
+  display_name: Data Classification
+  description: Governed handling classification for commerce datasets.
+  entity_types:
+  - urn:li:entityType:datahub.dataset
+  cardinality: SINGLE
+  allowed_values:
+  - value: PUBLIC
+    description: Intentionally public information.
+  - value: INTERNAL
+    description: Internal business data with standard access controls.
+  - value: CONFIDENTIAL
+    description: Sensitive business data requiring tighter access controls.
+  - value: RESTRICTED
+    description: Highly restricted data requiring explicit authorization.
+- id: commerce.governance.criticality
+  qualified_name: commerce.governance.criticality
+  type: string
+  display_name: Business Criticality
+  description: Business impact tier used for governance, incident prioritization,
+    and discovery.
+  entity_types:
+  - urn:li:entityType:datahub.dataset
+  cardinality: SINGLE
+  allowed_values:
+  - value: LOW
+    description: Low business impact if stale or unavailable.
+  - value: MEDIUM
+    description: Useful analytical asset with moderate business impact.
+  - value: HIGH
+    description: Important consumer-facing asset supporting core commerce analysis.
+  - value: CRITICAL
+    description: Mission-critical asset with explicit operational obligations.
+- id: commerce.governance.agentReadiness
+  qualified_name: commerce.governance.agentReadiness
+  type: string
+  display_name: Agent Readiness
+  description: 'Governance state controlling how strongly an AI/Data Agent may rely
+    on this dataset. Runtime verification is intentionally stronger than semantic
+    readiness.
+
+    '
+  entity_types:
+  - urn:li:entityType:datahub.dataset
+  cardinality: SINGLE
+  allowed_values:
+  - value: REFERENCE_ONLY
+    description: Discoverable context; not approved as a primary analytical answer
+      source.
+  - value: SEMANTIC_READY
+    description: Modeled and semantically governed, but real Runtime evidence may
+      still be deferred.
+  - value: RUNTIME_VERIFIED
+    description: Semantic contract plus required real Runtime evidence has been verified.
+  - value: BLOCKED
+    description: Agent should not use this asset for analytical answers.
+- id: commerce.governance.metricAuthority
+  qualified_name: commerce.governance.metricAuthority
+  type: string
+  display_name: Metric Authority
+  description: System that owns metric formulas for this consumer-facing dataset.
+  entity_types:
+  - urn:li:entityType:datahub.dataset
+  cardinality: SINGLE
+  allowed_values:
+  - value: METRICFLOW
+    description: Metric formulas are governed by MetricFlow and are not redefined
+      in the serving asset.
+  - value: NONE
+    description: Dataset does not expose governed metrics.
+- id: commerce.governance.servingRole
+  qualified_name: commerce.governance.servingRole
+  type: string
+  display_name: Serving Role
+  description: Consumer-serving responsibility of a rebuildable dataset.
+  entity_types:
+  - urn:li:entityType:datahub.dataset
+  cardinality: SINGLE
+  allowed_values:
+  - value: SHARED_BI_API_PROJECTION
+    description: Stable projection shared by fixed BI and business API consumers.
+  - value: BI_PROJECTION
+    description: Stable projection dedicated to BI/dashboard consumption.
+  - value: API_PROJECTION
+    description: Stable projection dedicated to business API consumption.

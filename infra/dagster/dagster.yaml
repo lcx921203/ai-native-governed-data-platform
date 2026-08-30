@@ -1,0 +1,5 @@
+freshness:
+  enabled: true
+
+telemetry:
+  enabled: false

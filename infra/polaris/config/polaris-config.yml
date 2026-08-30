@@ -1,0 +1,14 @@
+# Reference only.
+#
+# The local Polaris 1.7.0 runtime is configured through docker-compose.yml
+# environment variables. This file is intentionally not mounted into Polaris.
+# Keeping it makes that choice explicit and prevents the earlier placeholder
+# from being mistaken for an active server config.
+
+runtime:
+  configuration_source: docker-compose-environment
+  realm: POLARIS
+  catalog: commerce_catalog
+  iceberg_rest_uri: http://polaris:8181/api/catalog
+  management_uri: http://polaris:8181/api/management/v1
+  health_uri: http://polaris:8182/q/health

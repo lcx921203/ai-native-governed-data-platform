@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: int_shopify__orders_canonical
+    description: Shopify Order Current State；一个 order_id 一行。
+    columns:
+      - name: order_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__order_items_canonical
+    description: Shopify LineItem Current State；一个 line_item_id 一行。
+    columns:
+      - name: line_item_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__discount_allocations_canonical
+    description: DiscountAllocation Current State；Grain = line_item_id + discount_application_index。
+
+  - name: int_shopify__order_item_discounts
+    description: LineItem × Currency 当前折扣聚合。
+
+  - name: int_shopify__transactions_canonical
+    description: Shopify OrderTransaction Current State；一个 transaction_id 一行。
+    columns:
+      - name: transaction_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__refunds_canonical
+    description: Shopify Refund Current State；一个 refund_id 一行。
+    columns:
+      - name: refund_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__refund_items_canonical
+    description: Shopify RefundLineItem Current State；一个 refund_line_item_id 一行。
+    columns:
+      - name: refund_line_item_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__fulfillments_canonical
+    description: Shopify Fulfillment Current State；一个 fulfillment_id 一行。
+    columns:
+      - name: fulfillment_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__fulfillment_items_canonical
+    description: Shopify FulfillmentLineItem Current State；一个 fulfillment_line_item_id 一行。
+    columns:
+      - name: fulfillment_line_item_id
+        data_tests: [not_null, unique]
+
+  - name: int_shopify__fulfillment_events_canonical
+    description: Shopify FulfillmentEvent Current State；一个 fulfillment_event_id 一行。
+    columns:
+      - name: fulfillment_event_id
+        data_tests: [not_null, unique]

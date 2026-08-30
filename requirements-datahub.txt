@@ -1,0 +1,1 @@
+acryl-datahub[iceberg,dbt]==1.7.0

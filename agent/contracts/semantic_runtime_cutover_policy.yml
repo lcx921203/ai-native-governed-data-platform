@@ -1,0 +1,24 @@
+version: 1
+contract: commerce_agent_semantic_runtime_cutover
+mode: verified_runtime_only
+principles:
+  dbt_metricflow_are_semantic_calculation_authority: true
+  phase7_core_runtime_evidence_required: true
+  current_metricflow_health_required: true
+  explain_before_query: true
+  arbitrary_sql: false
+  caller_raw_where: false
+  static_contracts_never_upgrade_numeric_claims: true
+  runtime_evidence_is_outside_git_source_tree: true
+  capability_specific_phase5_gates_remain_required: true
+runtime:
+  allow_env: PHASE7A_ALLOW_AGENT_SEMANTIC_RUNTIME
+  core_evidence: .runtime/evidence/phase7a/core_runtime.json
+  required_core_status: RUNTIME_BOOTSTRAP_VERIFIED
+  required_core_evidence: [services, spark_thrift, dbt, metricflow]
+  metricflow_health_command: [health-checks]
+  health_cache_seconds: 60
+  evidence_output: .runtime/evidence/phase7a/agent_semantic_runtime.json
+closure:
+  success_status: AGENT_SEMANTIC_RUNTIME_CUTOVER_VERIFIED
+  runtime_evidence: DEFERRED

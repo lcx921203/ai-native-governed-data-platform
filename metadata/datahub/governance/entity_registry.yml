@@ -1,0 +1,33 @@
+version: 1
+contract: commerce_governed_entity_registry
+entities:
+- id: store
+  semantic_model: stores
+  glossary_term: commerce-entity-store
+- id: item
+  semantic_model: items
+  glossary_term: commerce-entity-item
+- id: order
+  semantic_model: orders
+  glossary_term: commerce-entity-order
+- id: order_item
+  semantic_model: order_items
+  glossary_term: commerce-entity-order-item
+- id: payment_transaction
+  semantic_model: payment_transactions
+  glossary_term: commerce-entity-payment-transaction
+- id: refund
+  semantic_model: refunds
+  glossary_term: commerce-entity-refund
+- id: refund_item
+  semantic_model: refund_items
+  glossary_term: commerce-entity-refund-item
+- id: fulfillment
+  semantic_model: fulfillments
+  glossary_term: commerce-entity-fulfillment
+- id: fulfillment_item
+  semantic_model: fulfillment_items
+  glossary_term: commerce-entity-fulfillment-item
+- id: fulfillment_event
+  semantic_model: fulfillment_events
+  glossary_term: commerce-entity-fulfillment-event

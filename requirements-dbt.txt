@@ -1,0 +1,3 @@
+# Canonical dbt runtime: latest Semantic Layer YAML spec (dbt Core 1.12+)
+dbt-core==1.12.2
+dbt-spark[pyhive]==1.11.0

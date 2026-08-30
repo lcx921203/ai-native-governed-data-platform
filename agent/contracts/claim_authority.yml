@@ -1,0 +1,33 @@
+# Claim Ledger 的权威来源矩阵。
+# 业务逻辑：每一种 claim 只允许指定系统提供 primary evidence，例如 MetricFlow 数值、DataHub identity、Dagster runtime。
+# 工程边界：Knowledge RAG 不能覆盖结构化权威；LLM 不在这张表中，因为它只负责受约束表达。
+version: 1
+claim_authority:
+  metric_definition:
+    primary: [metricflow]
+    secondary: [knowledge_rag]
+    rag_override_primary: false
+  metric_numeric_value:
+    primary: [metricflow_runtime]
+    rag_allowed: false
+  dataset_identity:
+    primary: [datahub]
+    rag_override_primary: false
+  ownership:
+    primary: [datahub]
+    rag_override_primary: false
+  lineage:
+    primary: [datahub]
+    fallback: [dbt_static]
+  runtime_status:
+    primary: [dagster]
+    rag_allowed: false
+  observed_failure:
+    primary: [dagster]
+    rag_allowed: false
+  business_rationale:
+    primary: [knowledge_rag]
+  design_decision:
+    primary: [knowledge_rag]
+  troubleshooting_procedure:
+    primary: [knowledge_rag]

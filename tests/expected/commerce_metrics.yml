@@ -1,0 +1,156 @@
+# MetricFlow Golden Oracle
+# 业务逻辑：冻结一组受治理查询的 expected business result，验证语义层没有悄悄改变口径。
+# 输入绑定：fixture_sha256 先固定测试数据；queries 再声明 metrics/dimensions/filters 与 expected rows。
+# 输出：由 validate_metricflow_golden_results.py 比较实际 CSV 与 Oracle。
+# 工程边界：Oracle 文件本身只是期望结果；只有真实 MetricFlow CLI 执行并比较通过才是 Runtime Acceptance PASS。
+
+fixture_contract: shopify_order_domain_v1
+currency: USD
+fixture_sha256:
+  data/fixtures/shopify/order_normal.json: 0c387c3756feb29e2b661bf17beaa03db20c9b50fe2c410163da5e1fb50cfc5e
+  data/fixtures/shopify/order_discount.json: 9efbfdc62c7f9daf034f34fe22b381daa4ddaf8c20637d1d3e580ea6df13cd83
+  data/fixtures/shopify/order_partial_refund.json: c53c30fc64fcc6ad6a3e172d7baff175e2069eedab9b7db2ae0575977eeb915a
+  data/fixtures/shopify/order_auth_capture.json: d2a80e63f2d70cb79fe7f1cd8850c3f4d6dfc9618948a4e0644ef41d0a895e1b
+  data/fixtures/shopify/order_fulfillment.json: 16fd37eca736fcf5e5bdda5890ea70ac6057eca766b85c3c5905f316df3a96ee
+  data/fixtures/master/stores.csv: 7cbe061ba1604b27e7e94aa1cb9ef60a53c29cf90518ed8f7b894c1a41eaeaeb
+  data/fixtures/master/items.csv: fc1823d36ccdb7370007dd2360de3516c28b063efd14c044a6e2c9fbe285f84d
+queries:
+- name: orders_global
+  metrics:
+  - order_count
+  expected:
+  - order_count: 5
+- name: sales_global
+  metrics:
+  - gross_sales
+  - discount_amount
+  - sales_before_reversal
+  - units_ordered
+  - orders_with_item
+  expected:
+  - gross_sales: '400.00'
+    discount_amount: '10.00'
+    sales_before_reversal: '390.00'
+    units_ordered: 11
+    orders_with_item: 5
+- name: payments_global
+  metrics:
+  - payment_transaction_count
+  - authorized_payment_amount
+  - collected_payment_amount
+  - successful_payment_refund_amount
+  - collected_payment_by_order_cohort
+  expected:
+  - payment_transaction_count: 7
+    authorized_payment_amount: '80.00'
+    collected_payment_amount: '390.00'
+    successful_payment_refund_amount: '20.00'
+    collected_payment_by_order_cohort: '390.00'
+- name: refunds_global
+  metrics:
+  - refund_count
+  - refund_processed_amount
+  expected:
+  - refund_count: 1
+    refund_processed_amount: '20.00'
+- name: refund_items_global
+  metrics:
+  - sales_reversal_amount
+  - units_refunded
+  expected:
+  - sales_reversal_amount: '20.00'
+    units_refunded: 1
+- name: fulfillment_global
+  metrics:
+  - shipment_count
+  - delivery_count
+  - average_time_to_ship_minutes
+  - average_delivery_duration_minutes
+  expected:
+  - shipment_count: 1
+    delivery_count: 1
+    average_time_to_ship_minutes: '2820.0'
+    average_delivery_duration_minutes: '3330.0'
+- name: fulfillment_items_global
+  metrics:
+  - units_shipped
+  - units_delivered
+  expected:
+  - units_shipped: 3
+    units_delivered: 3
+- name: fulfillment_events_global
+  metrics:
+  - fulfillment_event_count
+  expected:
+  - fulfillment_event_count: 2
+- name: average_order_value_global
+  metrics:
+  - average_order_value
+  expected:
+  - average_order_value: '78.00'
+- name: order_cohort_net_sales_global
+  metrics:
+  - order_cohort_net_sales
+  expected:
+  - order_cohort_net_sales: '370.00'
+- name: order_to_paid_24h_conversion_rate_global
+  metrics:
+  - order_to_paid_24h_conversion_rate
+  expected:
+  - order_to_paid_24h_conversion_rate: '0.80'
+- name: order_to_fulfillment_3d_conversion_rate_global
+  metrics:
+  - order_to_fulfillment_3d_conversion_rate
+  expected:
+  - order_to_fulfillment_3d_conversion_rate: '0.20'
+- name: order_to_delivered_7d_conversion_rate_global
+  metrics:
+  - order_to_delivered_7d_conversion_rate
+  expected:
+  - order_to_delivered_7d_conversion_rate: '0.20'
+- name: gross_sales_by_store_region
+  metrics:
+  - gross_sales
+  group_by:
+  - store__region
+  expected:
+  - store__region: South
+    gross_sales: '80.00'
+  - store__region: West
+    gross_sales: '320.00'
+- name: average_order_value_by_store_region
+  metrics:
+  - average_order_value
+  group_by:
+  - store__region
+  expected:
+  - store__region: South
+    average_order_value: '80.00'
+  - store__region: West
+    average_order_value: '77.50'
+- name: gross_sales_by_item_subcategory
+  metrics:
+  - gross_sales
+  group_by:
+  - item__subcategory
+  expected:
+  - item__subcategory: Soda
+    gross_sales: '340.00'
+  - item__subcategory: Water
+    gross_sales: '60.00'
+- name: activity_net_sales_by_day
+  metrics:
+  - activity_net_sales
+  group_by:
+  - metric_time__day
+  expected:
+  - metric_time__day: '2026-08-01'
+    activity_net_sales: '390.00'
+  - metric_time__day: '2026-08-02'
+    activity_net_sales: '0.00'
+  - metric_time__day: '2026-08-03'
+    activity_net_sales: '0.00'
+  - metric_time__day: '2026-08-04'
+    activity_net_sales: '0.00'
+  - metric_time__day: '2026-08-05'
+    activity_net_sales: '-20.00'

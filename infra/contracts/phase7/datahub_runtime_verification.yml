@@ -1,0 +1,40 @@
+# 业务逻辑：定义 DataHub Metadata Plane 从 SOURCE/STATIC 升级到 RUNTIME_VERIFIED 时必须满足的最终 re-query 条件。
+# DataHub API 语义：要求 exact Iceberg Dataset identity、Domain、Owners、Tags、Glossary Terms、Structured Properties，并对关键模型检查 upstream lineage。
+# 工程边界：只有最终 DataHub re-query 全部通过才允许写 Runtime Evidence；源码/配置存在本身不算 Runtime PASS。
+version: 1
+contract: commerce_phase7a_datahub_runtime_verification
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+principles:
+  reuse_phase4c_identity_resolver: true
+  reuse_phase4c_governance_projection: true
+  exact_dataset_identity_only: true
+  fuzzy_identity_binding_forbidden: true
+  unresolved_identity_blocks_governance_write: true
+  git_static_identity_artifact_is_immutable_at_runtime: true
+  runtime_evidence_lives_outside_source_tree: true
+  runtime_verified_requires_final_requery: true
+datahub:
+  gms_url: http://localhost:8080
+  platform: iceberg
+  platform_urn: urn:li:dataPlatform:iceberg
+  platform_instance: commerce_polaris
+  environment: DEV
+identity:
+  allowed_resolved_statuses: [RESOLVED_EXPECTED, RESOLVED_SEARCH_EXACT]
+  require_resolved_urn_equals_expected_urn: true
+  require_entity_exists: true
+  require_platform_match: true
+  require_platform_instance_match: true
+governance:
+  require_domain: true
+  require_owners: true
+  require_tags: true
+  require_glossary_terms: true
+  require_structured_properties: true
+lineage:
+  required_models: [orders, order_lifecycle_snapshot, order_items, refunds, fulfillments]
+  merge_datahub_siblings: true
+  minimum_upstream_relationships: 1
+evidence:
+  directory: .runtime/evidence/phase7a/datahub
+  success_status: DATAHUB_METADATA_PLANE_VERIFIED

@@ -1,0 +1,26 @@
+version: 1
+contract: commerce_agent_operational_runtime_cutover
+mode: dagster_read_only
+principles:
+  phase3c_recovery_state_is_runtime_truth_reader: true
+  phase3c_recovery_policy_is_execution_authority: true
+  exact_partition_truth_precedes_run_status: true
+  structured_failure_tags_only: true
+  free_text_log_cause_inference: false
+  observed_recovery_run_is_not_policy_decision: true
+  policy_decision_is_not_observed_execution: true
+  agent_read_only: true
+  agent_launch_run: false
+  agent_backfill: false
+  agent_retry: false
+  agent_recovery_write: false
+runtime:
+  allow_env: PHASE7A_ALLOW_AGENT_DAGSTER_READ
+  core_evidence: .runtime/evidence/phase7a/core_runtime.json
+  required_core_status: RUNTIME_BOOTSTRAP_VERIFIED
+  dagster_home: infra/dagster
+  recovery_horizon_days: 7
+  max_run_records_per_partition: 50
+evidence:
+  output: .runtime/evidence/phase7a/dagster_operational_runtime.json
+  success_status: DAGSTER_OPERATIONAL_RUNTIME_VERIFIED

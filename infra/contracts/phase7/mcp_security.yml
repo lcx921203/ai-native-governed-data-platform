@@ -1,0 +1,45 @@
+# 业务逻辑：远程 MCP 不是“有 Token 就全能”，而是 Profile + OAuth Scope + Governed Registry 三层共同授权。
+# OAuth/JWT API：HTTP 模式必须校验 signature / issuer / audience / expiration / subject，并禁止 Token Passthrough。
+# 工程边界：模型不能自己决定授权，且 MCP Security 不授予任何生产写入或 Recovery 执行权。
+version: 1
+contract: commerce_phase7c_mcp_security
+status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+transport:
+  stdio:
+    auth: local_process_boundary
+    remote_access: false
+  streamable_http:
+    oauth_required: true
+    protected_resource_metadata: true
+    origin_validation: true
+    dns_rebinding_protection: true
+authorization:
+  base_scope: commerce:mcp:read
+  capability_scopes:
+    metadata: commerce:metadata:read
+    semantic: commerce:semantic:read
+    operational: commerce:operations:read
+    knowledge: commerce:knowledge:read
+token_validation:
+  signature: {required: true}
+  issuer: {required: true}
+  audience: {required: true}
+  expiration: {required: true}
+  subject: {required: true}
+  token_passthrough: forbidden
+authority:
+  profile_controls_registration: true
+  oauth_scope_controls_invocation: true
+  governed_registry_controls_execution: true
+  model_controls_authorization: false
+forbidden:
+  arbitrary_sql: true
+  arbitrary_file: true
+  shell: true
+  code_execution: true
+  datahub_write: true
+  dagster_write: true
+  recovery_execution: true
+evidence:
+  success_status: MCP_SECURITY_RUNTIME_VERIFIED
+  runtime_evidence: DEFERRED

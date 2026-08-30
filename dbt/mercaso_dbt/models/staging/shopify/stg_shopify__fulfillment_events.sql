@@ -1,0 +1,20 @@
+select
+    fulfillment_event_id,
+    fulfillment_id,
+    order_id,
+    upper(event_status) as event_status,
+    event_created_at,
+    event_time,
+    estimated_delivery_at,
+    event_message,
+    city,
+    province,
+    country,
+    zip,
+    latitude,
+    longitude,
+    last_source_updated_at as source_updated_at,
+    record_hash,
+    extracted_at,
+    batch_id
+from {{ source('shopify', 'fulfillment_events') }}
