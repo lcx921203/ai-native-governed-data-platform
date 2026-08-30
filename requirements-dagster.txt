@@ -3,8 +3,9 @@ dagster==1.13.18
 dagster-webserver==1.13.18
 dagster-dbt==0.29.18
 
-# Canonical dbt modeling runtime already documented in infra/runtime/VERSIONS.md.
-dbt-core==1.12.2
+# Dagster host compatibility runtime. dagster-dbt 0.29.18 requires dbt-core >=1.7,<1.12.
+# The canonical dbt 1.12.2 modeling runtime stays isolated in requirements-dbt.txt.
+dbt-core==1.11.14
 dbt-spark[PyHive]==1.11.0
 PyYAML==6.0.3
 

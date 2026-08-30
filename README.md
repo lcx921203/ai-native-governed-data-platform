@@ -221,12 +221,12 @@ for the exact distinction between engineered/static contracts and real runtime e
 
 ## Environment model
 
-The repository intentionally uses multiple Python environments because the current open-source MetricFlow compatibility runtime and canonical dbt runtime target different dbt-core versions.
+The repository intentionally uses multiple Python environments because the canonical dbt runtime, Dagster + dagster-dbt host runtime, and open-source MetricFlow compatibility runtime currently have different dbt-core compatibility ranges.
 
 ```text
-requirements-dbt.txt                 canonical dbt
+requirements-dbt.txt                 canonical dbt 1.12 modeling runtime
+requirements-dagster.txt             Dagster host + dagster-dbt compatible dbt 1.11 runtime
 requirements-metricflow-compat.txt   local open-source MetricFlow compatibility
-requirements-dagster.txt             orchestration
 requirements-datahub.txt             governance
 requirements-rag.txt                 knowledge retrieval
 requirements-mcp.txt                 MCP runtime

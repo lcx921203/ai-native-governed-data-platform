@@ -43,7 +43,7 @@ def test_ci_is_read_only_and_uses_isolated_python_311_runtime():
     text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "actions/checkout@v7" in text
     assert "actions/setup-python@v7" in text
-    assert "astral-sh/setup-uv@v9" in text
+    assert "astral-sh/setup-uv@v10.0.1" in text
 
 
 def test_lock_policy_covers_every_runtime_environment():
