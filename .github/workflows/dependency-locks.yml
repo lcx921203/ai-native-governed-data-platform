@@ -1,0 +1,44 @@
+name: Dependency Locks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.12.1"
+
+jobs:
+  generate-locks:
+    name: Generate all hash locks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Generate all locks
+        run: ./scripts/lock_dependencies.sh all
+
+      - name: Validate complete lock set
+        run: python scripts/check_dependency_locks.py --require-all
+
+      - name: Upload generated lock files
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-py311-linux-locks
+          path: requirements/locks/*.lock.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.12.1"
+
+jobs:
+  static-quality:
+    name: Static quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install lightweight test dependencies
+        run: uv pip install --system 'pytest>=8.4,<9' 'PyYAML==6.0.3'
+
+      - name: Python syntax
+        run: python -m compileall -q agent acceptance ingestion lakehouse metadata mcp_server orchestration serving tests scripts
+
+      - name: Shell syntax
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+          done < <(find . -type f -name '*.sh' -print0)
+
+      - name: YAML and JSON syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+
+          excluded = {'.git', '.runtime', '.venv', 'target', 'logs'}
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or any(part in excluded for part in path.parts):
+                  continue
+              if path.suffix in {'.yml', '.yaml'}:
+                  yaml.safe_load(path.read_text(encoding='utf-8'))
+              elif path.suffix == '.json':
+                  json.loads(path.read_text(encoding='utf-8'))
+          PY
+
+      - name: Source comment and CI policy contracts
+        run: pytest -q tests/test_source_comment_contract.py tests/test_ci_dependency_lock_contract.py
+
+      - name: Metric version lifecycle governance
+        run: |
+          python metadata/datahub/tools/validate_metric_lifecycle.py
+          pytest -q tests/test_metric_version_lifecycle_contract.py
+
+      - name: Validate committed lock set if present
+        run: python scripts/check_dependency_locks.py
+
+  contract-suite:
+    name: Full static contract suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Resolve or reuse CI dependency lock
+        shell: bash
+        run: |
+          if [[ -f requirements/locks/ci-py311-linux.lock.txt ]]; then
+            echo "CI_LOCK=requirements/locks/ci-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          else
+            LOCK_OUTPUT_DIR=.ci-locks ./scripts/lock_dependencies.sh ci
+            echo "CI_LOCK=.ci-locks/ci-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install CI environment from hash lock
+        run: uv pip install --system -r "$CI_LOCK"
+
+      - name: Run all source/static contracts
+        run: pytest -q
+
+  dependency-resolution:
+    name: Resolve ${{ matrix.component }} lock
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - agent
+          - dagster
+          - datahub
+          - dbt
+          - mcp
+          - metricflow-compat
+          - rag
+          - serving
+          - streaming
+          - ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Resolve deterministic hash lock
+        env:
+          LOCK_OUTPUT_DIR: .ci-locks
+        run: ./scripts/lock_dependencies.sh "${{ matrix.component }}"
+
+      - name: Verify hashes exist
+        shell: bash
+        run: grep -q -- '--hash=sha256:' ".ci-locks/${{ matrix.component }}-py311-linux.lock.txt"

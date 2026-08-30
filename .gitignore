@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.venv-*/
+dbt/mercaso_dbt/target/
+dbt/mercaso_dbt/logs/
+infra/dagster/history/
+.DS_Store
+
+.runtime/
