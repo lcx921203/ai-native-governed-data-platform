@@ -1,4 +1,4 @@
-version: 2
+version: 3
 contract: governed_context_planner
 mode: route_driven_minimal_context
 
@@ -10,12 +10,13 @@ principles:
   context_planner_has_no_metric_definition_authority: true
   unknown_intent_fail_closed: true
   analysis_requires_semantic_and_skill_context: true
+  optional_code_context_is_progressive_expansion_only: true
 
 defaults:
   max_items: 5
 
 # Context Planner 只消费 Router 已经确定的 Intent。
-# 没有出现在这里的 Intent 不会自动退化成“加载所有 Context”。
+# required Context 默认加载；optional Context 只有在前一级证据不足时才逐级扩展。
 intent_context:
 
   METRIC_QUERY:
@@ -47,6 +48,13 @@ intent_context:
       reason: >
         分析路径必须由一个明确命中的 ACTIVE Analytics Skill 提供；
         没有 Skill 时 Fail Closed，不允许 LLM 临场发明分析流程。
+
+    - source: code
+      required: false
+      max_items: 2
+      reason: >
+        只有 Semantic + Skill 无法解释底层模型具体转换行为时，
+        才允许渐进式加载 Model Context Card；不能默认读取完整 dbt SQL。
 
   DIMENSION_VALUE_DISCOVERY:
     - source: semantic
@@ -87,8 +95,8 @@ intent_context:
       required: false
       max_items: 2
       reason: >
-        Metadata Lineage 无法解释具体转换逻辑时，后续才允许读取精确 Code Context；
-        不允许默认把整套源码塞入模型。
+        Metadata Lineage 无法解释具体转换逻辑时，才加载 Model Context Card；
+        Card 仍不足时才允许显式读取有限 Raw Code 片段。
 
   RUNTIME_DIAGNOSIS:
     - source: metadata
@@ -117,8 +125,6 @@ intent_context:
       reason: >
         无法确定目标时只能搜索受治理 Metadata Registry，不能由 LLM 自动猜目标。
 
-  # 当前 Router 的 Knowledge Intent 是统一的 KNOWLEDGE_QUERY。
-  # scopes 已经由 Router 的 ToolPlan 限定为 runbook / architecture / glossary 等。
   KNOWLEDGE_QUERY:
     - source: knowledge
       required: true
@@ -126,7 +132,6 @@ intent_context:
       reason: >
         Knowledge Query 只能读取 Router 已批准 scope 下的 Governed Knowledge Corpus。
 
-  # 兼容历史/后续更细粒度的 Intent 命名。
   KNOWLEDGE_RUNBOOK:
     - source: knowledge
       required: true

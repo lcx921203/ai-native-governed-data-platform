@@ -1,0 +1,46 @@
+version: 1
+contract: governed_model_context_card
+mode: compact_code_context_then_bounded_raw_fallback
+
+principles:
+  code_is_evidence_not_metric_authority: true
+  metric_definition_authority_remains_metricflow: true
+  model_context_card_is_not_new_source_of_truth: true
+  source_fingerprint_required: true
+  stale_prebuilt_card_fail_closed: true
+  prebuilt_card_preferred: true
+  local_build_uses_deterministic_parser_only: true
+  raw_code_fallback_requires_explicit_opt_in: true
+  full_source_file_is_never_default_context: true
+  context_budget_is_enforced_before_llm: true
+
+paths:
+  dbt_models_root: dbt/mercaso_dbt/models
+  marts_schema: dbt/mercaso_dbt/models/marts/commerce/_commerce_models.yml
+  semantic_contract: dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml
+  prebuilt_root: metadata/model_context
+
+fallback:
+  # 本地开发可以由确定性 parser 临时构建 Card，不消耗 LLM Token。
+  # 生产环境应在 CI 中预构建，并把此开关收紧。
+  allow_local_build_when_prebuilt_missing: true
+
+limits:
+  max_upstream_refs: 24
+  max_upstream_sources: 12
+  max_execution_window_fields: 6
+  max_macros: 12
+  max_join_signals: 16
+  max_predicate_signals: 20
+  max_entities: 12
+  max_dimensions: 24
+  max_metrics: 24
+
+  # Context Engineering（上下文工程）预算。
+  # 这里是字符级硬门；estimated_tokens 只是跨模型的粗略成本观测值。
+  max_card_chars: 7000
+  token_estimate_chars_per_token: 4
+
+  # Raw Code 只有 Card 不能回答且显式请求时才允许进入下一层。
+  max_raw_snippet_lines: 80
+  max_raw_snippet_chars: 8000

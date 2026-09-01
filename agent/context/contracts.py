@@ -28,10 +28,12 @@ class ContextSource(str, Enum):
     # Knowledge RAG 中的 Runbook、设计决策、业务解释。
     KNOWLEDGE = "knowledge"
 
-    # 某类分析问题的标准分析步骤。下一步接 Skill Registry。
+    # 某类分析问题的标准分析步骤，由 GovernedSkillRegistry 提供。
     SKILL = "skill"
 
-    # 从 dbt / SQL / YAML 提炼的代码事实。后续接 Model Context Card。
+    # 从 dbt SQL / YAML 提炼的 Code Context。
+    # 默认使用 agent.code_context 的 Model Context Card；
+    # Raw Code 只能在 Card 信息不足时做显式、有限 fallback。
     CODE = "code"
 
     # 用户偏好、受控纠正等长期上下文。当前先保留扩展位置。
