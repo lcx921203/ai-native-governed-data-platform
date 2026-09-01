@@ -1,22 +1,4 @@
-"""Single Agent Runtime（单主智能体运行时）的结构化契约。
-
-Runtime 的目标不是创造新的业务能力，而是把已经存在的受治理组件串成一条
-唯一、可追踪、可验证的执行链。
-
-主链路：
-    Router
-      -> Context Planner
-      -> Context Loader
-      -> Planner
-      -> Executor
-      -> Validation
-      -> Claim Ledger
-      -> Renderer
-      -> Answer Validator
-
-Router / Planner / Executor / Validator 都是同一个 Runtime 的阶段，
-不是多个彼此自治的 Agent。
-"""
+"""Single Agent Runtime（单主智能体运行时）的结构化契约。"""
 
 from __future__ import annotations
 
@@ -37,11 +19,7 @@ class AgentRuntimeStatus(str, Enum):
 
 @dataclass(frozen=True)
 class RuntimeStage:
-    """一个 Runtime 阶段的有界状态记录。
-
-    这里只保存阶段名和状态，不在这里提前做完整 tracing / cost accounting。
-    后续 Observability 会在这个基础上增加 latency / token / cost。
-    """
+    """一个 Runtime 阶段的有界状态记录。"""
 
     stage: str
     status: str
@@ -72,6 +50,10 @@ class AgentRunResult:
     answer_validated: bool = False
     stage_trace: tuple[RuntimeStage, ...] = ()
     warnings: list[str] = field(default_factory=list)
+
+    # 新增：可信 Request Context 摘要与统一 Observability Trace。
+    request_context: Any | None = None
+    observability: Any | None = None
 
     @property
     def answer(self) -> str:
@@ -106,5 +88,7 @@ class AgentRunResult:
             else None,
             "answer_validated": self.answer_validated,
             "stage_trace": [item.to_dict() for item in self.stage_trace],
+            "request_context": dump(self.request_context),
+            "observability": dump(self.observability),
             "warnings": list(self.warnings),
         }

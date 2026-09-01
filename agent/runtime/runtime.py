@@ -1,31 +1,17 @@
 """Production-style Governed Single Agent Runtime（受治理单主智能体运行时）。
 
-这一层只负责编排，不拥有新的指标、SQL、RAG、Runtime Fact 或业务规则。
-
-非分析请求：
-    Router
-      -> Context Planner
-      -> Context Loader
-      -> Existing ToolPlan Executor
-      -> Existing Response Composer / Claim Ledger
-      -> Renderer
-      -> Answer Validator
-
-分析请求：
-    Router(ANALYSIS)
-      -> Context Planner
-      -> Context Loader
-      -> Analysis Planner
-      -> Analysis Executor
-      -> Analysis Validation / bounded retry
-      -> Claim Ledger
-      -> Renderer
-      -> Answer Validator
+新增生产边界：
+- RequestContext 独立于 Prompt；
+- 显式 RequestContext 先 Authorization，再进入 Context / Tool；
+- ContextVar 将 tenant dimension scope 自动传播到所有 MetricFlow Executor；
+- 每次 Run 生成 Trace + Usage/Cost Summary；
+- 没有真实 Provider Usage 时不伪造美元 Cost。
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Callable
 
 import yaml
@@ -40,6 +26,7 @@ from agent.context import (
     GovernedContextLoader,
     GovernedContextPlanner,
 )
+from agent.observability import GovernedRunObserver
 from agent.response import (
     AnswerStatus,
     GovernedResponseComposer,
@@ -51,6 +38,11 @@ from agent.router import (
     GovernedPlanExecutor,
     Intent,
     PlanStatus,
+)
+from agent.tenancy import (
+    GovernedRequestAuthorizer,
+    RequestContext,
+    bind_request_context,
 )
 
 from .contracts import AgentRunResult, AgentRuntimeStatus, RuntimeStage
@@ -74,6 +66,8 @@ class GovernedAgentRuntime:
         runtime_response_composer: Any | None = None,
         renderer: Callable[[Any], Any] | None = None,
         answer_validator: Callable[[Any, Any], bool] | None = None,
+        authorizer: Any | None = None,
+        observer: Any | None = None,
     ):
         self.root = Path(project_root).resolve()
         self.policy = yaml.safe_load(
@@ -92,16 +86,51 @@ class GovernedAgentRuntime:
         )
         self.renderer = renderer or render_deterministic
         self.answer_validator = answer_validator or validate_answer_draft
+        self.authorizer = authorizer or GovernedRequestAuthorizer(self.root)
+        self.observer = observer or GovernedRunObserver(self.root)
 
-    def run(self, question: str) -> AgentRunResult:
-        """执行一次完整受治理 Agent 调用。"""
+    def run(
+        self,
+        question: str,
+        request_context: RequestContext | None = None,
+    ) -> AgentRunResult:
+        """执行一次完整受治理 Agent 调用。
 
+        `request_context` 是可信边界参数，不属于 question / Prompt。
+        生产部署应设置 `AGENT_REQUIRE_REQUEST_CONTEXT=true`。
+        """
+
+        started = perf_counter()
+        explicit_context = request_context is not None
+        effective_context = self.authorizer.resolve(request_context)
+
+        with bind_request_context(effective_context):
+            result = self._run_bound(
+                question,
+                effective_context,
+                record_authorization_stage=explicit_context or effective_context is None,
+            )
+
+        elapsed_ms = (perf_counter() - started) * 1000
+        return self.observer.attach(
+            result,
+            effective_context,
+            total_duration_ms=elapsed_ms,
+        )
+
+    def _run_bound(
+        self,
+        question: str,
+        request_context: RequestContext | None,
+        *,
+        record_authorization_stage: bool,
+    ) -> AgentRunResult:
         stages: list[RuntimeStage] = []
 
         route = self.router.plan(question)
         stages.append(RuntimeStage("router", route.status.value, route.intent.value))
 
-        # Router 已经 BLOCKED 时，不再构造无意义 Context。
+        # Router 的安全 BLOCKED 优先，不需要触达任何下游资源。
         if route.status is PlanStatus.BLOCKED:
             execution = self.plan_executor.execute(route)
             stages.append(RuntimeStage("executor", execution.status.value, "router_blocked"))
@@ -111,6 +140,30 @@ class GovernedAgentRuntime:
                 question,
                 route=route,
                 execution=execution,
+                envelope=envelope,
+                stages=stages,
+            )
+
+        authorization = self.authorizer.authorize(route, request_context)
+        if record_authorization_stage:
+            stages.append(
+                RuntimeStage(
+                    "authorization",
+                    "PASS" if authorization.allowed else "BLOCKED",
+                    ",".join(authorization.required_scopes),
+                )
+            )
+
+        if not authorization.allowed:
+            envelope = self.runtime_response_composer.compose_preflight_failure(
+                route,
+                status=AnswerStatus.BLOCKED,
+                warnings=list(authorization.warnings),
+            )
+            stages.append(RuntimeStage("claim_ledger", envelope.status.value, "authorization_failure"))
+            return self._finalize(
+                question,
+                route=route,
                 envelope=envelope,
                 stages=stages,
             )
@@ -174,7 +227,7 @@ class GovernedAgentRuntime:
                 stages,
             )
 
-        # 非 ANALYSIS 的所有路径继续走原有 Router ToolPlan Executor。
+        # MetricFlow Executor 会从 ContextVar 自动获得 tenant dimension scope。
         execution = self.plan_executor.execute(route)
         stages.append(RuntimeStage("executor", execution.status.value, "tool_plan"))
         envelope = self.response_composer.compose(execution)
@@ -197,7 +250,11 @@ class GovernedAgentRuntime:
         context_bundle: Any,
         stages: list[RuntimeStage],
     ) -> AgentRunResult:
-        """ANALYSIS 专用的 Skill -> Plan -> Execute -> Validate 链路。"""
+        """ANALYSIS 专用的 Skill -> Plan -> Execute -> Validate 链路。
+
+        Analysis 内部 Comparator / Breakdown 新建的 MetricFlow Executor
+        同样读取当前 ContextVar，因此 tenant data scope 不会丢失。
+        """
 
         if route.status is not PlanStatus.PLANNING_REQUIRED:
             envelope = self.runtime_response_composer.compose_preflight_failure(
@@ -291,13 +348,15 @@ class GovernedAgentRuntime:
         execution: Any | None = None,
         analysis_execution: Any | None = None,
     ) -> AgentRunResult:
-        """Renderer 之后必须经过本地 Answer Validator；验证失败即 Fail Closed。"""
+        """Renderer 之后必须经过本地 Answer Validator；False 也必须 Fail Closed。"""
 
         try:
             draft = self.renderer(envelope)
             stages.append(RuntimeStage("renderer", "COMPLETE"))
             validated = bool(self.answer_validator(envelope, draft))
-            stages.append(RuntimeStage("answer_validator", "PASS" if validated else "BLOCKED"))
+            if not validated:
+                raise ValueError("Answer Validator returned false.")
+            stages.append(RuntimeStage("answer_validator", "PASS"))
         except Exception as exc:
             stages.append(RuntimeStage("answer_validator", "ERROR", str(exc)))
             return AgentRunResult(
@@ -330,7 +389,7 @@ class GovernedAgentRuntime:
             analysis_execution=analysis_execution,
             envelope=envelope,
             draft=draft,
-            answer_validated=validated,
+            answer_validated=True,
             stage_trace=tuple(stages),
             warnings=[],
         )

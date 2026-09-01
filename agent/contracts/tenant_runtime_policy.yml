@@ -1,0 +1,45 @@
+version: 1
+contract: governed_multi_tenant_request_context
+mode: trusted_request_context_fail_closed
+
+principles:
+  request_context_is_not_prompt_data: true
+  bearer_token_is_not_propagated_to_agent: true
+  capability_scope_checked_before_context_and_tools: true
+  object_allowlist_checked_before_execution: true
+  semantic_row_scope_is_injected_at_metricflow_executor: true
+  tenant_scope_conflict_fails_closed: true
+  multi_value_scope_not_silently_downgraded: true
+  contextvar_isolation_for_concurrent_requests: true
+  implicit_local_context_is_for_compatibility_only: true
+  production_requires_explicit_request_context: true
+
+strict_mode:
+  require_context_env: AGENT_REQUIRE_REQUEST_CONTEXT
+
+compatibility:
+  # 保持现有本地 tests / examples 的 run(question) 可继续工作。
+  # Production 部署必须设置 AGENT_REQUIRE_REQUEST_CONTEXT=true。
+  allow_implicit_local_context: true
+
+limits:
+  max_dimension_scopes: 2
+  max_total_semantic_filters: 4
+
+# 与当前 MCP Scope 语义保持一致，但 Agent Core 不反向依赖 mcp_server。
+intent_required_scopes:
+  METRIC_QUERY: [commerce:semantic:read]
+  METRIC_DEFINITION: [commerce:semantic:read]
+  ANALYSIS: [commerce:semantic:read]
+  DIMENSION_VALUE_DISCOVERY: [commerce:semantic:read]
+
+  DATASET_GOVERNANCE: [commerce:metadata:read]
+  ENTITY_CONTEXT: [commerce:metadata:read]
+  LINEAGE_QUERY: [commerce:metadata:read]
+  METADATA_DISCOVERY: [commerce:metadata:read]
+
+  RUNTIME_DIAGNOSIS:
+    - commerce:metadata:read
+    - commerce:operations:read
+
+  KNOWLEDGE_QUERY: [commerce:knowledge:read]

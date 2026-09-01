@@ -1,7 +1,12 @@
 """受治理 SemanticQueryPlan 的 Fail-Closed MetricFlow 执行器。
 
-执行顺序是 Explain → Query；只有计划 READY 且 Runtime gate 打开时才允许触达 MetricFlow。
-工程边界：本模块不生成公式，不回退任意 SQL；真实数值证据只有实际 Runtime 成功后才能标记 RUNTIME_VERIFIED。
+执行顺序是 Tenant Scope -> Explain -> Query；
+只有计划 READY、Request Scope 合法且 Runtime gate 打开时才允许触达 MetricFlow。
+
+工程边界：
+- 本模块不生成公式，不回退任意 SQL；
+- 真实数值证据只有实际 Runtime 成功后才能标记 RUNTIME_VERIFIED；
+- tenant / row scope 不从 Prompt 获取，只读取可信 RequestContext ContextVar。
 """
 
 from __future__ import annotations
@@ -10,6 +15,7 @@ import csv
 import os
 import subprocess
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -17,6 +23,7 @@ import yaml
 
 from agent.semantic_query.contracts import SemanticQueryPlan, SemanticQueryResult, SemanticQueryStatus
 from agent.semantic_query.planner import GovernedSemanticQueryPlanner
+from agent.tenancy import GovernedRequestScopeEnforcer, current_request_context
 
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -24,28 +31,50 @@ Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 class MetricFlowSemanticQueryExecutor:
     """执行已经通过 Planner 审核的 MetricFlow 查询计划。
-    
-    输入 SemanticQueryPlan，输出 SemanticQueryResult；负责 Runtime gate、Explain、Query 与有限错误投影。
+
+    输入 SemanticQueryPlan，输出 SemanticQueryResult；
+    负责 tenant scope、Runtime gate、Explain、Query 与有限错误投影。
     """
+
     def __init__(self, project_root: Path | str, runner: Runner | None = None):
         self.root = Path(project_root).resolve()
         self.policy = yaml.safe_load(
             (self.root / "agent/contracts/semantic_query_policy.yml").read_text(encoding="utf-8")
         )
         self.planner = GovernedSemanticQueryPlanner(self.root)
+        self.scope_enforcer = GovernedRequestScopeEnforcer(self.root)
         self.runner = runner or subprocess.run
 
     def execute(self, plan: SemanticQueryPlan) -> SemanticQueryResult:
-        """执行 Explain-before-query 流程。
-        
-        先验证计划与 Runtime permission，再运行 MetricFlow Explain，成功后才 Query；任何一步不满足都返回 BLOCKED / DEFERRED / ERROR。
-        """
+        """先注入可信 Request Scope，再执行 Explain-before-query。"""
+
         if plan.status is not SemanticQueryStatus.READY or plan.spec is None:
             return SemanticQueryResult(
                 status=plan.status,
                 evidence="STATIC_CONTRACT",
                 plan=plan,
                 warnings=list(plan.warnings),
+            )
+
+        # RequestContext 使用 ContextVar 传播，所以 Time Comparison / Breakdown 内部
+        # 新建的 MetricFlow Executor 也会自动继承同一 tenant scope。
+        scoped_plan, scope_warning = self.scope_enforcer.apply(
+            plan,
+            current_request_context(),
+        )
+        if scope_warning:
+            return SemanticQueryResult(
+                status=SemanticQueryStatus.BLOCKED,
+                evidence="STATIC_CONTRACT",
+                plan=plan,
+                warnings=[scope_warning],
+                validation="TENANT_SCOPE_REJECTED",
+            )
+        plan = scoped_plan
+        if plan.spec is not None:
+            plan = replace(
+                plan,
+                command_preview=self.planner.command_args(plan.spec),
             )
 
         gate = self.policy["runtime"]["allow_env"]
@@ -151,14 +180,16 @@ class MetricFlowSemanticQueryExecutor:
         )
 
     def _metricflow_binary(self) -> Path:
-        """解析当前环境可用的 MetricFlow CLI 入口；找不到时返回 DEFERRED，而不是伪造执行结果。"""
+        """解析当前环境可用的 MetricFlow CLI 入口；找不到时返回 DEFERRED。"""
+
         configured = os.getenv(self.policy["runtime"]["metricflow_bin_env"], "").strip()
         return Path(configured).expanduser().resolve() if configured else (
             self.root / self.policy["runtime"]["default_metricflow_bin"]
         ).resolve()
 
     def _run(self, cmd: list[str], cwd: Path, env: dict[str, str], timeout: int) -> subprocess.CompletedProcess[str]:
-        """调用 subprocess 执行一条受限 MetricFlow CLI，并捕获 stdout/stderr/returncode 供证据判断。"""
+        """执行一条受限 MetricFlow CLI，并捕获有限运行结果。"""
+
         try:
             return self.runner(
                 cmd,
@@ -170,17 +201,22 @@ class MetricFlowSemanticQueryExecutor:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            return subprocess.CompletedProcess(cmd, 124, stdout=exc.stdout or "", stderr="MetricFlow command timed out")
+            return subprocess.CompletedProcess(
+                cmd,
+                124,
+                stdout=exc.stdout or "",
+                stderr="MetricFlow command timed out",
+            )
 
     @staticmethod
     def _bounded_error(result: subprocess.CompletedProcess[str]) -> str:
-        """把底层 CLI 错误裁剪成受控文本，避免把无限日志或敏感运行信息直接暴露给 Agent。"""
+        """裁剪底层 CLI 错误，避免无限日志或敏感信息进入 Agent。"""
+
         text = (result.stderr or result.stdout or "MetricFlow command failed").strip().replace("\x00", "")
         return text[-1200:]
 
     @staticmethod
     def _deferred(plan: SemanticQueryPlan, reason: str) -> SemanticQueryResult:
-        """构造 Runtime 未开放/不可用时的 DEFERRED 结果，明确保持非运行证据状态。"""
         return SemanticQueryResult(
             status=SemanticQueryStatus.DEFERRED,
             evidence="STATIC_CONTRACT",
