@@ -1,0 +1,32 @@
+version: 1
+contract: governed_context_loader
+mode: required_first_then_progressive_optional_expansion
+
+principles:
+  router_binding_must_match_context_plan: true
+  required_planning_context_loaded_first: true
+  optional_context_not_loaded_by_default: true
+  runtime_context_is_executor_owned: true
+  knowledge_retrieval_is_executor_owned: true
+  no_duplicate_runtime_query_in_loader: true
+  no_duplicate_rag_retrieval_in_loader: true
+  code_context_requires_plan_authorization: true
+  raw_code_requires_model_context_card_first: true
+  memory_fail_closed_until_implemented: true
+  budget_checked_before_llm: true
+
+limits:
+  # 这里都是粗略 token budget，用于 Runtime 成本门控，不替代真实 provider usage。
+  max_initial_estimated_tokens: 5000
+  max_expanded_estimated_tokens: 8000
+  max_expansion_steps: 2
+  token_estimate_chars_per_token: 4
+
+progressive_expansion:
+  model_context_card:
+    allowed_reasons:
+      - TRANSFORMATION_LOGIC_REQUIRED
+      - LINEAGE_EXPLANATION_REQUIRED
+
+  raw_code:
+    allowed_reason: MODEL_CONTEXT_CARD_INSUFFICIENT
