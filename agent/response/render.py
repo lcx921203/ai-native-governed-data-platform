@@ -2,6 +2,10 @@ from .contracts import AnswerDraft, ClaimKind
 
 
 def render_deterministic(envelope):
+    """把 Claim Ledger 确定性投影成 AnswerDraft。
+
+    这里只显示已经进入 Claim Ledger 的受治理声明；不会自行创建新事实。
+    """
     visible = {
         ClaimKind.SEMANTIC_QUERY_PLAN,
         ClaimKind.QUERY_RESULT,
@@ -24,6 +28,7 @@ def render_deterministic(envelope):
         ClaimKind.ACTION_AUTHORITY,
         ClaimKind.APPROVAL_STATUS,
         ClaimKind.APPROVAL_AUDIT,
+        ClaimKind.KNOWLEDGE_EVIDENCE,
     }
     texts = []
     ids = []

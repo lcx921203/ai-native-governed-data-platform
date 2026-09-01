@@ -1,0 +1,30 @@
+version: 1
+contract: governed_single_agent_runtime
+mode: one_runtime_multiple_governed_stages
+
+principles:
+  single_main_agent: true
+  router_precedes_context_planner: true
+  context_planner_precedes_context_loader: true
+  analysis_requires_skill_and_analysis_planner: true
+  analysis_executor_must_use_validation: true
+  bounded_retry_only: true
+  non_analysis_reuses_existing_tool_plan_executor: true
+  claim_ledger_precedes_renderer: true
+  answer_validator_is_mandatory: true
+  invalid_answer_fails_closed: true
+  arbitrary_sql: false
+  llm_cannot_add_unplanned_tools: true
+  llm_cannot_define_metric_formula: true
+  multi_agent_supervisor: false
+
+stages:
+  - router
+  - context_planner
+  - context_loader
+  - planner
+  - executor
+  - validation
+  - claim_ledger
+  - renderer
+  - answer_validator
