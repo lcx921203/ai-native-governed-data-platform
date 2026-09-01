@@ -1,0 +1,32 @@
+version: 1
+contract: governed_agent_evaluation
+mode: deterministic_static_regression_then_runtime_golden
+
+principles:
+  eval_data_is_repository_owned: true
+  llm_as_only_judge: false
+  deterministic_checks_first: true
+  route_and_authority_are_regression_contracts: true
+  forbidden_behavior_is_first_class_eval: true
+  analysis_skill_selection_is_measured: true
+  analysis_plan_coverage_is_measured: true
+  runtime_numeric_accuracy_requires_reproducible_golden_data: true
+  do_not_invent_golden_business_results: true
+  critical_case_regression_fails_ci: true
+
+gates:
+  minimum_static_pass_rate: 1.0
+  fail_on_critical_case: true
+
+future_runtime_eval:
+  enabled_by_default: false
+  requires:
+    - reproducible_test_dataset
+    - fixed_metricflow_runtime
+    - golden_expected_results
+    - runtime_evidence
+  metrics:
+    - golden_result_accuracy
+    - reconciliation_accuracy
+    - evidence_correctness
+    - retry_success_rate

@@ -1,0 +1,62 @@
+version: 1
+suite: analysis_queries
+category: analysis
+critical: true
+
+cases:
+  - id: analysis_sales_decline_previous_period
+    question: "为什么 2026-08-01 到 2026-08-07 gross_sales 环比下降？"
+    expect:
+      intent: ANALYSIS
+      route_status: PLANNING_REQUIRED
+      target_kind: metric
+      target_id: gross_sales
+      tool_names: []
+      required_context: [semantic, skill]
+      optional_context: [code]
+      skill_id: sales_decline_analysis
+      analysis_status: READY
+      comparison_mode: PREVIOUS_PERIOD
+      unit_count: 7
+      required_unit_count: 6
+      unit_kinds:
+        - TIME_COMPARISON
+        - TIME_COMPARISON
+        - BREAKDOWN
+        - BREAKDOWN
+        - BREAKDOWN
+        - TIME_COMPARISON
+        - EVIDENCE_SUMMARY
+
+  - id: analysis_sales_decline_yoy
+    question: "为什么 2026-08-01 到 2026-08-07 gross_sales 同比下降？"
+    expect:
+      intent: ANALYSIS
+      route_status: PLANNING_REQUIRED
+      target_id: gross_sales
+      required_context: [semantic, skill]
+      optional_context: [code]
+      skill_id: sales_decline_analysis
+      analysis_status: READY
+      comparison_mode: YEAR_OVER_YEAR
+      unit_count: 7
+
+  - id: analysis_requires_reference_window
+    question: "为什么 2026-08-01 到 2026-08-07 gross_sales 下降？"
+    expect:
+      intent: ANALYSIS
+      route_status: PLANNING_REQUIRED
+      target_id: gross_sales
+      skill_id: sales_decline_analysis
+      analysis_status: CLARIFICATION_REQUIRED
+
+  - id: analysis_no_skill_for_order_count_decline
+    question: "为什么 2026-08-01 到 2026-08-07 order_count 环比下降？"
+    expect:
+      intent: ANALYSIS
+      route_status: PLANNING_REQUIRED
+      target_id: order_count
+      required_context: [semantic, skill]
+      optional_context: [code]
+      skill_id: null
+      analysis_status: BLOCKED

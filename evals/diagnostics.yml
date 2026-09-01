@@ -1,0 +1,48 @@
+version: 1
+suite: diagnostics
+category: diagnostics
+critical: true
+
+cases:
+  - id: runtime_diagnosis_orders
+    question: "为什么 orders 昨天没更新？"
+    expect:
+      intent: RUNTIME_DIAGNOSIS
+      route_status: PLANNED
+      target_kind: dataset
+      target_id: orders
+      tool_names: [get_dataset_context, get_runtime_context]
+      required_context: [metadata, runtime]
+      optional_context: []
+
+  - id: lineage_orders_upstream
+    question: "orders 的上游血缘是什么？"
+    expect:
+      intent: LINEAGE_QUERY
+      route_status: PLANNED
+      target_kind: dataset
+      target_id: orders
+      tool_names: [get_lineage_context]
+      required_context: [metadata]
+      optional_context: [code]
+
+  - id: governance_orders_owner
+    question: "orders 是哪个业务域，谁负责？"
+    expect:
+      intent: DATASET_GOVERNANCE
+      route_status: PLANNED
+      target_kind: dataset
+      target_id: orders
+      tool_names: [get_dataset_context]
+      required_context: [metadata]
+      optional_context: []
+
+  - id: knowledge_design_routing
+    question: "这个项目为什么这样设计？"
+    expect:
+      intent: KNOWLEDGE_QUERY
+      route_status: PLANNED
+      target_kind: knowledge
+      tool_names: [search_knowledge, fetch_top_knowledge_hits]
+      required_context: [knowledge]
+      optional_context: []

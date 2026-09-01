@@ -1,0 +1,51 @@
+version: 1
+suite: semantic_queries
+category: semantic
+critical: true
+
+cases:
+  - id: semantic_metric_query_gross_sales
+    question: "2026-08-05 gross_sales 是多少？"
+    expect:
+      intent: METRIC_QUERY
+      route_status: PLANNED
+      target_kind: metric
+      target_id: gross_sales
+      tool_names: [query_semantic_metric]
+      required_context: [semantic]
+      optional_context: []
+      forbidden_context: [knowledge, code, memory]
+
+  - id: semantic_metric_definition_gross_sales
+    question: "gross_sales 的定义是什么？"
+    expect:
+      intent: METRIC_DEFINITION
+      route_status: PLANNED
+      target_kind: metric
+      target_id: gross_sales
+      tool_names: [get_metric_context]
+      required_context: [semantic]
+      optional_context: []
+      forbidden_context: [knowledge, runtime, code]
+
+  - id: semantic_multi_metric_query
+    question: "2026-08-05 gross_sales 和 order_count 是多少？"
+    expect:
+      intent: METRIC_QUERY
+      route_status: PLANNED
+      target_kind: metric_set
+      target_id: "gross_sales,order_count"
+      tool_names: [query_semantic_metrics]
+      required_context: [semantic]
+      optional_context: []
+
+  - id: semantic_dimension_value_discovery
+    question: "gross_sales 的地区有哪些可选值？"
+    expect:
+      intent: DIMENSION_VALUE_DISCOVERY
+      route_status: PLANNED
+      target_kind: dimension
+      target_id: store__region
+      tool_names: [get_dimension_values]
+      required_context: [semantic]
+      optional_context: []
