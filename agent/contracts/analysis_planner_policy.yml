@@ -1,0 +1,52 @@
+version: 1
+contract: governed_analysis_planner
+mode: compile_skill_to_bounded_analysis_units
+
+principles:
+  router_must_resolve_analysis_first: true
+  context_planner_must_precede_analysis_planner: true
+  exactly_one_active_skill_required: true
+  metric_definition_authority: MetricFlow
+  dimension_path_authority: MetricFlow
+  arbitrary_sql: false
+  default_comparison_window: false
+  explicit_reference_window_required: true
+  explicit_calendar_date_required: true
+  skill_action_allowlist_only: true
+  planner_does_not_execute_runtime_queries: true
+  evidence_before_conclusion: true
+
+limits:
+  max_skill_steps: 8
+  max_required_metrics: 3
+  max_optional_metrics: 3
+  max_dimensions: 5
+
+allowed_actions:
+  - compare_target_metric
+  - compare_companion_metrics
+  - breakdown_by_dimensions
+  - compare_optional_metrics
+  - summarize_ranked_drivers
+
+comparison_markers:
+  previous_period:
+    - 环比
+    - 上一期
+    - 比上一期
+    - 和上一期比
+    - 前一期
+    - 比前一期
+    - previous period
+    - prior period
+  year_over_year:
+    - 同比
+    - 去年同期
+    - year over year
+    - yoy
+
+authority:
+  metric_query: MetricFlow
+  metric_definition: MetricFlow
+  dimension_path: MetricFlow
+  summary: VERIFIED_ANALYSIS_EVIDENCE
