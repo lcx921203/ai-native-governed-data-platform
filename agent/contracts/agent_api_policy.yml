@@ -1,4 +1,4 @@
-version: 1
+version: 2
 contract: governed_production_agent_api
 mode: authenticated_http_trusted_request_context
 
@@ -14,6 +14,7 @@ principles:
   internal_runtime_error_returns_trace_id_only: true
   interactive_docs_disabled_by_default: true
   renderer_runtime_gate_is_preserved: true
+  shared_identity_mapper_with_mcp: true
 
 authentication:
   jwt:
@@ -22,18 +23,9 @@ authentication:
     audience_env: AGENT_API_AUDIENCE
     algorithms: [RS256, ES256]
 
-identity_claims:
-  tenant_id: tenant_id
-  roles: roles
-  allowed_metrics: allowed_metrics
-  allowed_datasets: allowed_datasets
-  allowed_entities: allowed_entities
-  allowed_dimensions: allowed_dimensions
-  allowed_knowledge_scopes: allowed_knowledge_scopes
-  dimension_scopes: dimension_scopes
+identity:
+  mapper: agent.tenancy.TrustedClaimsContextMapper
+  policy: agent/contracts/trusted_identity_policy.yml
 
 limits:
   max_question_chars: 4000
-  max_roles: 16
-  max_object_allowlist_items: 128
-  max_dimension_scopes: 2

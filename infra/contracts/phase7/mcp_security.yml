@@ -1,18 +1,24 @@
-# 业务逻辑：远程 MCP 不是“有 Token 就全能”，而是 Profile + OAuth Scope + Governed Registry 三层共同授权。
+# 业务逻辑：远程 MCP 不是“有 Token 就全能”，而是 Profile + OAuth Scope + Trusted RequestContext + Governed Registry 共同授权。
 # OAuth/JWT API：HTTP 模式必须校验 signature / issuer / audience / expiration / subject，并禁止 Token Passthrough。
-# 工程边界：模型不能自己决定授权，且 MCP Security 不授予任何生产写入或 Recovery 执行权。
-version: 1
+# 工程边界：模型不能自己决定授权；tenant/object/row scope 与 Agent API 共用同一 Trusted Identity Contract。
+version: 2
 contract: commerce_phase7c_mcp_security
 status: ENGINEERED_RUNTIME_EXECUTION_DEFERRED
+
 transport:
   stdio:
     auth: local_process_boundary
     remote_access: false
+    request_context:
+      tenant_id: local
+      implicit_local: true
   streamable_http:
     oauth_required: true
     protected_resource_metadata: true
     origin_validation: true
     dns_rebinding_protection: true
+    trusted_request_context_required: true
+
 authorization:
   base_scope: commerce:mcp:read
   capability_scopes:
@@ -20,6 +26,22 @@ authorization:
     semantic: commerce:semantic:read
     operational: commerce:operations:read
     knowledge: commerce:knowledge:read
+
+  shared_identity_policy: agent/contracts/trusted_identity_policy.yml
+  tenant_id_from_verified_claim: true
+  object_allowlists:
+    metrics: allowed_metrics
+    datasets: allowed_datasets
+    entities: allowed_entities
+    dimensions: allowed_dimensions
+    knowledge_scopes: allowed_knowledge_scopes
+  missing_object_allowlist: deny
+  dimension_scope:
+    source: verified_claim
+    propagated_via: RequestContext_ContextVar
+    semantic_executor_enforced: true
+    multi_value_v1: fail_closed
+
 token_validation:
   signature: {required: true}
   issuer: {required: true}
@@ -27,11 +49,14 @@ token_validation:
   expiration: {required: true}
   subject: {required: true}
   token_passthrough: forbidden
+
 authority:
   profile_controls_registration: true
   oauth_scope_controls_invocation: true
+  request_context_controls_object_and_row_scope: true
   governed_registry_controls_execution: true
   model_controls_authorization: false
+
 forbidden:
   arbitrary_sql: true
   arbitrary_file: true
@@ -40,6 +65,7 @@ forbidden:
   datahub_write: true
   dagster_write: true
   recovery_execution: true
+
 evidence:
   success_status: MCP_SECURITY_RUNTIME_VERIFIED
   runtime_evidence: DEFERRED

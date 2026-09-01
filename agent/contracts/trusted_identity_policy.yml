@@ -1,0 +1,33 @@
+version: 1
+contract: trusted_identity_to_request_context
+mode: verified_claims_fail_closed
+
+# 业务逻辑：HTTP Agent API 与远程 MCP 必须复用同一套身份 Claim -> RequestContext 映射。
+# Authority Contract：JWT 验签仍由协议入口负责；本 Policy 只接受“已经验证”的 claims。
+# 工程边界：缺 tenant/object scope 默认拒绝，Bearer Token/JWT 原文永不进入 RequestContext。
+principles:
+  verified_identity_only: true
+  shared_by_agent_api_and_mcp: true
+  tenant_id_required: true
+  subject_required: true
+  subject_must_match_verified_sub_when_present: true
+  missing_object_allowlist_defaults_to_deny: true
+  bearer_token_not_mapped: true
+  raw_jwt_not_mapped: true
+  dimension_scope_is_trusted_claim_only: true
+  multi_value_dimension_scope_fails_closed: true
+
+identity_claims:
+  tenant_id: tenant_id
+  roles: roles
+  allowed_metrics: allowed_metrics
+  allowed_datasets: allowed_datasets
+  allowed_entities: allowed_entities
+  allowed_dimensions: allowed_dimensions
+  allowed_knowledge_scopes: allowed_knowledge_scopes
+  dimension_scopes: dimension_scopes
+
+limits:
+  max_roles: 16
+  max_object_allowlist_items: 128
+  max_dimension_scopes: 2
