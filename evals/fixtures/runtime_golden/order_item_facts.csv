@@ -1,0 +1,10 @@
+metric_time__day,order_id,gross_sales_amount,store__region,store__country
+2026-08-01,O1,100.00,West,US
+2026-08-01,O1,50.00,West,US
+2026-08-01,O2,80.00,South,US
+2026-08-02,O3,120.00,West,US
+2026-08-02,O4,200.00,West,US
+2026-08-03,O5,90.00,South,US
+2026-08-05,O6,100.00,West,US
+2026-08-05,O6,50.00,West,US
+2026-08-05,O7,150.00,South,US

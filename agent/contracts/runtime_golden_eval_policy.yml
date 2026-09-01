@@ -1,0 +1,33 @@
+version: 1
+contract: governed_runtime_golden_eval
+mode: synthetic_fixture_full_path_first
+
+principles:
+  synthetic_fixture_is_not_production_accuracy: true
+  full_agent_runtime_path_is_exercised: true
+  router_and_context_are_not_bypassed: true
+  semantic_planner_is_not_bypassed: true
+  metricflow_executor_contract_is_exercised: true
+  explain_before_query_is_required: true
+  runtime_verified_evidence_is_required: true
+  golden_expected_values_are_frozen: true
+  semantic_contract_fingerprint_is_required: true
+  changed_semantics_make_golden_stale: true
+  synthetic_runner_support_is_allowlisted: true
+  unsupported_metric_fails_closed: true
+  live_golden_requires_separate_approved_manifest: true
+
+paths:
+  manifest: evals/runtime_golden/semantic_queries.yml
+
+gates:
+  minimum_pass_rate: 1.0
+
+next_stage_live_golden:
+  enabled_by_default: false
+  requirements:
+    - isolated_preproduction_dataset
+    - approved_expected_results
+    - actual_metricflow_runtime
+    - warehouse_runtime
+    - immutable_data_snapshot_or_fixture

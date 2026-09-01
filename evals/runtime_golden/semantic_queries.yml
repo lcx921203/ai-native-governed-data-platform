@@ -1,0 +1,62 @@
+version: 1
+suite: runtime_golden_semantic
+mode: SYNTHETIC_METRICFLOW_FIXTURE
+
+description: >
+  这是可复现的合成 Runtime Golden 数据集，只验证 Agent 全链路和
+  Semantic/MetricFlow execution contract，不代表生产业务数据准确率。
+
+source_fingerprints:
+  - path: dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml
+    git_blob_sha: e79379186f86b794c857fee866bd488c5d110763
+  - path: dbt/mercaso_dbt/models/metrics/sales.yml
+    git_blob_sha: 5cc009e5b2eb5cc66e66305b23f4dd7f72dcecab
+  - path: agent/contracts/semantic_query_policy.yml
+    git_blob_sha: 2f1efbe3bd92a0ef133148b96abcfb3511af839e
+
+fixture:
+  path: evals/fixtures/runtime_golden/order_item_facts.csv
+  git_blob_sha: e36db4f5bda67b214838891e691020a14ac9fcdb
+
+cases:
+  - id: runtime_golden_gross_sales_one_day
+    question: "2026-08-05 gross_sales 是多少？"
+    expect:
+      answer_status: ANSWERED
+      evidence: RUNTIME_VERIFIED
+      validation: METRICFLOW_EXPLAIN_AND_QUERY_PASS
+      columns: [gross_sales]
+      rows:
+        - {gross_sales: "300.00"}
+
+  - id: runtime_golden_gross_sales_and_order_count
+    question: "2026-08-05 gross_sales 和 order_count 是多少？"
+    expect:
+      answer_status: ANSWERED
+      evidence: RUNTIME_VERIFIED
+      validation: METRICFLOW_EXPLAIN_AND_QUERY_PASS
+      columns: [gross_sales, order_count]
+      rows:
+        - {gross_sales: "300.00", order_count: "2"}
+
+  - id: runtime_golden_filtered_west
+    question: "2026-08-05 美国西部地区 gross_sales 和 order_count 是多少？"
+    expect:
+      answer_status: ANSWERED
+      evidence: RUNTIME_VERIFIED
+      validation: METRICFLOW_EXPLAIN_AND_QUERY_PASS
+      columns: [gross_sales, order_count]
+      rows:
+        - {gross_sales: "150.00", order_count: "1"}
+
+  - id: runtime_golden_daily_trend
+    question: "2026-08-01 到 2026-08-03 按天看 gross_sales"
+    expect:
+      answer_status: ANSWERED
+      evidence: RUNTIME_VERIFIED
+      validation: METRICFLOW_EXPLAIN_AND_QUERY_PASS
+      columns: [metric_time__day, gross_sales]
+      rows:
+        - {metric_time__day: "2026-08-01", gross_sales: "230.00"}
+        - {metric_time__day: "2026-08-02", gross_sales: "320.00"}
+        - {metric_time__day: "2026-08-03", gross_sales: "90.00"}
