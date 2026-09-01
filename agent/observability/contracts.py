@@ -1,16 +1,10 @@
 """Agent Runtime 的 Trace / Cost Observability 契约。
 
-当前 Unified Runtime 仍是 deterministic renderer，没有真正 LLM Provider 调用，
-所以绝不伪造 token price 或美元成本。
-
-V1 先稳定记录：
-- tenant / subject（不含 token）；
-- total latency；
-- Context estimated tokens；
-- Tool result 数；
-- Analysis unit attempts / retry rounds；
-- final answer status / validation；
-- cost_per_answer_usd = None，直到真实 Provider/Trino 等 usage 被接入。
+V2 在 V1 的 Context/Tool/Retry 观测基础上加入 Provider 实际 Usage：
+- input / cached input / cache-write / output / reasoning token；
+- provider/model；
+- 受治理 pricing catalog 得出的 Provider Cost；
+- 未记录 usage、未知 model 或长上下文时，Monetary Cost 保持 unknown。
 """
 
 from __future__ import annotations
@@ -29,10 +23,18 @@ class CostSummary:
 
     llm_calls: int = 0
     llm_input_tokens: int = 0
+    llm_cached_input_tokens: int = 0
+    llm_cache_write_tokens: int = 0
     llm_output_tokens: int = 0
+    llm_reasoning_tokens: int = 0
+    llm_total_tokens: int = 0
+    llm_models: tuple[str, ...] = ()
+
     provider_cost_usd: float | None = None
     cost_per_answer_usd: float | None = None
     monetary_cost_known: bool = False
+    pricing_breakdown: tuple[dict[str, Any], ...] = ()
+    pricing_warnings: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,10 +45,17 @@ class CostSummary:
             "retry_rounds": self.retry_rounds,
             "llm_calls": self.llm_calls,
             "llm_input_tokens": self.llm_input_tokens,
+            "llm_cached_input_tokens": self.llm_cached_input_tokens,
+            "llm_cache_write_tokens": self.llm_cache_write_tokens,
             "llm_output_tokens": self.llm_output_tokens,
+            "llm_reasoning_tokens": self.llm_reasoning_tokens,
+            "llm_total_tokens": self.llm_total_tokens,
+            "llm_models": list(self.llm_models),
             "provider_cost_usd": self.provider_cost_usd,
             "cost_per_answer_usd": self.cost_per_answer_usd,
             "monetary_cost_known": self.monetary_cost_known,
+            "pricing_breakdown": [dict(item) for item in self.pricing_breakdown],
+            "pricing_warnings": list(self.pricing_warnings),
         }
 
 

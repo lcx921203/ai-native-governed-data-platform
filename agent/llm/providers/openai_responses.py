@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from agent.llm.prompt import build_renderer_payload
+from agent.llm.usage import LLMUsageEvent, record_llm_usage
 from agent.response.contracts import AnswerDraft, ResponseEnvelope
 from agent.response.validator import validate_answer_draft
 
@@ -144,6 +145,38 @@ def _get(obj: Any, name: str, default: Any = None) -> Any:
     return getattr(obj, name, default)
 
 
+def _int(obj: Any, name: str) -> int:
+    value = _get(obj, name, 0)
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _record_usage(response: Any, *, requested_model: str) -> None:
+    """记录 Provider 实际返回的 usage；不记录 Prompt 或 API Key。"""
+
+    usage = _get(response, "usage")
+    if usage is None:
+        return
+
+    input_details = _get(usage, "input_tokens_details") or {}
+    output_details = _get(usage, "output_tokens_details") or {}
+
+    event = LLMUsageEvent(
+        provider="openai",
+        model=str(_get(response, "model", requested_model) or requested_model),
+        input_tokens=_int(usage, "input_tokens"),
+        output_tokens=_int(usage, "output_tokens"),
+        total_tokens=_int(usage, "total_tokens"),
+        cached_input_tokens=_int(input_details, "cached_tokens"),
+        cache_write_tokens=_int(input_details, "cache_write_tokens"),
+        reasoning_tokens=_int(output_details, "reasoning_tokens"),
+        response_id=str(_get(response, "id", "") or ""),
+    )
+    record_llm_usage(event)
+
+
 def _find_refusal(response: Any) -> str | None:
     for output in _get(response, "output", []) or []:
         if _get(output, "type") != "message":
@@ -229,6 +262,10 @@ class OpenAIResponsesRenderer:
             raise
         except Exception as exc:  # Provider/network errors are fail-closed at this boundary.
             raise OpenAIProviderError(f"OpenAI Responses API call failed: {exc}") from exc
+
+        # Usage 必须在 refusal / incomplete / schema validation 之前记录：
+        # Provider 已经完成了计费用量，即使最终 Agent 因验证失败而 Fail Closed。
+        _record_usage(response, requested_model=self.config.model)
 
         refusal = _find_refusal(response)
         if refusal:

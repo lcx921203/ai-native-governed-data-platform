@@ -1,6 +1,6 @@
-version: 1
+version: 2
 contract: governed_agent_cost_observability
-mode: measured_units_without_fake_pricing
+mode: measured_provider_usage_and_governed_pricing
 
 principles:
   tenant_id_is_trace_dimension: true
@@ -9,12 +9,14 @@ principles:
   tool_result_count_is_recorded: true
   analysis_retry_usage_is_recorded: true
   total_latency_is_recorded: true
-  provider_cost_is_unknown_until_reported: true
-  no_hardcoded_model_price_without_provider_usage: true
-  cost_per_answer_requires_actual_priced_usage: true
+
+  provider_usage_is_recorded_when_available: true
+  cached_and_cache_write_tokens_are_distinguished: true
+  pricing_catalog_is_versioned: true
+  unknown_pricing_is_not_zero_cost: true
+  cost_per_answer_requires_validated_answer: true
 
 future_usage_sources:
-  - llm_provider_input_output_tokens
   - embedding_tokens
   - reranker_calls
   - trino_bytes_scanned

@@ -1,0 +1,43 @@
+version: 1
+contract: governed_llm_pricing_catalog
+currency: USD
+unit: per_1m_tokens
+effective_date: 2026-09-01
+
+principles:
+  pricing_is_configuration_not_code: true
+  provider_usage_is_required: true
+  cached_input_is_priced_separately: true
+  cache_write_is_priced_separately: true
+  reasoning_tokens_are_part_of_output_tokens: true
+  unknown_model_cost_is_unknown_not_zero: true
+  long_context_cost_is_unknown_in_v1: true
+  catalog_must_be_reviewed_when_provider_pricing_changes: true
+
+providers:
+  openai:
+    source: https://developers.openai.com/api/docs/models/compare
+    cache_write_multiplier: 1.25
+
+    # OpenAI 当前文档说明：>272K input token 的请求采用不同长上下文价格。
+    # V1 为避免边界/缓存组合计价误差，超过该阈值直接保留 monetary cost unknown。
+    max_standard_pricing_input_tokens: 272000
+
+    models:
+      gpt-5.6-sol:
+        aliases: [gpt-5.6]
+        input: 4.00
+        cached_input: 0.40
+        output: 20.00
+
+      gpt-5.6-terra:
+        aliases: []
+        input: 2.00
+        cached_input: 0.20
+        output: 12.00
+
+      gpt-5.6-luna:
+        aliases: []
+        input: 0.20
+        cached_input: 0.02
+        output: 1.20

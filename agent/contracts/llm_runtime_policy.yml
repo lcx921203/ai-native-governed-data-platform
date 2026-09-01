@@ -1,0 +1,17 @@
+version: 1
+contract: governed_llm_runtime_mode
+mode: explicit_renderer_selection
+
+principles:
+  deterministic_is_default: true
+  live_provider_requires_explicit_mode: true
+  existing_openai_live_gate_is_preserved: true
+  provider_failure_does_not_silently_fallback: true
+  answer_validator_remains_mandatory: true
+  renderer_receives_claim_ledger_only: true
+
+renderer_mode_env: AGENT_RENDERER_MODE
+allowed_modes:
+  - deterministic
+  - openai
+default_mode: deterministic

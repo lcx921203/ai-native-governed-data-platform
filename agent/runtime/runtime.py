@@ -1,11 +1,11 @@
 """Production-style Governed Single Agent Runtime（受治理单主智能体运行时）。
 
-新增生产边界：
+生产边界：
 - RequestContext 独立于 Prompt；
 - 显式 RequestContext 先 Authorization，再进入 Context / Tool；
 - ContextVar 将 tenant dimension scope 自动传播到所有 MetricFlow Executor；
-- 每次 Run 生成 Trace + Usage/Cost Summary；
-- 没有真实 Provider Usage 时不伪造美元 Cost。
+- 每次 Run 生成 Trace + Provider Usage/Cost Summary；
+- Live LLM usage 由 renderer adapter 记录，Runtime 不读取 Provider 私有对象。
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from agent.context import (
     GovernedContextLoader,
     GovernedContextPlanner,
 )
+from agent.llm import capture_llm_usage
 from agent.observability import GovernedRunObserver
 from agent.response import (
     AnswerStatus,
@@ -94,17 +95,15 @@ class GovernedAgentRuntime:
         question: str,
         request_context: RequestContext | None = None,
     ) -> AgentRunResult:
-        """执行一次完整受治理 Agent 调用。
-
-        `request_context` 是可信边界参数，不属于 question / Prompt。
-        生产部署应设置 `AGENT_REQUIRE_REQUEST_CONTEXT=true`。
-        """
+        """执行一次完整受治理 Agent 调用，并隔离收集本次 Provider Usage。"""
 
         started = perf_counter()
         explicit_context = request_context is not None
         effective_context = self.authorizer.resolve(request_context)
 
-        with bind_request_context(effective_context):
+        # 两个 ContextVar 分别隔离身份范围和 LLM Usage；
+        # asyncio / 并发请求不能共享 mutable tenant/usage state。
+        with bind_request_context(effective_context), capture_llm_usage() as usage_events:
             result = self._run_bound(
                 question,
                 effective_context,
@@ -116,6 +115,7 @@ class GovernedAgentRuntime:
             result,
             effective_context,
             total_duration_ms=elapsed_ms,
+            llm_usage_events=tuple(usage_events),
         )
 
     def _run_bound(
@@ -130,7 +130,6 @@ class GovernedAgentRuntime:
         route = self.router.plan(question)
         stages.append(RuntimeStage("router", route.status.value, route.intent.value))
 
-        # Router 的安全 BLOCKED 优先，不需要触达任何下游资源。
         if route.status is PlanStatus.BLOCKED:
             execution = self.plan_executor.execute(route)
             stages.append(RuntimeStage("executor", execution.status.value, "router_blocked"))
@@ -227,7 +226,6 @@ class GovernedAgentRuntime:
                 stages,
             )
 
-        # MetricFlow Executor 会从 ContextVar 自动获得 tenant dimension scope。
         execution = self.plan_executor.execute(route)
         stages.append(RuntimeStage("executor", execution.status.value, "tool_plan"))
         envelope = self.response_composer.compose(execution)
@@ -250,11 +248,7 @@ class GovernedAgentRuntime:
         context_bundle: Any,
         stages: list[RuntimeStage],
     ) -> AgentRunResult:
-        """ANALYSIS 专用的 Skill -> Plan -> Execute -> Validate 链路。
-
-        Analysis 内部 Comparator / Breakdown 新建的 MetricFlow Executor
-        同样读取当前 ContextVar，因此 tenant data scope 不会丢失。
-        """
+        """ANALYSIS 专用的 Skill -> Plan -> Execute -> Validate 链路。"""
 
         if route.status is not PlanStatus.PLANNING_REQUIRED:
             envelope = self.runtime_response_composer.compose_preflight_failure(
