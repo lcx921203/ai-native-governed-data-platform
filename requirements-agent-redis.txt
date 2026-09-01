@@ -1,0 +1,8 @@
+# Optional shared Traffic Backend for multi-worker / multi-pod Agent API.
+#
+# 安装方式：
+#   uv pip install -r requirements-agent.txt -r requirements-agent-redis.txt
+#
+# 只在 AGENT_API_TRAFFIC_BACKEND=redis 时由 agent.api.redis_traffic 惰性导入。
+# 保持独立文件，避免 Local/单 Worker Agent Runtime 被迫依赖 Redis Client。
+redis==6.4.0
