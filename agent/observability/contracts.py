@@ -1,10 +1,10 @@
-"""Agent Runtime 的 Trace / Cost Observability 契约。
+"""Agent Runtime 的 Trace / Cost / Audit Observability 契约。
 
-V2 在 V1 的 Context/Tool/Retry 观测基础上加入 Provider 实际 Usage：
-- input / cached input / cache-write / output / reasoning token；
-- provider/model；
-- 受治理 pricing catalog 得出的 Provider Cost；
-- 未记录 usage、未知 model 或长上下文时，Monetary Cost 保持 unknown。
+Trace 既承载运行状态和 Provider Usage，也记录本次审计是否已经持久化：
+- DISABLED：当前 Runtime 没启用持久化 Audit；
+- PENDING：Trace 已形成但 Audit 尚未落盘；
+- WRITTEN：Audit 已成功持久化；
+- FAILED：Audit 写入失败。
 """
 
 from __future__ import annotations
@@ -68,6 +68,7 @@ class RunTrace:
     answer_validated: bool
     stages: tuple[dict[str, Any], ...]
     cost: CostSummary
+    audit_status: str = "DISABLED"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,4 +79,5 @@ class RunTrace:
             "answer_validated": self.answer_validated,
             "stages": [dict(item) for item in self.stages],
             "cost": self.cost.to_dict(),
+            "audit_status": self.audit_status,
         }

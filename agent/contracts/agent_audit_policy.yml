@@ -1,0 +1,41 @@
+version: 1
+contract: governed_agent_runtime_audit
+mode: append_only_structured_audit
+
+principles:
+  raw_question_not_persisted: true
+  answer_text_not_persisted: true
+  bearer_token_not_persisted: true
+  jwt_claim_blob_not_persisted: true
+  provider_raw_response_not_persisted: true
+  internal_warning_text_not_persisted: true
+
+  tenant_and_subject_are_audit_dimensions: true
+  route_and_authorization_status_are_recorded: true
+  trace_id_is_primary_correlation_key: true
+  cost_and_usage_are_recorded: true
+
+  production_audit_failure_fails_closed: true
+  library_default_is_disabled_for_tests_and_local_tools: true
+  public_agent_api_does_not_expose_audit_query: true
+
+runtime:
+  mode_env: AGENT_AUDIT_MODE
+  allowed_modes: [disabled, jsonl]
+  default_mode: disabled
+
+  path_env: AGENT_AUDIT_PATH
+  default_path: .runtime/agent/audit.jsonl
+
+  failure_mode_env: AGENT_AUDIT_FAILURE_MODE
+  default_failure_mode: fail_closed
+
+storage:
+  format: jsonl
+  file_mode: "0600"
+  append_only: true
+  fsync_each_record: true
+  rotation_is_deployment_responsibility: true
+
+query:
+  max_results: 1000
