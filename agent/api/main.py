@@ -199,9 +199,10 @@ def create_app() -> FastAPI:
         openapi_url=None,
     )
 
-    @app.exception_handler(
-        (AgentAPIConfigurationError, TrafficGuardConfigurationError)
-    )
+    # FastAPI / Starlette 的 exception_handler 每次只接受一个 Exception class。
+    # 两个配置异常共享同一 Handler，因此使用两个装饰器分别注册，不能传 tuple。
+    @app.exception_handler(AgentAPIConfigurationError)
+    @app.exception_handler(TrafficGuardConfigurationError)
     async def configuration_error_handler(
         _request,
         _exc,
