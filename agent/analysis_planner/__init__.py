@@ -1,6 +1,16 @@
-"""Governed Analytics Skill -> Analysis Plan compiler."""
+"""Governed Analytics Skill -> Analysis Plan compiler and executor."""
 
-from .contracts import AnalysisPlan, AnalysisPlanStatus, AnalysisUnit, AnalysisUnitKind
+from .contracts import (
+    AnalysisExecution,
+    AnalysisExecutionStatus,
+    AnalysisPlan,
+    AnalysisPlanStatus,
+    AnalysisUnit,
+    AnalysisUnitExecution,
+    AnalysisUnitExecutionStatus,
+    AnalysisUnitKind,
+)
+from .executor import GovernedAnalysisExecutor
 from .planner import GovernedAnalysisPlanner
 
 __all__ = [
@@ -8,5 +18,10 @@ __all__ = [
     "AnalysisPlanStatus",
     "AnalysisUnit",
     "AnalysisUnitKind",
+    "AnalysisUnitExecution",
+    "AnalysisUnitExecutionStatus",
+    "AnalysisExecution",
+    "AnalysisExecutionStatus",
     "GovernedAnalysisPlanner",
+    "GovernedAnalysisExecutor",
 ]

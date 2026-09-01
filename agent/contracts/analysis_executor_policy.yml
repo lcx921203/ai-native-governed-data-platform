@@ -1,0 +1,17 @@
+version: 1
+contract: governed_analysis_executor
+mode: bounded_plan_execution_with_validation_retry
+
+principles:
+  execute_planner_units_only: true
+  arbitrary_sql: false
+  arbitrary_tool_injection: false
+  runtime_metric_authority: MetricFlow
+  evidence_summary_is_derived_only: true
+  evidence_summary_has_no_new_metric_math: true
+  retry_must_be_validator_requested: true
+  deferred_is_not_blindly_retried: true
+  clarification_is_not_blindly_retried: true
+
+limits:
+  max_validation_retries: 2

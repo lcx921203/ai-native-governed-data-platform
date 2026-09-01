@@ -1,0 +1,26 @@
+version: 1
+contract: governed_analysis_validation
+mode: evidence_and_execution_validation
+
+principles:
+  required_units_must_complete: true
+  optional_failure_allows_partial: true
+  runtime_fact_requires_runtime_verified: true
+  evidence_summary_requires_derived_verified: true
+  evidence_summary_has_no_new_metric_math: true
+  evidence_summary_cannot_claim_causality: true
+  retry_only_explicit_retryable_status: true
+  missing_unit_never_silently_passes: true
+
+retryable_statuses:
+  - ERROR
+
+hard_stop_statuses:
+  - BLOCKED
+  - DEFERRED
+  - CLARIFICATION_REQUIRED
+  - SKIPPED
+
+evidence:
+  runtime_required: RUNTIME_VERIFIED
+  summary_required: DERIVED_VERIFIED
