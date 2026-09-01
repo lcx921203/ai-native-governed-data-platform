@@ -29,7 +29,12 @@ def analyst_context(**overrides):
         allowed_metrics=frozenset({"gross_sales", "order_count"}),
         allowed_datasets=frozenset({"orders"}),
         allowed_entities=frozenset({"*"}),
-        allowed_dimensions=frozenset({"store__region"}),
+        # 下面两个 Region 测试的自然语言都包含“美国”，Planner 会产生：
+        # store__country=US + store__region=<West/South>。
+        # 既然这组 Fixture 的目标是验证 Region Tenant Scope 冲突/去重，
+        # 就必须显式允许 Planner 合法生成的 country filter，
+        # 否则新的对象级 Dimension Allowlist 会更早按设计 Fail Closed。
+        allowed_dimensions=frozenset({"store__country", "store__region"}),
         allowed_knowledge_scopes=frozenset({"architecture"}),
         dimension_scopes=(
             DimensionScope("store__region", ("West",)),
