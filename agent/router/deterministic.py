@@ -26,10 +26,11 @@ METRIC_ALIASES = {key: tuple([key, *value]) for key, value in _ROUTING_CONTRACT[
 
 class DeterministicToolRouter:
     """把自然语言问题绑定到受治理 Intent 与有限 ToolPlan。
-    
-    输入是用户问题；输出是 PLANNED / NEEDS_DISCOVERY / BLOCKED 等明确状态。
+
+    输入是用户问题；输出是 PLANNED / PLANNING_REQUIRED / NEEDS_DISCOVERY / BLOCKED 等明确状态。
     框架边界：这里只做确定性路由，不调用 LLM 猜测实体，也不直接执行工具。
     """
+
     def __init__(self, project_root: Path | str):
         self.root = Path(project_root).resolve()
         self.contract = yaml.safe_load(
@@ -61,10 +62,10 @@ class DeterministicToolRouter:
         return [(target, alias) for _, _, target, alias in found]
 
     def plan(self, question: str) -> ToolPlan:
-        """根据问题生成受治理工具计划。
-        
-        先阻断 SQL/raw predicate，再按 runtime、lineage、governance、metric query、knowledge 等优先级路由。
-        输出 ToolPlan，不在此处执行查询。
+        """根据问题生成受治理路由计划。
+
+        先阻断 SQL/raw predicate，再按 runtime、lineage、governance、analysis、metric query、knowledge 等优先级路由。
+        ANALYSIS 只负责识别“需要分析”，不会在 Router 内直接生成分析步骤；后续交给 Context Planner + Skill Registry + Analysis Planner。
         """
         q = question.strip()
         q_lower = q.casefold()
@@ -90,6 +91,7 @@ class DeterministicToolRouter:
         has_governance_marker = bool(self._matches(q, markers["dataset_governance"]))
         has_entity_marker = bool(self._matches(q, markers["entity_context"]))
         has_query_marker = bool(self._matches(q, markers["metric_query"]))
+        has_analysis_marker = bool(self._matches(q, markers.get("analysis", ())))
         knowledge_runbook_matches = self._matches(q, markers["knowledge_runbook"])
         knowledge_design_matches = self._matches(q, markers["knowledge_design"])
         knowledge_glossary_matches = self._matches(q, markers["knowledge_glossary"])
@@ -125,7 +127,7 @@ class DeterministicToolRouter:
                 ],
             )
 
-        # Runtime / lineage / dataset governance intentionally win over generic metric words.
+        # Runtime / lineage / dataset governance intentionally win over generic metric or analysis words.
         if datasets and has_runtime_marker:
             dataset, alias = datasets[0]
             return ToolPlan(
@@ -181,6 +183,23 @@ class DeterministicToolRouter:
         if has_metric_definition_marker and not metrics:
             return self._discovery(q, "Explicit metric intent was detected, but no governed metric was resolved.")
 
+        # Analysis is routed only after a concrete governed metric was resolved.
+        # Router 不选择具体 Skill，也不直接执行分析；它只把任务交给后续 Analysis Planner。
+        if metrics and has_analysis_marker and not has_metric_definition_marker:
+            metric, alias = metrics[0]
+            return ToolPlan(
+                q,
+                Intent.ANALYSIS,
+                PlanStatus.PLANNING_REQUIRED,
+                "metric",
+                metric,
+                alias,
+                steps=[],
+                warnings=[
+                    "Analysis intent resolved; Context Planner + Skill Registry + Analysis Planner are required before execution."
+                ],
+            )
+
         if metrics and (has_date or has_query_marker) and not has_metric_definition_marker:
             metric_ids = [item[0] for item in metrics][:3]
             tool = "query_semantic_metrics" if len(metric_ids) > 1 else "query_semantic_metric"
@@ -210,7 +229,6 @@ class DeterministicToolRouter:
                 alias,
                 [ToolStep("get_metric_context", {"metric": metric}, "Read governed metric meaning and dbt/MetricFlow definition.")],
             )
-
 
         # Why / Design / SOP 只有在结构化权威没有先命中时才进入 Knowledge RAG。
         # 例如“orders 昨天为什么没更新”仍属于 Dagster Runtime；“gross_sales 怎么算”仍属于 MetricFlow。

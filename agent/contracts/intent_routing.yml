@@ -1,6 +1,6 @@
-# 业务逻辑：先让结构化权威问题命中 MetricFlow / DataHub / Dagster，再让 Why / Design / SOP 类问题进入 Knowledge RAG。
-# Knowledge Intent 边界：裸“为什么”不是 RAG 充分条件；如果问题同时绑定 Dataset Runtime 或 Metric Definition，结构化权威优先。
-version: 3
+# 业务逻辑：先让结构化权威问题命中 MetricFlow / DataHub / Dagster；显式分析问题进入 ANALYSIS，随后由 Context Planner + Skill Registry + Analysis Planner 接管。
+# Knowledge Intent 边界：裸“为什么”不是 RAG 充分条件；如果问题同时绑定 Dataset Runtime、Metric Definition 或受治理分析指标，结构化权威优先。
+version: 4
 contract: commerce_agent_intent_routing
 mode: deterministic_pre_llm
 limits:
@@ -15,6 +15,8 @@ principles:
   runtime_fact_requires_runtime_evidence: true
   structured_authority_precedes_rag: true
   knowledge_intent_requires_explicit_marker: true
+  analysis_requires_skill: true
+  analysis_router_does_not_execute: true
 
 metric_aliases:
   order_count: [order_count, order count, 订单数, 订单数量]
@@ -77,6 +79,7 @@ markers:
   runtime: [没更新, 失败, run, runtime, 昨天, recovery, 恢复, 运行状态, 任务状态]
   dimension_values: [有哪些, 可选值, 可以筛, 能筛, values, dimension values]
   metric_query: [多少, 是多少, 查询, 看, 趋势, 按天, 按周, 按月, how much, trend]
+  analysis: [下降, 下跌, 减少, 上升, 增长, 增加, 异常, 原因, 归因, 驱动因素, decline, drop, decrease, increase, growth, anomaly, attribution, driver]
   knowledge_runbook: [runbook, SOP, 运行手册, 操作手册, 故障手册, 排查步骤, 怎么排查, 如何排查, 怎么处理, 如何处理]
   knowledge_design: [为什么这样设计, 设计原因, 设计取舍, 架构原因, design rationale, design decision, why designed]
   knowledge_glossary: [知识库里的术语, 文档里的术语, glossary]

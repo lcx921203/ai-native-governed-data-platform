@@ -77,11 +77,21 @@ class GovernedPlanExecutor:
     def execute(self, plan) -> PlanExecution:
         """执行受治理计划；遇到 BLOCKED / ERROR / DEFERRED 等门禁状态按 step contract 停止。
 
-        Knowledge Route 的第二步 ``fetch_top_knowledge_hits`` 是 Executor 内部编排动作：
-        它只能消费前一步 Search 返回的 exact chunk_id，不是一个对外暴露的新 MCP Tool。
+        ANALYSIS 的 ``PLANNING_REQUIRED`` 代表 Router 已完成意图识别，但还没有经过
+        Context Planner + Skill Registry + Analysis Planner。旧 Executor 必须显式 DEFER，
+        不能把“零步骤”误判成 COMPLETE。
         """
         if plan.status is PlanStatus.BLOCKED:
             return PlanExecution(plan, ExecutionStatus.BLOCKED, warnings=list(plan.warnings))
+        if plan.status is PlanStatus.PLANNING_REQUIRED:
+            return PlanExecution(
+                plan,
+                ExecutionStatus.DEFERRED,
+                warnings=[
+                    *list(plan.warnings),
+                    "Analysis plan has not been compiled by the governed Analysis Planner yet.",
+                ],
+            )
         if plan.status not in {PlanStatus.PLANNED, PlanStatus.NEEDS_DISCOVERY}:
             return PlanExecution(plan, ExecutionStatus.STOPPED, warnings=list(plan.warnings))
 

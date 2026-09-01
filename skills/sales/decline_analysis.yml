@@ -1,0 +1,82 @@
+version: 1
+id: sales_decline_analysis
+domain: sales
+status: ACTIVE
+
+description: >
+  销售类受治理指标发生下降时的标准分析方法。
+  Skill 只定义分析顺序，不定义 Metric 公式，不允许绕过 MetricFlow 写任意 SQL。
+
+match:
+  intents: [ANALYSIS]
+  metrics:
+    - gross_sales
+    - activity_net_sales
+    - order_cohort_net_sales
+  direction: decline
+  direction_markers:
+    - 下降
+    - 下跌
+    - 减少
+    - decline
+    - drop
+    - decrease
+    - fell
+
+requirements:
+  # 这些指标仍由 MetricFlow 解释和执行；Skill 只是声明分析时需要观察哪些信号。
+  required_metrics:
+    - order_count
+    - average_order_value
+  optional_metrics:
+    - refund_processed_amount
+    - sales_reversal_amount
+  dimensions:
+    - store__region
+    - item__category
+    - item__brand
+
+analysis_steps:
+  - id: baseline_compare
+    action: compare_target_metric
+    purpose: 对目标销售指标做当前窗口与参考窗口比较，确认下降幅度。
+
+  - id: companion_signal_check
+    action: compare_companion_metrics
+    metrics:
+      - order_count
+      - average_order_value
+    purpose: 检查订单量与客单价等伴随信号，帮助定位下降方向；不把它们硬编码成目标指标公式。
+
+  - id: governed_breakdown
+    action: breakdown_by_dimensions
+    dimensions:
+      - store__region
+      - item__category
+      - item__brand
+    purpose: 只沿 MetricFlow 已验证的 Dimension Path 下钻，找 Top Contributors。
+
+  - id: reversal_signal_check
+    action: compare_optional_metrics
+    metrics:
+      - refund_processed_amount
+      - sales_reversal_amount
+    purpose: 检查退款和冲销是否放大销售下降。
+
+  - id: summarize_driver_evidence
+    action: summarize_ranked_drivers
+    purpose: 只基于已执行并验证的结果输出驱动因素，不允许无证据补结论。
+
+authority:
+  metric_definition: MetricFlow
+  dimension_path: MetricFlow
+  metadata: DataHub
+  runtime_fact: RuntimeAuthority
+
+guardrails:
+  arbitrary_sql: false
+  redefine_metric_formula: false
+  invent_dimension_join: false
+  require_governed_dimensions: true
+  require_reference_window: true
+  evidence_before_conclusion: true
