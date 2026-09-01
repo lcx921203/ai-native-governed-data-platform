@@ -87,7 +87,25 @@ def test_jsonl_audit_contains_structured_metadata_but_not_prompt_answer_or_token
     assert "这是不应该被写进 Audit 的原始问题" not in serialized
     assert "这个答案也不能进入 Audit" not in serialized
     assert "Bearer" not in serialized
-    assert "token" not in serialized.lower()
+
+    # `estimated_context_tokens` / `llm_total_tokens` 是合法的用量字段，
+    # 所以不能用 `"token" not in serialized` 这种过宽断言。
+    # 真正要禁止的是认证 Secret / Raw JWT 相关字段。
+    forbidden_keys = {
+        "token",
+        "access_token",
+        "bearer_token",
+        "authorization",
+        "authorization_header",
+        "jwt",
+        "raw_jwt",
+        "jwt_claims",
+        "claims",
+        "prompt",
+        "question",
+        "answer",
+    }
+    assert forbidden_keys.isdisjoint(row.keys())
 
 
 def test_audit_reader_filters_by_tenant_and_trace(monkeypatch, tmp_path):
