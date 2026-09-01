@@ -1,4 +1,10 @@
 # Governed Agent static/runtime support.
 PyYAML>=6.0,<7.0
+
+# Production Agent HTTP boundary.
+fastapi>=0.128,<1.0
+uvicorn[standard]>=0.35,<1.0
+PyJWT[crypto]>=2.13,<3
+
 # Optional live renderer provider used only when PHASE4G_ALLOW_OPENAI_CALL=true.
 openai>=3.0,<4.0

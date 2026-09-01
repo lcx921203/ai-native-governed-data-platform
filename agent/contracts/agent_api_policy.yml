@@ -1,0 +1,39 @@
+version: 1
+contract: governed_production_agent_api
+mode: authenticated_http_trusted_request_context
+
+principles:
+  bearer_jwt_required_for_agent_query: true
+  jwt_signature_issuer_audience_exp_verified: true
+  tenant_id_must_come_from_verified_claim: true
+  request_context_is_not_prompt_data: true
+  raw_bearer_token_not_forwarded: true
+  missing_object_allowlist_defaults_to_deny: true
+  authorization_happens_before_context_and_tools: true
+  public_response_does_not_expose_internal_route_or_tool_trace: true
+  internal_runtime_error_returns_trace_id_only: true
+  interactive_docs_disabled_by_default: true
+  renderer_runtime_gate_is_preserved: true
+
+authentication:
+  jwt:
+    jwks_url_env: AGENT_API_JWKS_URL
+    issuer_env: AGENT_API_AUTH_ISSUER
+    audience_env: AGENT_API_AUDIENCE
+    algorithms: [RS256, ES256]
+
+identity_claims:
+  tenant_id: tenant_id
+  roles: roles
+  allowed_metrics: allowed_metrics
+  allowed_datasets: allowed_datasets
+  allowed_entities: allowed_entities
+  allowed_dimensions: allowed_dimensions
+  allowed_knowledge_scopes: allowed_knowledge_scopes
+  dimension_scopes: dimension_scopes
+
+limits:
+  max_question_chars: 4000
+  max_roles: 16
+  max_object_allowlist_items: 128
+  max_dimension_scopes: 2
