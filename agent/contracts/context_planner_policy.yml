@@ -1,0 +1,125 @@
+version: 1
+contract: governed_context_planner
+mode: route_driven_minimal_context
+
+principles:
+  route_before_context_planning: true
+  minimal_runtime_context: true
+  router_intent_must_not_be_reclassified: true
+  context_planner_has_no_query_execution: true
+  context_planner_has_no_metric_definition_authority: true
+  unknown_intent_fail_closed: true
+
+defaults:
+  max_items: 5
+
+# Context Planner 只消费 Router 已经确定的 Intent。
+# 没有出现在这里的 Intent 不会自动退化成“加载所有 Context”。
+intent_context:
+
+  METRIC_QUERY:
+    - source: semantic
+      required: true
+      max_items: 3
+      reason: >
+        指标查询必须使用受治理 Metric / Dimension / Business Time；
+        Agent 不允许自己重新定义指标公式。
+
+  METRIC_DEFINITION:
+    - source: semantic
+      required: true
+      max_items: 3
+      reason: >
+        指标定义必须来自当前受治理 dbt / MetricFlow 语义。
+
+  DIMENSION_VALUE_DISCOVERY:
+    - source: semantic
+      required: true
+      max_items: 5
+      reason: >
+        Dimension Value 必须位于已经验证的 Metric Semantic Path 中。
+
+  DATASET_GOVERNANCE:
+    - source: metadata
+      required: true
+      max_items: 5
+      reason: >
+        Dataset Identity、Owner、Domain、Classification 等由 Metadata Authority 提供。
+
+  # 兼容旧版/其他 Router 命名，不改变当前主语义。
+  DATASET_CONTEXT:
+    - source: metadata
+      required: true
+      max_items: 5
+      reason: >
+        Dataset Context 由受治理 Metadata Authority 提供。
+
+  ENTITY_CONTEXT:
+    - source: metadata
+      required: true
+      max_items: 5
+      reason: >
+        Entity 定义与 Semantic Model 参与关系从受治理 Metadata Context 获取。
+
+  LINEAGE_QUERY:
+    - source: metadata
+      required: true
+      max_items: 5
+      reason: >
+        Lineage 首先从 DataHub / 当前受治理静态 Lineage 获取。
+
+    - source: code
+      required: false
+      max_items: 2
+      reason: >
+        Metadata Lineage 无法解释具体转换逻辑时，后续才允许读取精确 Code Context；
+        不允许默认把整套源码塞入模型。
+
+  RUNTIME_DIAGNOSIS:
+    - source: metadata
+      required: true
+      max_items: 3
+      reason: >
+        Runtime Diagnosis 必须先确认准确 Dataset Identity。
+
+    - source: runtime
+      required: true
+      max_items: 5
+      reason: >
+        Run、Freshness、Partition Completeness 等运行事实只能来自 Runtime Authority。
+
+  METADATA_DISCOVERY:
+    - source: metadata
+      required: true
+      max_items: 10
+      reason: >
+        无法确定目标时只能搜索受治理 Metadata Registry，不能由 LLM 自动猜目标。
+
+  # 兼容另一版 Router 的命名。
+  METADATA_SEARCH:
+    - source: metadata
+      required: true
+      max_items: 10
+      reason: >
+        无法确定目标时只能搜索受治理 Metadata Registry，不能由 LLM 自动猜目标。
+
+  KNOWLEDGE_RUNBOOK:
+    - source: knowledge
+      required: true
+      max_items: 3
+      reason: >
+        Runbook 问题由 Governed Knowledge Corpus 提供解释证据。
+
+  KNOWLEDGE_DESIGN:
+    - source: knowledge
+      required: true
+      max_items: 3
+      reason: >
+        架构与设计决策从受治理 Knowledge Corpus 获取。
+
+  KNOWLEDGE_GLOSSARY:
+    - source: knowledge
+      required: true
+      max_items: 3
+      reason: >
+        业务术语解释从受治理 Knowledge Corpus 获取。
