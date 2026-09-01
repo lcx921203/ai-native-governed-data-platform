@@ -3,8 +3,8 @@
 
 示例：
     python scripts/query_agent_audit.py --tenant-id tenant-west
+    python scripts/query_agent_audit.py --event-type API_GUARD --status REQUEST_TIMEOUT
     python scripts/query_agent_audit.py --trace-id <trace_id>
-    python scripts/query_agent_audit.py --status ERROR --limit 20
 
 只输出结构化 Audit Record，不会读取/恢复原始 Prompt 或 Answer。
 """
@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--trace-id", default="")
     parser.add_argument("--tenant-id", default="")
     parser.add_argument("--subject", default="")
+    parser.add_argument("--event-type", default="")
     parser.add_argument("--intent", default="")
     parser.add_argument("--status", default="")
     parser.add_argument("--since", default="")
@@ -39,6 +40,7 @@ def main() -> int:
         trace_id=args.trace_id,
         tenant_id=args.tenant_id,
         subject=args.subject,
+        event_type=args.event_type,
         intent=args.intent,
         runtime_status=args.status,
         since=args.since,

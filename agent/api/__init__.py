@@ -2,7 +2,14 @@
 
 from .auth import AgentAPIIdentityError, AgentIdentityMapper
 from .contracts import AgentQueryRequest, AgentQueryResponse, HealthResponse
+from .guard_audit import GovernedAPIGuardAuditor
 from .main import app, create_app
+from .traffic import (
+    AdmissionLease,
+    AdmissionRejected,
+    GovernedTrafficGuard,
+    TrafficGuardConfigurationError,
+)
 
 __all__ = [
     "AgentAPIIdentityError",
@@ -10,6 +17,11 @@ __all__ = [
     "AgentQueryRequest",
     "AgentQueryResponse",
     "HealthResponse",
+    "GovernedAPIGuardAuditor",
+    "AdmissionLease",
+    "AdmissionRejected",
+    "GovernedTrafficGuard",
+    "TrafficGuardConfigurationError",
     "app",
     "create_app",
 ]

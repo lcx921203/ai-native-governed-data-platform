@@ -1,4 +1,4 @@
-"""Agent Runtime Audit（运行审计）的结构化契约。
+"""Agent Runtime / API Guard Audit（审计）的结构化契约。
 
 审计记录只保留“谁以什么受治理身份执行了什么类型的能力，以及结果/成本如何”。
 明确不保存：
@@ -7,8 +7,6 @@
 - Bearer Token / JWT；
 - Provider 原始 response；
 - 内部 warning/error 详情。
-
-这样 Audit 可以用于合规、成本归属和故障定位，同时避免把审计系统变成第二份敏感内容仓库。
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class AgentAuditRecord:
-    """一次 Agent Run 的最小不可逆审计投影。"""
+    """一次 Runtime 或 API Guard 生命周期事件的最小不可逆审计投影。"""
 
     schema_version: int
     occurred_at: str
@@ -51,11 +49,15 @@ class AgentAuditRecord:
     cost_per_answer_usd: float | None
     monetary_cost_known: bool
 
+    # 向后兼容：旧 Runtime 构造代码不传该字段时仍默认为 RUNTIME。
+    event_type: str = "RUNTIME"
+
     def to_dict(self) -> dict[str, Any]:
         """输出 JSONL 可序列化结构；不加入自由文本字段。"""
 
         return {
             "schema_version": self.schema_version,
+            "event_type": self.event_type,
             "occurred_at": self.occurred_at,
             "trace_id": self.trace_id,
             "tenant_id": self.tenant_id,

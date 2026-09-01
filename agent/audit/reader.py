@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from collections import deque
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .writer import GovernedAuditWriter
 
@@ -28,6 +28,7 @@ class GovernedAuditReader:
         trace_id: str = "",
         tenant_id: str = "",
         subject: str = "",
+        event_type: str = "",
         intent: str = "",
         runtime_status: str = "",
         since: str = "",
@@ -58,6 +59,8 @@ class GovernedAuditReader:
                 if tenant_id and row.get("tenant_id") != tenant_id:
                     continue
                 if subject and row.get("subject") != subject:
+                    continue
+                if event_type and row.get("event_type", "RUNTIME") != event_type:
                     continue
                 if intent and row.get("intent") != intent:
                     continue

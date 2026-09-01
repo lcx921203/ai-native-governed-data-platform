@@ -1,29 +1,27 @@
-"""Production Agent API + Trusted Identity Boundary（可信身份边界）。
+"""Production Agent API + Trusted Identity + SLO Guard（生产入口保护）。
 
 HTTP 链路：
     Bearer JWT
-      -> JWKS signature / issuer / audience / exp verification
-      -> VerifiedJWT
-      -> AgentIdentityMapper
-      -> RequestContext
+      -> Verified RequestContext
+      -> Subject/Tenant Rate Limit
+      -> Tenant/Global Concurrency Admission
       -> GovernedAgentRuntime
+      -> Timeout Boundary
       -> Answer Validator
       -> minimal public response
 
-工程边界：
-- API 不从 Prompt 推断 tenant / role / scope；
-- 原始 Bearer Token 不进入 Agent Runtime；
-- 401 只用于认证失败，403 用于已认证但授权不足；
-- Router / Tool Trace / 内部 Warning 不作为公共 API 返回；
-- Live LLM Renderer 是否启用仍由已有 Runtime Factory 的显式环境门控制。
+V1 Traffic Guard 是 process-local；多 Worker / 多 Pod 的全局限流需要共享基础设施。
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 from functools import lru_cache
 from pathlib import Path
+from time import perf_counter
 from typing import Any
+from uuid import uuid4
 
 import yaml
 from fastapi import Depends, FastAPI, HTTPException, Response, Security
@@ -31,6 +29,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.concurrency import run_in_threadpool
 
+from agent.audit import AuditWriteError
 from agent.runtime import build_runtime_from_env
 from agent.tenancy import RequestContext
 from mcp_server.auth.jwt import (
@@ -40,6 +39,12 @@ from mcp_server.auth.jwt import (
 
 from .auth import AgentAPIIdentityError, AgentIdentityMapper
 from .contracts import AgentQueryRequest, AgentQueryResponse, HealthResponse
+from .guard_audit import GovernedAPIGuardAuditor
+from .traffic import (
+    AdmissionRejected,
+    GovernedTrafficGuard,
+    TrafficGuardConfigurationError,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -73,6 +78,20 @@ def get_identity_mapper() -> AgentIdentityMapper:
     """构造进程级 JWT claims -> RequestContext Mapper。"""
 
     return AgentIdentityMapper(ROOT)
+
+
+@lru_cache(maxsize=1)
+def get_traffic_guard() -> GovernedTrafficGuard:
+    """构造进程级 Admission Guard；它不声称是集群共享限流器。"""
+
+    return GovernedTrafficGuard(ROOT)
+
+
+@lru_cache(maxsize=1)
+def get_guard_auditor() -> GovernedAPIGuardAuditor:
+    """构造 API Guard Event 审计器。"""
+
+    return GovernedAPIGuardAuditor(ROOT)
 
 
 @lru_cache(maxsize=1)
@@ -115,7 +134,6 @@ def get_request_context(
         verified = verifier.verify(credentials.credentials)
         return mapper.map(verified)
     except (JWTVerificationError, AgentAPIIdentityError):
-        # 不能把 JWT 解析细节、issuer/audience 配置或 claim 内容回显给调用方。
         raise HTTPException(
             status_code=401,
             detail="Invalid bearer token or identity claims",
@@ -140,24 +158,55 @@ def _trace_id(result: Any) -> str:
     return str(getattr(observability, "trace_id", "") or "")
 
 
+def _audit_guard_event(
+    auditor: GovernedAPIGuardAuditor,
+    *,
+    trace_id: str,
+    request_context: RequestContext,
+    runtime_status: str,
+    duration_ms: float,
+) -> None:
+    """写入 Admission/Timeout Audit；Fail-Closed 模式下写失败投影为 503。"""
+
+    try:
+        auditor.record(
+            trace_id=trace_id,
+            request_context=request_context,
+            runtime_status=runtime_status,
+            duration_ms=duration_ms,
+        )
+    except AuditWriteError:
+        if auditor.fail_closed:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "AGENT_AUDIT_UNAVAILABLE",
+                    "trace_id": trace_id,
+                },
+                headers={"X-Trace-Id": trace_id},
+            ) from None
+
+
 def create_app() -> FastAPI:
     """创建默认关闭交互式文档的生产 Agent API。"""
 
     app = FastAPI(
         title="Commerce Governed Agent API",
-        version="1.0.0",
-        description="Authenticated governed Agent runtime over trusted RequestContext.",
+        version="1.1.0",
+        description="Authenticated governed Agent runtime with process-local admission control.",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
     )
 
-    @app.exception_handler(AgentAPIConfigurationError)
+    @app.exception_handler(
+        (AgentAPIConfigurationError, TrafficGuardConfigurationError)
+    )
     async def configuration_error_handler(
         _request,
-        _exc: AgentAPIConfigurationError,
+        _exc,
     ) -> JSONResponse:
-        """把服务端配置缺失统一投影为 503，避免泄露认证配置细节。"""
+        """服务端安全/流量配置缺失统一投影为 503。"""
 
         return JSONResponse(
             status_code=503,
@@ -172,11 +221,13 @@ def create_app() -> FastAPI:
 
     @app.get("/health/ready", response_model=HealthResponse)
     def ready() -> HealthResponse:
-        """Readiness：确认 Runtime 与 JWT verifier 至少可以完成本地配置构造。"""
+        """Readiness：确认 Runtime、认证和 Traffic Guard 都可构造。"""
 
         try:
             get_runtime()
             get_jwt_verifier()
+            get_traffic_guard()
+            get_guard_auditor()
         except Exception as exc:
             raise HTTPException(
                 status_code=503,
@@ -193,20 +244,94 @@ def create_app() -> FastAPI:
         response: Response,
         request_context: RequestContext = Depends(get_request_context),
         runtime=Depends(get_runtime),
+        traffic_guard: GovernedTrafficGuard = Depends(get_traffic_guard),
+        guard_auditor: GovernedAPIGuardAuditor = Depends(get_guard_auditor),
     ) -> AgentQueryResponse:
-        """在可信 RequestContext 下执行一次统一 Agent Runtime。"""
+        """在可信身份、限流、并发与 Timeout Guard 下执行 Agent Runtime。"""
 
-        result = await run_in_threadpool(
-            runtime.run,
-            payload.question,
-            request_context,
+        request_started = perf_counter()
+        try:
+            lease = await traffic_guard.acquire(request_context)
+        except AdmissionRejected as rejected:
+            trace_id = str(uuid4())
+            elapsed_ms = (perf_counter() - request_started) * 1000
+            _audit_guard_event(
+                guard_auditor,
+                trace_id=trace_id,
+                request_context=request_context,
+                runtime_status=rejected.code,
+                duration_ms=elapsed_ms,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "code": rejected.code,
+                    "trace_id": trace_id,
+                },
+                headers={
+                    "Retry-After": str(rejected.retry_after_seconds),
+                    "X-Trace-Id": trace_id,
+                },
+            ) from None
+
+        # shield(task) 的关键作用：
+        # API 超时可以先返回 504，但 Python Worker Thread 不会被伪装成已经终止。
+        # lease 只在 Task 真正结束的 callback 中释放，因此超时请求仍占容量。
+        task = asyncio.create_task(
+            run_in_threadpool(
+                runtime.run,
+                payload.question,
+                request_context,
+            )
         )
+        task.add_done_callback(lambda _task: lease.release())
+
+        try:
+            result = await asyncio.wait_for(
+                asyncio.shield(task),
+                timeout=traffic_guard.request_timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            trace_id = str(uuid4())
+            elapsed_ms = (perf_counter() - request_started) * 1000
+            _audit_guard_event(
+                guard_auditor,
+                trace_id=trace_id,
+                request_context=request_context,
+                runtime_status="REQUEST_TIMEOUT",
+                duration_ms=elapsed_ms,
+            )
+            raise HTTPException(
+                status_code=504,
+                detail={
+                    "code": "AGENT_REQUEST_TIMEOUT",
+                    "trace_id": trace_id,
+                },
+                headers={"X-Trace-Id": trace_id},
+            ) from None
+        except Exception:
+            trace_id = str(uuid4())
+            elapsed_ms = (perf_counter() - request_started) * 1000
+            _audit_guard_event(
+                guard_auditor,
+                trace_id=trace_id,
+                request_context=request_context,
+                runtime_status="RUNTIME_EXCEPTION",
+                duration_ms=elapsed_ms,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "code": "AGENT_RUNTIME_ERROR",
+                    "trace_id": trace_id,
+                },
+                headers={"X-Trace-Id": trace_id},
+            ) from None
 
         trace_id = _trace_id(result)
         if trace_id:
             response.headers["X-Trace-Id"] = trace_id
 
-        # 认证已经成功，但 capability/object/tenant scope 不允许。
         if _authorization_blocked(result):
             raise HTTPException(
                 status_code=403,
@@ -214,6 +339,7 @@ def create_app() -> FastAPI:
                     "code": "AGENT_AUTHORIZATION_DENIED",
                     "trace_id": trace_id,
                 },
+                headers={"X-Trace-Id": trace_id} if trace_id else None,
             )
 
         status = str(
@@ -224,13 +350,13 @@ def create_app() -> FastAPI:
             )
         )
         if status == "ERROR":
-            # 内部 Provider/Tool/Validator 错误只返回 trace_id，详细原因留在受治理 Trace。
             raise HTTPException(
                 status_code=500,
                 detail={
                     "code": "AGENT_RUNTIME_ERROR",
                     "trace_id": trace_id,
                 },
+                headers={"X-Trace-Id": trace_id} if trace_id else None,
             )
 
         return AgentQueryResponse(

@@ -1,0 +1,56 @@
+version: 1
+contract: governed_agent_api_runtime_guard
+mode: process_local_admission_control_v1
+
+principles:
+  limits_are_initial_guardrails_not_measured_slo: true
+  authenticated_identity_is_rate_limit_key: true
+  tenant_and_subject_rate_limits_are_both_enforced: true
+  tenant_and_global_concurrency_are_both_enforced: true
+  no_unbounded_request_queue: true
+  admission_rejection_is_429: true
+
+  api_timeout_returns_without_cancelling_worker_thread: true
+  timed_out_worker_keeps_concurrency_slot_until_actual_completion: true
+  timeout_and_admission_events_are_audited: true
+
+  process_local_state_is_not_cluster_global_state: true
+  multi_worker_global_limits_require_shared_infrastructure: true
+  bearer_token_is_never_a_rate_limit_key: true
+  prompt_content_is_never_a_rate_limit_key: true
+
+limits:
+  request_timeout_seconds:
+    env: AGENT_API_REQUEST_TIMEOUT_SECONDS
+    default: 60
+
+  global_concurrency:
+    env: AGENT_API_GLOBAL_CONCURRENCY
+    default: 16
+
+  tenant_concurrency:
+    env: AGENT_API_TENANT_CONCURRENCY
+    default: 4
+
+  subject_requests_per_minute:
+    env: AGENT_API_SUBJECT_RPM
+    default: 30
+
+  tenant_requests_per_minute:
+    env: AGENT_API_TENANT_RPM
+    default: 120
+
+  max_tracked_identity_keys:
+    env: AGENT_API_MAX_TRACKED_IDENTITIES
+    default: 10000
+
+rate_limit:
+  algorithm: sliding_window
+  window_seconds: 60
+
+deployment:
+  default_worker_count: 1
+  guard_scope: process
+  cluster_wide_next_step:
+    - api_gateway
+    - redis_or_shared_rate_limiter
