@@ -23,7 +23,8 @@ import yaml
 
 from agent.semantic_query.contracts import SemanticQueryPlan, SemanticQueryResult, SemanticQueryStatus
 from agent.semantic_query.planner import GovernedSemanticQueryPlanner
-from agent.tenancy import GovernedRequestScopeEnforcer, current_request_context
+from agent.tenancy.context import current_request_context
+from agent.tenancy.semantic_scope import GovernedRequestScopeEnforcer
 
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
