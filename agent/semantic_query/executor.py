@@ -217,6 +217,8 @@ class MetricFlowSemanticQueryExecutor:
 
     @staticmethod
     def _deferred(plan: SemanticQueryPlan, reason: str) -> SemanticQueryResult:
+        """把本地 Runtime 条件不足安全投影为 DEFERRED，不伪造执行结果。"""
+
         return SemanticQueryResult(
             status=SemanticQueryStatus.DEFERRED,
             evidence="STATIC_CONTRACT",

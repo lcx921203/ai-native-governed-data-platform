@@ -20,7 +20,9 @@ def test_sales_decline_routes_to_analysis_before_metric_query():
     assert route.steps == []
 
 
-def test_analysis_context_requires_semantic_and_one_skill_only():
+def test_analysis_context_requires_semantic_and_skill_with_optional_code():
+    """ANALYSIS 默认只强制 Semantic + Skill，Code 只能作为渐进式可选上下文。"""
+
     route = DeterministicToolRouter(ROOT).plan("为什么本周 gross_sales 下降？")
     context_plan = GovernedContextPlanner(ROOT).plan(route)
 
@@ -28,9 +30,19 @@ def test_analysis_context_requires_semantic_and_one_skill_only():
         ContextSource.SEMANTIC,
         ContextSource.SKILL,
     }
-    skill_req = next(item for item in context_plan.requirements if item.source is ContextSource.SKILL)
+    skill_req = next(
+        item
+        for item in context_plan.requirements
+        if item.source is ContextSource.SKILL
+    )
     assert skill_req.max_items == 1
-    assert not context_plan.requires(ContextSource.CODE)
+
+    # Model Context Card 已经进入 Context Plan，但它不是默认必需上下文。
+    # 只有 Semantic + Skill 无法解释底层转换行为时才允许渐进式扩展。
+    assert ContextSource.CODE in context_plan.optional_sources()
+    assert ContextSource.CODE not in context_plan.required_sources()
+
+    # Knowledge RAG 仍然不属于 Sales Analysis 的默认/可选上下文。
     assert not context_plan.requires(ContextSource.KNOWLEDGE)
 
 
