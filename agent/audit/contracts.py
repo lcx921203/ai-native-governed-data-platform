@@ -49,6 +49,10 @@ class AgentAuditRecord:
     cost_per_answer_usd: float | None
     monetary_cost_known: bool
 
+    # Structured Stage Timing 只保存 Stage Name + Duration；不保存 Prompt / Detail。
+    # Default 空值保持旧 API Guard / 测试构造代码向后兼容。
+    stage_timings: tuple[tuple[str, float], ...] = ()
+
     # 向后兼容：旧 Runtime 构造代码不传该字段时仍默认为 RUNTIME。
     event_type: str = "RUNTIME"
 
@@ -70,6 +74,13 @@ class AgentAuditRecord:
             "runtime_status": self.runtime_status,
             "answer_validated": self.answer_validated,
             "stage_statuses": list(self.stage_statuses),
+            "stage_timings": [
+                {
+                    "stage": str(stage),
+                    "duration_ms": round(max(0.0, float(duration_ms)), 3),
+                }
+                for stage, duration_ms in self.stage_timings
+            ],
             "duration_ms": round(self.duration_ms, 3),
             "estimated_context_tokens": self.estimated_context_tokens,
             "tool_result_count": self.tool_result_count,

@@ -90,6 +90,17 @@ class GovernedAgentRuntime:
         self.authorizer = authorizer or GovernedRequestAuthorizer(self.root)
         self.observer = observer or GovernedRunObserver(self.root)
 
+    @staticmethod
+    def _measure(operation: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[Any, float]:
+        """执行一个 Runtime Stage Operation，并返回结果与毫秒耗时。
+
+        这里只记录阶段总耗时，不保存输入参数、Prompt、Tool Payload 或 Provider 原始响应。
+        """
+
+        started = perf_counter()
+        value = operation(*args, **kwargs)
+        return value, max(0.0, (perf_counter() - started) * 1000)
+
     def run(
         self,
         question: str,
@@ -127,14 +138,34 @@ class GovernedAgentRuntime:
     ) -> AgentRunResult:
         stages: list[RuntimeStage] = []
 
-        route = self.router.plan(question)
-        stages.append(RuntimeStage("router", route.status.value, route.intent.value))
+        route, router_ms = self._measure(self.router.plan, question)
+        stages.append(
+            RuntimeStage(
+                "router",
+                route.status.value,
+                route.intent.value,
+                duration_ms=router_ms,
+            )
+        )
 
         if route.status is PlanStatus.BLOCKED:
-            execution = self.plan_executor.execute(route)
-            stages.append(RuntimeStage("executor", execution.status.value, "router_blocked"))
-            envelope = self.response_composer.compose(execution)
-            stages.append(RuntimeStage("claim_ledger", envelope.status.value))
+            execution, executor_ms = self._measure(self.plan_executor.execute, route)
+            stages.append(
+                RuntimeStage(
+                    "executor",
+                    execution.status.value,
+                    "router_blocked",
+                    duration_ms=executor_ms,
+                )
+            )
+            envelope, claim_ms = self._measure(self.response_composer.compose, execution)
+            stages.append(
+                RuntimeStage(
+                    "claim_ledger",
+                    envelope.status.value,
+                    duration_ms=claim_ms,
+                )
+            )
             return self._finalize(
                 question,
                 route=route,
@@ -143,23 +174,36 @@ class GovernedAgentRuntime:
                 stages=stages,
             )
 
-        authorization = self.authorizer.authorize(route, request_context)
+        authorization, authorization_ms = self._measure(
+            self.authorizer.authorize,
+            route,
+            request_context,
+        )
         if record_authorization_stage:
             stages.append(
                 RuntimeStage(
                     "authorization",
                     "PASS" if authorization.allowed else "BLOCKED",
                     ",".join(authorization.required_scopes),
+                    duration_ms=authorization_ms,
                 )
             )
 
         if not authorization.allowed:
-            envelope = self.runtime_response_composer.compose_preflight_failure(
+            envelope, claim_ms = self._measure(
+                self.runtime_response_composer.compose_preflight_failure,
                 route,
                 status=AnswerStatus.BLOCKED,
                 warnings=list(authorization.warnings),
             )
-            stages.append(RuntimeStage("claim_ledger", envelope.status.value, "authorization_failure"))
+            stages.append(
+                RuntimeStage(
+                    "claim_ledger",
+                    envelope.status.value,
+                    "authorization_failure",
+                    duration_ms=claim_ms,
+                )
+            )
             return self._finalize(
                 question,
                 route=route,
@@ -167,21 +211,27 @@ class GovernedAgentRuntime:
                 stages=stages,
             )
 
-        context_plan = self.context_planner.plan(route)
+        context_plan, context_planner_ms = self._measure(self.context_planner.plan, route)
         stages.append(
             RuntimeStage(
                 "context_planner",
                 "PLANNED" if not context_plan.warnings else "PLANNED_WITH_WARNINGS",
                 ",".join(x.value for x in context_plan.required_sources()),
+                duration_ms=context_planner_ms,
             )
         )
 
-        context_bundle = self.context_loader.load(route, context_plan)
+        context_bundle, context_loader_ms = self._measure(
+            self.context_loader.load,
+            route,
+            context_plan,
+        )
         stages.append(
             RuntimeStage(
                 "context_loader",
                 context_bundle.status.value,
                 f"estimated_tokens={context_bundle.estimated_tokens}",
+                duration_ms=context_loader_ms,
             )
         )
 
@@ -202,12 +252,20 @@ class GovernedAgentRuntime:
                     for warning in item.warnings
                 ],
             ]
-            envelope = self.runtime_response_composer.compose_preflight_failure(
+            envelope, claim_ms = self._measure(
+                self.runtime_response_composer.compose_preflight_failure,
                 route,
                 status=answer_status,
                 warnings=warnings,
             )
-            stages.append(RuntimeStage("claim_ledger", envelope.status.value, "preflight_failure"))
+            stages.append(
+                RuntimeStage(
+                    "claim_ledger",
+                    envelope.status.value,
+                    "preflight_failure",
+                    duration_ms=claim_ms,
+                )
+            )
             return self._finalize(
                 question,
                 route=route,
@@ -226,10 +284,24 @@ class GovernedAgentRuntime:
                 stages,
             )
 
-        execution = self.plan_executor.execute(route)
-        stages.append(RuntimeStage("executor", execution.status.value, "tool_plan"))
-        envelope = self.response_composer.compose(execution)
-        stages.append(RuntimeStage("claim_ledger", envelope.status.value, "standard"))
+        execution, executor_ms = self._measure(self.plan_executor.execute, route)
+        stages.append(
+            RuntimeStage(
+                "executor",
+                execution.status.value,
+                "tool_plan",
+                duration_ms=executor_ms,
+            )
+        )
+        envelope, claim_ms = self._measure(self.response_composer.compose, execution)
+        stages.append(
+            RuntimeStage(
+                "claim_ledger",
+                envelope.status.value,
+                "standard",
+                duration_ms=claim_ms,
+            )
+        )
         return self._finalize(
             question,
             route=route,
@@ -251,7 +323,8 @@ class GovernedAgentRuntime:
         """ANALYSIS 专用的 Skill -> Plan -> Execute -> Validate 链路。"""
 
         if route.status is not PlanStatus.PLANNING_REQUIRED:
-            envelope = self.runtime_response_composer.compose_preflight_failure(
+            envelope, claim_ms = self._measure(
+                self.runtime_response_composer.compose_preflight_failure,
                 route,
                 status=AnswerStatus.BLOCKED,
                 warnings=[
@@ -259,7 +332,13 @@ class GovernedAgentRuntime:
                 ],
             )
             stages.append(RuntimeStage("analysis_planner", "BLOCKED", "invalid_router_status"))
-            stages.append(RuntimeStage("claim_ledger", envelope.status.value))
+            stages.append(
+                RuntimeStage(
+                    "claim_ledger",
+                    envelope.status.value,
+                    duration_ms=claim_ms,
+                )
+            )
             return self._finalize(
                 question,
                 route=route,
@@ -269,21 +348,34 @@ class GovernedAgentRuntime:
                 stages=stages,
             )
 
-        analysis_plan = self.analysis_planner.plan(route, context_plan)
+        analysis_plan, analysis_planner_ms = self._measure(
+            self.analysis_planner.plan,
+            route,
+            context_plan,
+        )
         stages.append(
             RuntimeStage(
                 "analysis_planner",
                 analysis_plan.status.value,
                 f"skill={analysis_plan.skill_id or ''}; units={len(analysis_plan.units)}",
+                duration_ms=analysis_planner_ms,
             )
         )
 
         if analysis_plan.status is not AnalysisPlanStatus.READY:
-            envelope = self.runtime_response_composer.compose_analysis_plan_failure(
+            envelope, claim_ms = self._measure(
+                self.runtime_response_composer.compose_analysis_plan_failure,
                 route,
                 analysis_plan,
             )
-            stages.append(RuntimeStage("claim_ledger", envelope.status.value, "analysis_plan_failure"))
+            stages.append(
+                RuntimeStage(
+                    "claim_ledger",
+                    envelope.status.value,
+                    "analysis_plan_failure",
+                    duration_ms=claim_ms,
+                )
+            )
             return self._finalize(
                 question,
                 route=route,
@@ -294,12 +386,16 @@ class GovernedAgentRuntime:
                 stages=stages,
             )
 
-        analysis_execution = self.analysis_executor.execute_with_validation(analysis_plan)
+        analysis_execution, analysis_executor_ms = self._measure(
+            self.analysis_executor.execute_with_validation,
+            analysis_plan,
+        )
         stages.append(
             RuntimeStage(
                 "analysis_executor",
                 analysis_execution.status.value,
                 f"retry_rounds={analysis_execution.retry_rounds}",
+                duration_ms=analysis_executor_ms,
             )
         )
 
@@ -313,11 +409,19 @@ class GovernedAgentRuntime:
                 )
             )
 
-        envelope = self.runtime_response_composer.compose_analysis(
+        envelope, claim_ms = self._measure(
+            self.runtime_response_composer.compose_analysis,
             route,
             analysis_execution,
         )
-        stages.append(RuntimeStage("claim_ledger", envelope.status.value, "analysis"))
+        stages.append(
+            RuntimeStage(
+                "claim_ledger",
+                envelope.status.value,
+                "analysis",
+                duration_ms=claim_ms,
+            )
+        )
         return self._finalize(
             question,
             route=route,
@@ -344,15 +448,44 @@ class GovernedAgentRuntime:
     ) -> AgentRunResult:
         """Renderer 之后必须经过本地 Answer Validator；False 也必须 Fail Closed。"""
 
+        validator_ms = 0.0
         try:
-            draft = self.renderer(envelope)
-            stages.append(RuntimeStage("renderer", "COMPLETE"))
-            validated = bool(self.answer_validator(envelope, draft))
+            draft, renderer_ms = self._measure(self.renderer, envelope)
+            stages.append(
+                RuntimeStage(
+                    "renderer",
+                    "COMPLETE",
+                    duration_ms=renderer_ms,
+                )
+            )
+
+            validator_started = perf_counter()
+            try:
+                validated = bool(self.answer_validator(envelope, draft))
+            finally:
+                validator_ms = max(
+                    0.0,
+                    (perf_counter() - validator_started) * 1000,
+                )
+
             if not validated:
                 raise ValueError("Answer Validator returned false.")
-            stages.append(RuntimeStage("answer_validator", "PASS"))
+            stages.append(
+                RuntimeStage(
+                    "answer_validator",
+                    "PASS",
+                    duration_ms=validator_ms,
+                )
+            )
         except Exception as exc:
-            stages.append(RuntimeStage("answer_validator", "ERROR", str(exc)))
+            stages.append(
+                RuntimeStage(
+                    "answer_validator",
+                    "ERROR",
+                    str(exc),
+                    duration_ms=validator_ms,
+                )
+            )
             return AgentRunResult(
                 question=question,
                 status=AgentRuntimeStatus.ERROR,

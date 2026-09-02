@@ -1,4 +1,4 @@
-version: 2
+version: 3
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
@@ -16,18 +16,27 @@ principles:
   api_e2e_ci_uses_deterministic_renderer: true
   api_e2e_ci_excludes_live_llm_and_external_query_engines: true
 
+  # V3：把 HTTP Total 拆成 Measured Runtime + Runtime Stage + Outside Runtime Residual。
+  api_e2e_records_internal_runtime_stage_latency: true
+  api_e2e_stage_timing_comes_from_internal_audit: true
+  raw_audit_is_not_uploaded_as_load_evidence: true
+  public_agent_api_does_not_expose_stage_timing: true
+  http_outside_runtime_is_residual_not_single_component_latency: true
+  runtime_unattributed_is_residual_not_single_component_latency: true
+
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
   benchmark_report_never_contains_redis_url_or_credentials: true
   benchmark_report_never_contains_bearer_token_or_prompt: true
   benchmark_report_never_contains_jwks_private_key: true
+  benchmark_report_never_contains_raw_trace_ids: true
 
   guardrail_promotion_requires_representative_staging_evidence: true
   guardrail_promotion_requires_repeated_runs: true
   guardrail_promotion_requires_human_review: true
 
 evidence:
-  schema_version: 1
+  schema_version: 2
   calibration_status: LAB_OBSERVED_NOT_PROMOTED
 
   kinds:
@@ -45,10 +54,12 @@ evidence:
     - unexpected_error_count
     - duration_seconds
     - attempts_per_second
-    - p50
-    - p95
-    - p99
-    - max
+    - http_total_p50_p95_p99_max
+    - runtime_total_p50_p95_p99_max
+    - runtime_stage_p50_p95_p99_max
+    - http_outside_runtime_p50_p95_p99_max
+    - runtime_unattributed_p50_p95_p99_max
+    - stage_timing_coverage
 
 profiles:
   ci_smoke:
@@ -57,12 +68,13 @@ profiles:
     production_slo_authority: false
 
   api_e2e_ci_smoke:
-    purpose: authenticated_agent_api_correctness_under_bounded_load
+    purpose: authenticated_agent_api_correctness_and_stage_breakdown_under_bounded_load
     latency_gate: false
     production_slo_authority: false
     live_llm: false
     live_metricflow: false
     live_trino: false
+    audit_mode: jsonl_fail_closed
 
   lab:
     purpose: repeatable_redis_admission_layer_baseline
@@ -70,12 +82,13 @@ profiles:
     production_slo_authority: false
 
   api_e2e_lab:
-    purpose: repeatable_authenticated_agent_api_baseline
+    purpose: repeatable_authenticated_agent_api_stage_breakdown_baseline
     latency_gate: false
     production_slo_authority: false
     live_llm: false
     live_metricflow: false
     live_trino: false
+    audit_mode: jsonl_fail_closed
 
 promotion:
   current_production_slo_status: UNCALIBRATED

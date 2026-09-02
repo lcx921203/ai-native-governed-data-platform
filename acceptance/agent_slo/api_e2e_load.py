@@ -33,8 +33,9 @@ import platform
 import socket
 import subprocess
 import sys
+import tempfile
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -346,6 +347,7 @@ def _server_env(
     project_root: Path,
     redis_url: str,
     redis_namespace: str,
+    audit_path: Path,
     authority: LocalJWTAuthority,
     scenario: APIE2EScenario,
 ) -> dict[str, str]:
@@ -372,7 +374,10 @@ def _server_env(
             "AGENT_REQUIRE_REQUEST_CONTEXT": "true",
             "AGENT_RENDERER_MODE": "deterministic",
             "PHASE4G_ALLOW_OPENAI_CALL": "false",
-            "AGENT_AUDIT_MODE": "disabled",
+            # Stage Timing 通过 Internal Audit Correlation 获取；Raw Audit 不上传。
+            "AGENT_AUDIT_MODE": "jsonl",
+            "AGENT_AUDIT_PATH": str(audit_path),
+            "AGENT_AUDIT_FAILURE_MODE": "fail_closed",
         }
     )
 
@@ -427,7 +432,7 @@ def _request_once(
     connection: http.client.HTTPConnection,
     *,
     token: str,
-) -> tuple[int, dict, float, bool]:
+) -> tuple[int, dict, float, bool, str]:
     """发送一次真实 HTTP POST，并只返回状态/结构化错误/耗时/响应契约结果。"""
 
     body = json.dumps(
@@ -456,6 +461,7 @@ def _request_once(
         payload = {}
 
     contract_ok = False
+    trace_id = ""
     if response.status == 200:
         trace_id = str(payload.get("trace_id") or "")
         contract_ok = bool(
@@ -474,7 +480,7 @@ def _request_once(
             and response.getheader("Retry-After")
         )
 
-    return response.status, payload, elapsed_ms, contract_ok
+    return response.status, payload, elapsed_ms, contract_ok, trace_id
 
 
 def _latency(values: list[float]) -> dict[str, float | int | None]:
@@ -497,6 +503,94 @@ def _latency(values: list[float]) -> dict[str, float | int | None]:
     }
 
 
+def _runtime_stage_breakdown(
+    audit_path: Path,
+    successful_samples: list[tuple[str, float]],
+) -> dict[str, object]:
+    """按 Trace ID 把 HTTP 200 与内部 Runtime Audit 关联，并聚合 Stage Percentile。
+
+    Raw Audit 只在临时目录中存在。最终 Evidence 只保留聚合统计，不保存 Trace ID、
+    Tenant、Subject、Prompt、Answer 或 Stage Detail。
+    """
+
+    runtime_rows: dict[str, dict] = {}
+    if audit_path.exists():
+        for line in audit_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if str(row.get("event_type") or "RUNTIME") != "RUNTIME":
+                continue
+            trace_id = str(row.get("trace_id") or "")
+            if trace_id:
+                runtime_rows[trace_id] = row
+
+    runtime_total_values: list[float] = []
+    outside_runtime_values: list[float] = []
+    runtime_unattributed_values: list[float] = []
+    stage_values: defaultdict[str, list[float]] = defaultdict(list)
+    matched = 0
+
+    for trace_id, http_total_ms in successful_samples:
+        row = runtime_rows.get(trace_id)
+        if row is None:
+            continue
+
+        matched += 1
+        runtime_total_ms = max(0.0, float(row.get("duration_ms") or 0.0))
+        runtime_total_values.append(runtime_total_ms)
+        outside_runtime_values.append(
+            max(0.0, float(http_total_ms) - runtime_total_ms)
+        )
+
+        stage_sum_ms = 0.0
+        for item in row.get("stage_timings") or []:
+            stage = str(item.get("stage") or "").strip()
+            if not stage:
+                continue
+            duration_ms = max(0.0, float(item.get("duration_ms") or 0.0))
+            stage_values[stage].append(duration_ms)
+            stage_sum_ms += duration_ms
+
+        runtime_unattributed_values.append(
+            max(0.0, runtime_total_ms - stage_sum_ms)
+        )
+
+    expected = len(successful_samples)
+    coverage = (
+        1.0
+        if expected == 0
+        else round(matched / expected, 6)
+    )
+
+    return {
+        "expected_runtime_records": expected,
+        "matched_runtime_records": matched,
+        "stage_timing_coverage": coverage,
+        "runtime_total_latency_ms": _latency(runtime_total_values),
+        "http_outside_runtime_latency_ms": _latency(outside_runtime_values),
+        "runtime_unattributed_latency_ms": _latency(runtime_unattributed_values),
+        "runtime_stage_latency_ms": {
+            stage: _latency(values)
+            for stage, values in sorted(stage_values.items())
+        },
+        "residual_semantics": {
+            "http_outside_runtime": (
+                "HTTP total minus measured GovernedAgentRuntime duration; includes JWT/JWKS, "
+                "RequestContext mapping, Redis admission, threadpool scheduling, audit persistence, "
+                "lease release, FastAPI serialization, and loopback transport."
+            ),
+            "runtime_unattributed": (
+                "Runtime total minus measured stage calls; includes orchestration/context-manager/"
+                "observer preparation overhead not assigned to one governed stage."
+            ),
+        },
+    }
+
+
 def _run_scenario(
     project_root: Path,
     *,
@@ -505,7 +599,7 @@ def _run_scenario(
     authority: LocalJWTAuthority,
     scenario: APIE2EScenario,
 ) -> dict:
-    """运行一个真实 HTTP/JWT/Redis/Runtime Scenario。"""
+    """运行一个真实 HTTP/JWT/Redis/Runtime Scenario，并形成 Stage Breakdown。"""
 
     scenario.validate()
 
@@ -536,190 +630,219 @@ def _run_scenario(
         for identity in identities
     }
 
-    port = _free_port()
-    env = _server_env(
-        project_root=project_root,
-        redis_url=redis_url,
-        redis_namespace=namespace,
-        authority=authority,
-        scenario=scenario,
-    )
-    process = _start_agent_api(
-        project_root=project_root,
-        port=port,
-        env=env,
-    )
+    with tempfile.TemporaryDirectory(prefix="agent-api-e2e-") as temp_dir:
+        audit_path = Path(temp_dir) / "audit.jsonl"
+        port = _free_port()
+        env = _server_env(
+            project_root=project_root,
+            redis_url=redis_url,
+            redis_namespace=namespace,
+            audit_path=audit_path,
+            authority=authority,
+            scenario=scenario,
+        )
+        process = _start_agent_api(
+            project_root=project_root,
+            port=port,
+            env=env,
+        )
 
-    def sync_worker(worker_id: int) -> dict:
-        """每个 Worker 独占一个 HTTP/1.1 Connection，顺序发送分片请求。"""
+        def sync_worker(worker_id: int) -> dict:
+            """每个 Worker 独占 HTTP/1.1 Connection，并保留仅内存 Trace Correlation。"""
+
+            status_counts: Counter[int] = Counter()
+            code_counts: Counter[str] = Counter()
+            latencies: list[float] = []
+            successful_samples: list[tuple[str, float]] = []
+            contract_failures = 0
+            unexpected_errors: Counter[str] = Counter()
+
+            connection = http.client.HTTPConnection(
+                "127.0.0.1",
+                port,
+                timeout=15,
+            )
+            try:
+                for attempt_index in range(
+                    worker_id,
+                    scenario.attempts,
+                    scenario.workers,
+                ):
+                    identity = (
+                        f"e2e-tenant-{attempt_index % scenario.tenant_count}",
+                        f"e2e-subject-{attempt_index % scenario.subject_count}",
+                    )
+                    token = tokens[identity]
+                    try:
+                        (
+                            status,
+                            payload,
+                            elapsed_ms,
+                            contract_ok,
+                            trace_id,
+                        ) = _request_once(
+                            connection,
+                            token=token,
+                        )
+                    except Exception:
+                        unexpected_errors["HTTP_REQUEST_EXCEPTION"] += 1
+                        connection.close()
+                        connection = http.client.HTTPConnection(
+                            "127.0.0.1",
+                            port,
+                            timeout=15,
+                        )
+                        continue
+
+                    status_counts[status] += 1
+                    latencies.append(elapsed_ms)
+                    if not contract_ok:
+                        contract_failures += 1
+
+                    if status == 200 and trace_id:
+                        successful_samples.append((trace_id, elapsed_ms))
+                    elif status == 429:
+                        detail = payload.get("detail") or {}
+                        code_counts[str(detail.get("code") or "UNKNOWN_429")] += 1
+                    elif status != 200:
+                        code_counts[f"HTTP_{status}"] += 1
+            finally:
+                connection.close()
+
+            return {
+                "status_counts": status_counts,
+                "code_counts": code_counts,
+                "latencies": latencies,
+                "successful_samples": successful_samples,
+                "contract_failures": contract_failures,
+                "unexpected_errors": unexpected_errors,
+            }
+
+        try:
+            _wait_until_ready(
+                port=port,
+                process=process,
+            )
+
+            started = perf_counter()
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=scenario.workers
+            ) as executor:
+                worker_results = list(
+                    executor.map(
+                        sync_worker,
+                        range(scenario.workers),
+                    )
+                )
+            duration_seconds = max(
+                0.000001,
+                perf_counter() - started,
+            )
+        finally:
+            _stop_agent_api(process)
 
         status_counts: Counter[int] = Counter()
         code_counts: Counter[str] = Counter()
-        latencies: list[float] = []
-        contract_failures = 0
         unexpected_errors: Counter[str] = Counter()
+        latencies: list[float] = []
+        successful_samples: list[tuple[str, float]] = []
+        contract_failures = 0
 
-        connection = http.client.HTTPConnection(
-            "127.0.0.1",
-            port,
-            timeout=15,
-        )
-        try:
-            for attempt_index in range(
-                worker_id,
-                scenario.attempts,
-                scenario.workers,
-            ):
-                identity = (
-                    f"e2e-tenant-{attempt_index % scenario.tenant_count}",
-                    f"e2e-subject-{attempt_index % scenario.subject_count}",
-                )
-                token = tokens[identity]
-                try:
-                    status, payload, elapsed_ms, contract_ok = _request_once(
-                        connection,
-                        token=token,
-                    )
-                except Exception:
-                    unexpected_errors["HTTP_REQUEST_EXCEPTION"] += 1
-                    connection.close()
-                    connection = http.client.HTTPConnection(
-                        "127.0.0.1",
-                        port,
-                        timeout=15,
-                    )
-                    continue
+        for item in worker_results:
+            status_counts.update(item["status_counts"])
+            code_counts.update(item["code_counts"])
+            unexpected_errors.update(item["unexpected_errors"])
+            latencies.extend(item["latencies"])
+            successful_samples.extend(item["successful_samples"])
+            contract_failures += int(item["contract_failures"])
 
-                status_counts[status] += 1
-                latencies.append(elapsed_ms)
-                if not contract_ok:
-                    contract_failures += 1
-
-                if status == 429:
-                    detail = payload.get("detail") or {}
-                    code_counts[str(detail.get("code") or "UNKNOWN_429")] += 1
-                elif status != 200:
-                    code_counts[f"HTTP_{status}"] += 1
-        finally:
-            connection.close()
-
-        return {
-            "status_counts": status_counts,
-            "code_counts": code_counts,
-            "latencies": latencies,
-            "contract_failures": contract_failures,
-            "unexpected_errors": unexpected_errors,
-        }
-
-    try:
-        _wait_until_ready(
-            port=port,
-            process=process,
+        stage_breakdown = _runtime_stage_breakdown(
+            audit_path,
+            successful_samples,
         )
 
-        started = perf_counter()
-        import concurrent.futures
-
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=scenario.workers
-        ) as executor:
-            worker_results = list(
-                executor.map(
-                    sync_worker,
-                    range(scenario.workers),
-                )
+        observed = sum(status_counts.values()) + sum(unexpected_errors.values())
+        expected_429_seen = (
+            True
+            if not scenario.require_expected_429
+            else code_counts.get(
+                str(scenario.expected_429_code),
+                0,
             )
-        duration_seconds = max(
-            0.000001,
-            perf_counter() - started,
+            > 0
         )
-    finally:
-        _stop_agent_api(process)
-
-    status_counts: Counter[int] = Counter()
-    code_counts: Counter[str] = Counter()
-    unexpected_errors: Counter[str] = Counter()
-    latencies: list[float] = []
-    contract_failures = 0
-
-    for item in worker_results:
-        status_counts.update(item["status_counts"])
-        code_counts.update(item["code_counts"])
-        unexpected_errors.update(item["unexpected_errors"])
-        latencies.extend(item["latencies"])
-        contract_failures += int(item["contract_failures"])
-
-    observed = sum(status_counts.values()) + sum(unexpected_errors.values())
-    expected_429_seen = (
-        True
-        if not scenario.require_expected_429
-        else code_counts.get(
-            str(scenario.expected_429_code),
-            0,
+        all_200_ok = (
+            True
+            if not scenario.expect_all_200
+            else status_counts.get(200, 0) == scenario.attempts
         )
-        > 0
-    )
-    all_200_ok = (
-        True
-        if not scenario.expect_all_200
-        else status_counts.get(200, 0) == scenario.attempts
-    )
-    unexpected_statuses = sum(
-        count
-        for status, count in status_counts.items()
-        if status not in {200, 429}
-    )
-    unexpected_429 = sum(
-        count
-        for code, count in code_counts.items()
-        if code.startswith("HTTP_")
-        or (
-            code.endswith("_LIMIT")
-            or code.endswith("_LIMITED")
+        unexpected_statuses = sum(
+            count
+            for status, count in status_counts.items()
+            if status not in {200, 429}
         )
-        and scenario.expected_429_code
-        and code != scenario.expected_429_code
-    )
+        unexpected_429 = sum(
+            count
+            for code, count in code_counts.items()
+            if code.startswith("HTTP_")
+            or (
+                code.endswith("_LIMIT")
+                or code.endswith("_LIMITED")
+            )
+            and scenario.expected_429_code
+            and code != scenario.expected_429_code
+        )
 
-    correctness_pass = bool(
-        observed == scenario.attempts
-        and not unexpected_errors
-        and contract_failures == 0
-        and unexpected_statuses == 0
-        and unexpected_429 == 0
-        and expected_429_seen
-        and all_200_ok
-        and status_counts.get(200, 0) > 0
-    )
+        stage_coverage_ok = (
+            int(stage_breakdown["matched_runtime_records"])
+            == status_counts.get(200, 0)
+        )
 
-    return {
-        "scenario": asdict(scenario),
-        "result": {
-            "attempts": scenario.attempts,
-            "status_counts": {
-                str(key): value
-                for key, value
-                in sorted(status_counts.items())
+        correctness_pass = bool(
+            observed == scenario.attempts
+            and not unexpected_errors
+            and contract_failures == 0
+            and unexpected_statuses == 0
+            and unexpected_429 == 0
+            and expected_429_seen
+            and all_200_ok
+            and status_counts.get(200, 0) > 0
+            and stage_coverage_ok
+        )
+
+        # TemporaryDirectory 退出后 Raw Audit 自动删除；Evidence 只保留聚合值。
+        return {
+            "scenario": asdict(scenario),
+            "result": {
+                "attempts": scenario.attempts,
+                "status_counts": {
+                    str(key): value
+                    for key, value
+                    in sorted(status_counts.items())
+                },
+                "rejection_counts": dict(
+                    sorted(code_counts.items())
+                ),
+                "unexpected_error_count": sum(
+                    unexpected_errors.values()
+                ),
+                "unexpected_error_codes": dict(
+                    sorted(unexpected_errors.items())
+                ),
+                "response_contract_failure_count": contract_failures,
+                "duration_seconds": round(duration_seconds, 4),
+                "attempts_per_second": round(
+                    scenario.attempts / duration_seconds,
+                    2,
+                ),
+                "stage_timing_coverage_pass": stage_coverage_ok,
+                "correctness_pass": correctness_pass,
             },
-            "rejection_counts": dict(
-                sorted(code_counts.items())
-            ),
-            "unexpected_error_count": sum(
-                unexpected_errors.values()
-            ),
-            "unexpected_error_codes": dict(
-                sorted(unexpected_errors.items())
-            ),
-            "response_contract_failure_count": contract_failures,
-            "duration_seconds": round(duration_seconds, 4),
-            "attempts_per_second": round(
-                scenario.attempts / duration_seconds,
-                2,
-            ),
-            "correctness_pass": correctness_pass,
-        },
-        "http_total_latency_ms": _latency(latencies),
-    }
+            "http_total_latency_ms": _latency(latencies),
+            "latency_breakdown": stage_breakdown,
+        }
 
 
 def _initial_guardrails(project_root: Path) -> dict:
@@ -778,7 +901,7 @@ def run_api_e2e_profile(
         authority.close()
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "evidence_kind": "AUTHENTICATED_AGENT_API_E2E_LOAD_OBSERVATION",
         "calibration_status": "LAB_OBSERVED_NOT_PROMOTED",
         "production_slo_authority": False,
@@ -804,6 +927,8 @@ def run_api_e2e_profile(
             "includes_metadata_context_tool": True,
             "includes_deterministic_renderer": True,
             "includes_answer_validator": True,
+            "includes_internal_stage_timing_audit": True,
+            "raw_audit_uploaded": False,
             "includes_live_llm": False,
             "includes_live_metricflow": False,
             "includes_live_trino": False,
@@ -840,6 +965,11 @@ def run_api_e2e_profile(
         raise RuntimeError(
             "Secret/runtime endpoint/prompt must never appear in Agent API E2E evidence."
         )
+
+    # Trace ID 只用于进程内 Correlation；最终 Evidence 只能保留聚合 Coverage/Percentile。
+    for item in report["scenario_results"]:
+        if "trace_id" in json.dumps(item, ensure_ascii=False, sort_keys=True):
+            raise RuntimeError("Raw trace IDs must never appear in Agent API E2E evidence.")
 
     output.parent.mkdir(
         parents=True,

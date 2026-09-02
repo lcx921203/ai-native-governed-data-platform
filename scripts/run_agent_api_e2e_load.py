@@ -48,12 +48,32 @@ def main() -> int:
     for item in report["scenario_results"]:
         result = item["result"]
         latency = item["http_total_latency_ms"]
+        breakdown = item["latency_breakdown"]
+        stage_map = breakdown["runtime_stage_latency_ms"]
+        ranked = sorted(
+            (
+                (stage, values.get("p95"))
+                for stage, values in stage_map.items()
+                if values.get("p95") is not None
+            ),
+            key=lambda pair: float(pair[1]),
+            reverse=True,
+        )
+        top_stage = (
+            f"{ranked[0][0]}:{ranked[0][1]}ms"
+            if ranked
+            else "none"
+        )
         print(
             f"- {item['scenario']['name']}: "
             f"attempts={result['attempts']} "
             f"status={result['status_counts']} "
             f"rejections={result['rejection_counts']} "
-            f"p95_ms={latency['p95']} "
+            f"http_p95_ms={latency['p95']} "
+            f"runtime_p95_ms={breakdown['runtime_total_latency_ms']['p95']} "
+            f"outside_runtime_p95_ms={breakdown['http_outside_runtime_latency_ms']['p95']} "
+            f"top_runtime_stage={top_stage} "
+            f"stage_coverage={breakdown['stage_timing_coverage']} "
             f"correctness={result['correctness_pass']}"
         )
 

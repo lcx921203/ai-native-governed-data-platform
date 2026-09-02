@@ -198,6 +198,14 @@ class GovernedRunObserver:
                 f"{getattr(stage, 'stage', '')}:{getattr(stage, 'status', '')}"
                 for stage in getattr(result, "stage_trace", ()) or ()
             ),
+            stage_timings=tuple(
+                (
+                    str(getattr(stage, "stage", "") or ""),
+                    max(0.0, float(getattr(stage, "duration_ms", 0.0) or 0.0)),
+                )
+                for stage in getattr(result, "stage_trace", ()) or ()
+                if str(getattr(stage, "stage", "") or "")
+            ),
             duration_ms=trace.cost.total_duration_ms,
             estimated_context_tokens=trace.cost.estimated_context_tokens,
             tool_result_count=trace.cost.tool_result_count,

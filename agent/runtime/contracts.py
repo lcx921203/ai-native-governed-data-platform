@@ -24,12 +24,16 @@ class RuntimeStage:
     stage: str
     status: str
     detail: str = ""
+    duration_ms: float = 0.0
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, Any]:
+        """输出稳定结构；Duration 只记录数值，不引入自由文本。"""
+
         return {
             "stage": self.stage,
             "status": self.status,
             "detail": self.detail,
+            "duration_ms": round(max(0.0, float(self.duration_ms)), 3),
         }
 
 
