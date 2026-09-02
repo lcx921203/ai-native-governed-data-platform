@@ -15,7 +15,7 @@ env:
 
 jobs:
   redis-admission-load-lab:
-    name: Redis admission load lab
+    name: Redis and Agent API load lab
     runs-on: ubuntu-latest
 
     services:
@@ -73,11 +73,20 @@ jobs:
             --environment-label github-hosted-lab \
             --output .runtime/slo/redis-admission-load-lab.json
 
+      - name: Run authenticated Agent API E2E load lab
+        run: |
+          python scripts/run_agent_api_e2e_load.py \
+            --profile lab \
+            --environment-label github-hosted-lab \
+            --output .runtime/slo/agent-api-e2e-load-lab.json
+
       - name: Upload load evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: agent-slo-calibration-lab-${{ github.run_id }}
-          path: .runtime/slo/redis-admission-load-lab.json
+          path: |
+            .runtime/slo/redis-admission-load-lab.json
+            .runtime/slo/agent-api-e2e-load-lab.json
           if-no-files-found: error
           retention-days: 30

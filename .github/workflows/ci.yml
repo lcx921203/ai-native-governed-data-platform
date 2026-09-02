@@ -182,6 +182,13 @@ jobs:
             --environment-label github-hosted-ci \
             --output .runtime/ci/agent-redis-load-smoke.json
 
+      - name: Run authenticated Agent API E2E load smoke
+        run: |
+          python scripts/run_agent_api_e2e_load.py \
+            --profile ci-smoke \
+            --environment-label github-hosted-ci \
+            --output .runtime/ci/agent-api-e2e-load-smoke.json
+
       - name: Upload Redis runtime and load evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -190,6 +197,7 @@ jobs:
           path: |
             .runtime/ci/redis-runtime-acceptance.xml
             .runtime/ci/agent-redis-load-smoke.json
+            .runtime/ci/agent-api-e2e-load-smoke.json
           if-no-files-found: error
           retention-days: 14
 

@@ -1,47 +1,81 @@
-version: 1
+version: 2
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
 principles:
   measured_sli_is_not_automatically_slo: true
   github_hosted_runner_is_not_production_slo_authority: true
+
   redis_admission_benchmark_is_not_end_to_end_agent_slo: true
+  authenticated_api_e2e_benchmark_is_not_production_slo: true
+  api_e2e_ci_uses_real_loopback_http: true
+  api_e2e_ci_uses_real_rs256_jwt_verification: true
+  api_e2e_ci_uses_real_request_context_mapping: true
+  api_e2e_ci_uses_real_redis_admission: true
+  api_e2e_ci_uses_real_governed_runtime: true
+  api_e2e_ci_uses_deterministic_renderer: true
+  api_e2e_ci_excludes_live_llm_and_external_query_engines: true
+
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
   benchmark_report_never_contains_redis_url_or_credentials: true
   benchmark_report_never_contains_bearer_token_or_prompt: true
+  benchmark_report_never_contains_jwks_private_key: true
+
   guardrail_promotion_requires_representative_staging_evidence: true
   guardrail_promotion_requires_repeated_runs: true
   guardrail_promotion_requires_human_review: true
 
 evidence:
   schema_version: 1
-  kind: REDIS_ADMISSION_LOAD_OBSERVATION
   calibration_status: LAB_OBSERVED_NOT_PROMOTED
+
+  kinds:
+    redis_admission:
+      kind: REDIS_ADMISSION_LOAD_OBSERVATION
+      scope: redis_admission_layer
+    authenticated_agent_api_e2e:
+      kind: AUTHENTICATED_AGENT_API_E2E_LOAD_OBSERVATION
+      scope: loopback_http_jwt_request_context_redis_runtime_renderer_validator
+
   required_metrics:
     - attempts
-    - admitted
+    - admitted_or_http_status_counts
     - rejection_counts
     - unexpected_error_count
-    - peak_in_flight
     - duration_seconds
     - attempts_per_second
-    - admitted_per_second
-    - admission_latency_ms_p50
-    - admission_latency_ms_p95
-    - admission_latency_ms_p99
-    - admission_latency_ms_max
-    - release_latency_ms_p95
+    - p50
+    - p95
+    - p99
+    - max
 
 profiles:
   ci_smoke:
-    purpose: correctness_under_bounded_load
+    purpose: redis_admission_correctness_under_bounded_load
     latency_gate: false
     production_slo_authority: false
+
+  api_e2e_ci_smoke:
+    purpose: authenticated_agent_api_correctness_under_bounded_load
+    latency_gate: false
+    production_slo_authority: false
+    live_llm: false
+    live_metricflow: false
+    live_trino: false
+
   lab:
-    purpose: repeatable_admission_layer_baseline
+    purpose: repeatable_redis_admission_layer_baseline
     latency_gate: false
     production_slo_authority: false
+
+  api_e2e_lab:
+    purpose: repeatable_authenticated_agent_api_baseline
+    latency_gate: false
+    production_slo_authority: false
+    live_llm: false
+    live_metricflow: false
+    live_trino: false
 
 promotion:
   current_production_slo_status: UNCALIBRATED
