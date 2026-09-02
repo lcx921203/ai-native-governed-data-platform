@@ -10,6 +10,10 @@ set -euo pipefail
 # 例如 MetricFlow compatibility 与 canonical dbt 的 dbt-core 版本不同，
 # Dagster + dagster-dbt 与 DataHub[dbt] 也要求互不兼容的 sqlglot 版本。
 # 强行合并会制造无法解析的“超级环境”，因此按 Runtime Boundary 独立锁定。
+#
+# agent-redis 是可选的生产共享流量 Backend：
+# - 不进入默认 `all`，避免 Local Agent Runtime 被迫安装 Redis Client；
+# - Real Redis Acceptance Job 会显式解析它，并从临时 hash lock 安装。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
@@ -37,6 +41,7 @@ components=(
 input_for() {
   case "$1" in
     agent) echo "requirements-agent.txt" ;;
+    agent-redis) echo "requirements-agent-redis.txt" ;;
     dagster) echo "requirements-dagster.txt" ;;
     datahub) echo "requirements-datahub.txt" ;;
     dbt) echo "requirements-dbt.txt" ;;

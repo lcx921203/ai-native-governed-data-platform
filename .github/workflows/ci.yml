@@ -111,6 +111,83 @@ jobs:
       - name: Run all source/static contracts
         run: pytest -q
 
+  redis-runtime-acceptance:
+    name: Real Redis runtime acceptance
+    runs-on: ubuntu-latest
+
+    # 这里启动真实 Redis Service，而不是 Fake Client。
+    # 固定 7.4.0 Alpine tag，避免使用 latest 造成不可控漂移。
+    services:
+      redis:
+        image: redis:7.4.0-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      AGENT_REDIS_RUNTIME_ACCEPTANCE: "true"
+      AGENT_API_TRAFFIC_BACKEND: redis
+      AGENT_API_REDIS_URL: redis://127.0.0.1:6379/0
+      AGENT_API_REDIS_NAMESPACE: commerce:agent:acceptance:${{ github.run_id }}
+      AGENT_API_REDIS_OPERATION_TIMEOUT_SECONDS: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Resolve or reuse CI dependency lock
+        shell: bash
+        run: |
+          if [[ -f requirements/locks/ci-py311-linux.lock.txt ]]; then
+            echo "CI_LOCK=requirements/locks/ci-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          else
+            LOCK_OUTPUT_DIR=.ci-locks ./scripts/lock_dependencies.sh ci
+            echo "CI_LOCK=.ci-locks/ci-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install base CI environment from hash lock
+        run: uv pip install --system -r "$CI_LOCK"
+
+      # Redis Client 是可选 Runtime Boundary，不强塞进 Local Agent Runtime。
+      # Acceptance Job 在线解析一个临时 hash lock，再从该 hash lock 安装。
+      - name: Resolve Redis runtime dependency hash lock
+        env:
+          LOCK_OUTPUT_DIR: .ci-locks
+        run: ./scripts/lock_dependencies.sh agent-redis
+
+      - name: Install Redis runtime client from hash lock
+        run: uv pip install --system -r .ci-locks/agent-redis-py311-linux.lock.txt
+
+      - name: Run real Redis runtime acceptance
+        run: |
+          mkdir -p .runtime/ci
+          pytest -q tests/runtime/test_agent_redis_runtime_acceptance.py \
+            --junitxml=.runtime/ci/redis-runtime-acceptance.xml
+
+      - name: Upload Redis runtime acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: redis-runtime-acceptance-${{ github.run_id }}
+          path: .runtime/ci/redis-runtime-acceptance.xml
+          if-no-files-found: error
+          retention-days: 14
+
   dependency-resolution:
     name: Resolve ${{ matrix.component }} lock
     runs-on: ubuntu-latest
