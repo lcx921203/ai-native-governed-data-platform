@@ -1,10 +1,7 @@
-version: 2
+version: 3
 contract: governed_agent_api_runtime_guard
 mode: local_or_redis_shared_admission_control
 
-# 业务逻辑：同一套 SLO Guardrail 可以落在 Local 或 Redis Shared Backend。
-# Runtime Authority：只有 Redis Backend 能代表多 Worker / 多 Pod 的共享 Rate/Concurrency 状态。
-# 工程边界：所有数值仍是 Initial Guardrail，不伪装成压测后的正式 SLO/SLA。
 principles:
   limits_are_initial_guardrails_not_measured_slo: true
   authenticated_identity_is_rate_limit_key: true
@@ -12,11 +9,9 @@ principles:
   tenant_and_global_concurrency_are_both_enforced: true
   no_unbounded_request_queue: true
   admission_rejection_is_429: true
-
   api_timeout_returns_without_cancelling_worker_thread: true
   timed_out_worker_keeps_concurrency_slot_until_actual_completion: true
   timeout_and_admission_events_are_audited: true
-
   local_backend_is_process_scoped_only: true
   multi_worker_or_multi_pod_requires_shared_backend: true
   redis_admission_is_atomic: true
@@ -26,7 +21,6 @@ principles:
   crashed_worker_lease_expires_automatically: true
   redis_backend_failure_fails_closed: true
   lost_heartbeat_withholds_answer: true
-
   redis_identity_keys_are_hashed: true
   redis_url_or_credentials_are_never_logged: true
   bearer_token_is_never_a_rate_limit_key: true
@@ -41,25 +35,18 @@ limits:
   request_timeout_seconds:
     env: AGENT_API_REQUEST_TIMEOUT_SECONDS
     default: 60
-
   global_concurrency:
     env: AGENT_API_GLOBAL_CONCURRENCY
     default: 16
-
   tenant_concurrency:
     env: AGENT_API_TENANT_CONCURRENCY
     default: 4
-
   subject_requests_per_minute:
     env: AGENT_API_SUBJECT_RPM
     default: 30
-
   tenant_requests_per_minute:
     env: AGENT_API_TENANT_RPM
     default: 120
-
-  # Local Backend 防止身份 Key 无界增长。
-  # Redis Backend 通过 Window TTL 自动回收 Rate Keys。
   max_tracked_identity_keys:
     env: AGENT_API_MAX_TRACKED_IDENTITIES
     default: 10000
@@ -71,47 +58,43 @@ rate_limit:
 distributed:
   redis:
     url_env: AGENT_API_REDIS_URL
-
     namespace_env: AGENT_API_REDIS_NAMESPACE
     default_namespace: commerce:agent:traffic:v2
-
-    # 所有 Lua KEYS 使用相同 Redis Cluster Hash Tag，
-    # 从而保持单 Slot 原子脚本语义。
     cluster_hash_tag: governed-agent-traffic
-
     lease_ttl_seconds:
       env: AGENT_API_REDIS_LEASE_TTL_SECONDS
       default: 90
-
     heartbeat_seconds:
       env: AGENT_API_REDIS_HEARTBEAT_SECONDS
       default: 20
-
     operation_timeout_seconds:
       env: AGENT_API_REDIS_OPERATION_TIMEOUT_SECONDS
       default: 1
-
     admission:
       primitive: lua_eval
       server_time: true
       rate_store: sorted_set
       concurrency_store: expiring_sorted_set_lease
       rate_is_consumed_only_after_all_checks_pass: true
-
     topology:
       v1: single_endpoint_or_managed_proxy
       cluster_key_schema_single_hash_slot: true
       automatic_cluster_topology_discovery: false
 
+calibration:
+  policy: agent/contracts/agent_slo_calibration_policy.yml
+  production_slo_status: UNCALIBRATED
+  ci_smoke_is_latency_gate: false
+  ci_smoke_is_production_slo_authority: false
+  current_defaults_source: INITIAL_GUARDRAIL
+
 deployment:
   default_worker_count: 1
   local_backend_max_workers: 1
-
   shared_backend_required_when:
     - uvicorn_workers_gt_1
     - kubernetes_replicas_gt_1
     - multiple_agent_api_processes_share_capacity_budget
-
   production_shared_backend:
     mode: redis
     optional_requirements: requirements-agent-redis.txt

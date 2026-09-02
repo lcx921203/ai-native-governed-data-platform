@@ -115,8 +115,6 @@ jobs:
     name: Real Redis runtime acceptance
     runs-on: ubuntu-latest
 
-    # 这里启动真实 Redis Service，而不是 Fake Client。
-    # 固定 7.4.0 Alpine tag，避免使用 latest 造成不可控漂移。
     services:
       redis:
         image: redis:7.4.0-alpine
@@ -163,8 +161,6 @@ jobs:
       - name: Install base CI environment from hash lock
         run: uv pip install --system -r "$CI_LOCK"
 
-      # Redis Client 是可选 Runtime Boundary，不强塞进 Local Agent Runtime。
-      # Acceptance Job 在线解析一个临时 hash lock，再从该 hash lock 安装。
       - name: Resolve Redis runtime dependency hash lock
         env:
           LOCK_OUTPUT_DIR: .ci-locks
@@ -179,12 +175,21 @@ jobs:
           pytest -q tests/runtime/test_agent_redis_runtime_acceptance.py \
             --junitxml=.runtime/ci/redis-runtime-acceptance.xml
 
-      - name: Upload Redis runtime acceptance evidence
+      - name: Run bounded Redis load smoke
+        run: |
+          python scripts/run_agent_redis_load.py \
+            --profile ci-smoke \
+            --environment-label github-hosted-ci \
+            --output .runtime/ci/agent-redis-load-smoke.json
+
+      - name: Upload Redis runtime and load evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: redis-runtime-acceptance-${{ github.run_id }}
-          path: .runtime/ci/redis-runtime-acceptance.xml
+          path: |
+            .runtime/ci/redis-runtime-acceptance.xml
+            .runtime/ci/agent-redis-load-smoke.json
           if-no-files-found: error
           retention-days: 14
 

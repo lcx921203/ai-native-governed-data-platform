@@ -1,0 +1,83 @@
+name: Agent SLO Calibration Lab
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.12.1"
+  AGENT_API_TRAFFIC_BACKEND: redis
+  AGENT_API_REDIS_URL: redis://127.0.0.1:6379/0
+  AGENT_API_REDIS_NAMESPACE: commerce:agent:slo-lab:${{ github.run_id }}
+
+jobs:
+  redis-admission-load-lab:
+    name: Redis admission load lab
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7.4.0-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Resolve or reuse Agent dependency lock
+        shell: bash
+        run: |
+          if [[ -f requirements/locks/agent-py311-linux.lock.txt ]]; then
+            echo "AGENT_LOCK=requirements/locks/agent-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          else
+            LOCK_OUTPUT_DIR=.ci-locks ./scripts/lock_dependencies.sh agent
+            echo "AGENT_LOCK=.ci-locks/agent-py311-linux.lock.txt" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Agent environment from hash lock
+        run: uv pip install --system -r "$AGENT_LOCK"
+
+      - name: Resolve Redis runtime dependency hash lock
+        env:
+          LOCK_OUTPUT_DIR: .ci-locks
+        run: ./scripts/lock_dependencies.sh agent-redis
+
+      - name: Install Redis runtime client from hash lock
+        run: uv pip install --system -r .ci-locks/agent-redis-py311-linux.lock.txt
+
+      - name: Run Redis admission load lab
+        run: |
+          mkdir -p .runtime/slo
+          python scripts/run_agent_redis_load.py \
+            --profile lab \
+            --environment-label github-hosted-lab \
+            --output .runtime/slo/redis-admission-load-lab.json
+
+      - name: Upload load evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: agent-slo-calibration-lab-${{ github.run_id }}
+          path: .runtime/slo/redis-admission-load-lab.json
+          if-no-files-found: error
+          retention-days: 30
