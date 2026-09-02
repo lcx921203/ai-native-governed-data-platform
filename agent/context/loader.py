@@ -36,7 +36,7 @@ from agent.skills import GovernedSkillRegistry, SkillResolutionStatus
 
 from .budget import GovernedContextBudget
 from .contracts import ContextPlan, ContextRequirement, ContextSource
-from .repository import GovernedContextRepository
+from .cached_repository import GovernedContextRepository
 from .runtime_contracts import (
     ContextBundle,
     ContextBundleStatus,
@@ -54,6 +54,12 @@ class GovernedContextLoader:
             (self.root / "agent/contracts/context_loader_policy.yml").read_text(encoding="utf-8")
         )
         self.repo = GovernedContextRepository(self.root)
+
+        # 性能边界：Git/dbt/MetricFlow 静态 Semantic Contract 在 Readiness 前预热。
+        # API 的 /health/ready 会构造 Runtime，因此请求到达前 Snapshot 已经完成。
+        # 如果 Snapshot 构建失败，Runtime 构造失败，Readiness 会 Fail Closed。
+        self.repo.warm_semantic_snapshot()
+
         self.skills = GovernedSkillRegistry(self.root)
         self.code = GovernedModelContextRepository(self.root)
         self.budget = GovernedContextBudget(self.root)

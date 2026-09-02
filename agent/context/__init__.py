@@ -1,11 +1,11 @@
 """Governed Agent Context Layer."""
 
 from .budget import GovernedContextBudget
+from .cached_repository import GovernedContextRepository
 from .contracts import ContextPlan, ContextRequirement, ContextSource
 from .expansion import GovernedProgressiveContextExpander
 from .loader import GovernedContextLoader
 from .planner import GovernedContextPlanner
-from .repository import GovernedContextRepository
 from .runtime_contracts import (
     ContextBundle,
     ContextBundleStatus,

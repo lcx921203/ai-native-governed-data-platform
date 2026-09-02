@@ -1,0 +1,52 @@
+version: 1
+contract: governed_semantic_context_repository_cache
+mode: process_scoped_immutable_snapshot
+
+# 业务逻辑：
+# dbt / MetricFlow / Git Governance Contract 在一次部署版本内是静态的。
+# 请求路径不应该重复读取和 YAML Parse 同一份 Source of Truth。
+principles:
+  source_of_truth_remains_dbt_metricflow_and_git: true
+  cache_does_not_create_second_semantic_truth: true
+
+  cache_scope_is_process: true
+  cache_is_shared_across_repository_instances: true
+  cache_is_read_only_by_contract: true
+  returned_payload_is_copy_isolated: true
+
+  semantic_snapshot_is_warmed_before_api_readiness: true
+  request_path_does_not_poll_source_files: true
+  contract_change_requires_new_deploy_or_process_restart: true
+  no_request_path_ttl_refresh: true
+
+  prompt_is_never_cached: true
+  answer_is_never_cached: true
+  tenant_or_subject_is_never_cached: true
+  jwt_or_bearer_token_is_never_cached: true
+  runtime_query_result_is_never_cached: true
+
+  first_snapshot_build_is_single_flight: true
+  snapshot_build_failure_fails_readiness: true
+
+cache:
+  max_repository_roots_per_process: 8
+
+cached_semantic_sources:
+  - metadata/datahub/governance/metric_registry.yml
+  - metadata/datahub/governance/metric_lifecycle.yml
+  - metadata/datahub/governance/glossary.yml
+  - dbt/mercaso_dbt/models/marts/commerce/_commerce_semantic.yml
+  - dbt/mercaso_dbt/models/metrics/*.yml
+
+cached_indexes:
+  - metric_registry
+  - metric_lifecycle
+  - glossary
+  - semantic_models
+  - metric_definitions
+  - metric_related_models
+  - metric_context
+
+invalidation:
+  production: deploy_or_process_restart
+  test_only_explicit_clear: clear_semantic_snapshot_process_cache
