@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
-"""运行 Agent Redis Admission Load Test，并生成可上传的 JSON Evidence。"""
+"""运行 Agent Redis Admission Load Test，并生成可上传的 JSON Evidence。
+
+支持直接执行：
+    python scripts/run_agent_redis_load.py ...
+
+Python 直接执行 scripts/*.py 时，默认只把 scripts/ 放进 sys.path，
+仓库根目录不会自动成为可导入路径。因此这里先显式绑定 Repo Root，
+再导入 acceptance.agent_slo。
+"""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
 from pathlib import Path
 
-from acceptance.agent_slo import run_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# 只加入当前脚本推导出的仓库根目录，不读取外部 PYTHONPATH。
+root_text = str(ROOT)
+if root_text not in sys.path:
+    sys.path.insert(0, root_text)
+
+from acceptance.agent_slo import run_profile
+
 
 def main() -> int:
+    """运行受治理 Load Profile；Correctness Under Load 失败时返回非 0。"""
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--profile",
