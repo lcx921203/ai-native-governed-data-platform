@@ -1,0 +1,60 @@
+version: 1
+contract: governed_jwks_verifier_cache
+mode: shared_public_keyset_cache_with_rotation_refresh
+
+principles:
+  bearer_token_is_never_cached: true
+  decoded_token_result_is_never_cached: true
+  public_jwk_set_only_is_cached: true
+
+  one_pyjwkclient_per_verifier_instance: true
+  verifier_instance_is_process_reused_by_agent_api: true
+  jwk_set_cache_has_finite_lifespan: true
+  signing_key_function_cache_is_disabled: true
+
+  jwks_is_prewarmed_before_serving: true
+  jwks_unavailable_fails_closed: true
+
+  unknown_kid_triggers_library_refresh: true
+  same_kid_invalid_signature_can_force_refresh: true
+  forced_refresh_is_single_retry_only: true
+  forced_refresh_has_cooldown: true
+  refresh_failure_never_disables_signature_verification: true
+
+  issuer_audience_exp_subject_remain_required: true
+  asymmetric_algorithm_allowlist_remains_required: true
+
+  jwks_url_is_not_exposed_in_public_auth_error: true
+  provider_error_text_is_not_exposed_in_public_auth_error: true
+
+defaults:
+  jwks_cache_lifespan_seconds: 300
+  jwks_http_timeout_seconds: 5
+  same_kid_signature_refresh_cooldown_seconds: 5
+  prewarm_jwks: true
+  cache_jwk_set: true
+  cache_keys: false
+
+bounds:
+  jwks_cache_lifespan_seconds:
+    min: 30
+    max: 3600
+  jwks_http_timeout_seconds:
+    min: 1
+    max: 30
+  same_kid_signature_refresh_cooldown_seconds:
+    min: 1
+    max: 60
+
+runtime:
+  implementation: mcp_server.auth.jwt.JWKSJWTVerifier
+  agent_api_instance_cache: agent.api.main.get_jwt_verifier
+  agent_api_readiness_constructs_verifier: true
+
+security:
+  pyjwt_minimum: "2.13"
+  token_claim_validation:
+    - exp
+    - sub
+    - iss
+    - aud
