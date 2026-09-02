@@ -151,6 +151,107 @@ class GovernedRunObserver:
         )
         return result
 
+    @staticmethod
+    def _safe_substage_timings(value: Any) -> tuple[tuple[str, float], ...]:
+        """读取内部子阶段 Timing，并拒绝空 Label / 负数。
+
+        ContextBundle / PlanExecution 已保证 Label 来自代码或受治理 ToolPlan；
+        这里仍只读取 `(name, duration_ms)`，不读取 Payload / Detail。
+        """
+
+        timings: list[tuple[str, float]] = []
+        for item in getattr(value, "substage_timings", ()) or ():
+            try:
+                name, duration_ms = item
+            except (TypeError, ValueError):
+                continue
+            name = str(name or "").strip()
+            if not name:
+                continue
+            timings.append(
+                (
+                    name,
+                    max(0.0, float(duration_ms or 0.0)),
+                )
+            )
+        return tuple(timings)
+
+    @classmethod
+    def _audit_stage_timings(
+        cls,
+        result: Any,
+    ) -> tuple[tuple[str, float], ...]:
+        """构造可加和的 Stage/Substage Timing。
+
+        关键语义：
+        - 普通 Stage 继续记录父级 duration；
+        - `context_loader` / `executor` 若存在内部 Timing，则用子阶段替换父级；
+        - 再补 `<parent>.unattributed = parent - sum(children)`；
+        - 因而 E2E Harness 可以继续直接求和，不会 Parent + Child 双计时。
+        """
+
+        context_children = cls._safe_substage_timings(
+            getattr(result, "context_bundle", None)
+        )
+        executor_children = cls._safe_substage_timings(
+            getattr(result, "execution", None)
+        )
+        child_map = {
+            "context_loader": context_children,
+            "executor": executor_children,
+        }
+
+        output: list[tuple[str, float]] = []
+        for stage in getattr(result, "stage_trace", ()) or ():
+            stage_name = str(
+                getattr(stage, "stage", "") or ""
+            ).strip()
+            if not stage_name:
+                continue
+
+            parent_ms = max(
+                0.0,
+                float(
+                    getattr(stage, "duration_ms", 0.0)
+                    or 0.0
+                ),
+            )
+            children = child_map.get(stage_name, ())
+            if not children:
+                output.append(
+                    (
+                        stage_name,
+                        parent_ms,
+                    )
+                )
+                continue
+
+            child_sum = 0.0
+            for child_name, duration_ms in children:
+                safe_duration = max(
+                    0.0,
+                    float(duration_ms),
+                )
+                output.append(
+                    (
+                        f"{stage_name}.{child_name}",
+                        safe_duration,
+                    )
+                )
+                child_sum += safe_duration
+
+            output.append(
+                (
+                    f"{stage_name}.unattributed",
+                    max(
+                        0.0,
+                        parent_ms - child_sum,
+                    ),
+                )
+            )
+
+        return tuple(output)
+
     def _audit_record(
         self,
         result: Any,
@@ -198,14 +299,7 @@ class GovernedRunObserver:
                 f"{getattr(stage, 'stage', '')}:{getattr(stage, 'status', '')}"
                 for stage in getattr(result, "stage_trace", ()) or ()
             ),
-            stage_timings=tuple(
-                (
-                    str(getattr(stage, "stage", "") or ""),
-                    max(0.0, float(getattr(stage, "duration_ms", 0.0) or 0.0)),
-                )
-                for stage in getattr(result, "stage_trace", ()) or ()
-                if str(getattr(stage, "stage", "") or "")
-            ),
+            stage_timings=self._audit_stage_timings(result),
             duration_ms=trace.cost.total_duration_ms,
             estimated_context_tokens=trace.cost.estimated_context_tokens,
             tool_result_count=trace.cost.tool_result_count,

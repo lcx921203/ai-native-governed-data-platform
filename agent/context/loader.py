@@ -14,13 +14,20 @@ Loader 不做第二次 Intent Classification，也不执行业务查询。
 - Runtime / Knowledge：只绑定后续 Tool handle，标记 EXECUTOR_OWNED；
 - Code：若只是 optional，初始阶段不加载；
 - Memory：当前未实现，Fail Closed。
+
+V2 Observability：
+- 只记录固定子阶段名称 + duration_ms；
+- 不记录 Metric ID / Dataset / Prompt / Payload；
+- 同名子阶段在一次 Load 内聚合，避免多 Metric 时把一次请求拆成多条样本；
+- Timing 随 ContextBundle 内部返回，避免在共享 Runtime 上保存 mutable last_timing。
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from time import perf_counter
+from typing import Any, Callable
 
 import yaml
 
@@ -55,15 +62,65 @@ class GovernedContextLoader:
     def _enum_value(value: Any) -> str:
         return str(getattr(value, "value", value))
 
+    @staticmethod
+    def _measure(
+        timings: list[tuple[str, float]],
+        name: str,
+        operation: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """执行一个 Loader 子操作并记录耗时。
+
+        `name` 必须是代码中固定的 bounded label，不能拼接用户输入、Metric ID 或路径。
+        """
+
+        started = perf_counter()
+        value = operation(*args, **kwargs)
+        timings.append(
+            (
+                name,
+                max(0.0, (perf_counter() - started) * 1000),
+            )
+        )
+        return value
+
+    @staticmethod
+    def _compact_timings(
+        timings: list[tuple[str, float]],
+    ) -> tuple[tuple[str, float], ...]:
+        """把一次 Load 内的同名子阶段求和，形成每请求唯一 Timing Label。"""
+
+        totals: dict[str, float] = {}
+        order: list[str] = []
+        for name, duration_ms in timings:
+            if name not in totals:
+                totals[name] = 0.0
+                order.append(name)
+            totals[name] += max(0.0, float(duration_ms))
+        return tuple(
+            (name, totals[name])
+            for name in order
+        )
+
     def load(self, route: Any, context_plan: ContextPlan) -> ContextBundle:
         """物化 required planning Context，并登记 optional / executor-owned Context。"""
 
-        mismatch = self._validate_route_binding(route, context_plan)
+        timings: list[tuple[str, float]] = []
+
+        mismatch = self._measure(
+            timings,
+            "route_binding",
+            self._validate_route_binding,
+            route,
+            context_plan,
+        )
         if mismatch:
             return ContextBundle(
                 context_plan=context_plan,
                 status=ContextBundleStatus.BLOCKED,
                 warnings=(mismatch,),
+                substage_timings=self._compact_timings(timings),
             )
 
         items: list[ContextItem] = []
@@ -85,13 +142,39 @@ class GovernedContextLoader:
                 continue
 
             if requirement.source is ContextSource.SEMANTIC:
-                items.extend(self._load_semantic(route, requirement))
+                items.extend(
+                    self._load_semantic(
+                        route,
+                        requirement,
+                        timings,
+                    )
+                )
             elif requirement.source is ContextSource.METADATA:
-                items.extend(self._load_metadata(route, requirement))
+                items.extend(
+                    self._load_metadata(
+                        route,
+                        requirement,
+                        timings,
+                    )
+                )
             elif requirement.source is ContextSource.SKILL:
-                items.append(self._load_skill(route, requirement))
+                items.append(
+                    self._load_skill(
+                        route,
+                        requirement,
+                        timings,
+                    )
+                )
             elif requirement.source in {ContextSource.RUNTIME, ContextSource.KNOWLEDGE}:
-                items.append(self._executor_owned(route, requirement))
+                items.append(
+                    self._measure(
+                        timings,
+                        "executor_owned_binding",
+                        self._executor_owned,
+                        route,
+                        requirement,
+                    )
+                )
             elif requirement.source is ContextSource.CODE:
                 # 当前策略不把 Code 配成 required；如果未来有人改 policy，
                 # 这里仍 Fail Closed，避免默认把代码塞入 Runtime Context。
@@ -119,7 +202,17 @@ class GovernedContextLoader:
                     )
                 )
 
-        return self._finalize(context_plan, tuple(items))
+        bundle = self._measure(
+            timings,
+            "finalize",
+            self._finalize,
+            context_plan,
+            tuple(items),
+        )
+        return replace(
+            bundle,
+            substage_timings=self._compact_timings(timings),
+        )
 
     def _validate_route_binding(self, route: Any, plan: ContextPlan) -> str | None:
         intent = self._enum_value(getattr(route, "intent", "UNKNOWN"))
@@ -137,8 +230,14 @@ class GovernedContextLoader:
         self,
         route: Any,
         requirement: ContextRequirement,
+        timings: list[tuple[str, float]],
     ) -> list[ContextItem]:
-        metrics = self._metric_targets(route)
+        metrics = self._measure(
+            timings,
+            "semantic.target_resolution",
+            self._metric_targets,
+            route,
+        )
         if not metrics:
             return [
                 ContextItem(
@@ -155,7 +254,12 @@ class GovernedContextLoader:
 
         items: list[ContextItem] = []
         for metric in metrics[: requirement.max_items]:
-            payload = self.repo.metric_context(metric)
+            payload = self._measure(
+                timings,
+                "semantic.repository_lookup",
+                self.repo.metric_context,
+                metric,
+            )
             if payload is None:
                 items.append(
                     ContextItem(
@@ -169,6 +273,12 @@ class GovernedContextLoader:
                 )
                 continue
 
+            estimated_tokens = self._measure(
+                timings,
+                "semantic.token_estimate",
+                self.budget.estimate,
+                payload,
+            )
             items.append(
                 ContextItem(
                     source=ContextSource.SEMANTIC,
@@ -178,7 +288,7 @@ class GovernedContextLoader:
                     payload=payload,
                     authority="dbt_metricflow",
                     evidence_mode="STATIC_GOVERNED_SEMANTIC",
-                    estimated_tokens=self.budget.estimate(payload),
+                    estimated_tokens=estimated_tokens,
                 )
             )
         return items
@@ -187,6 +297,7 @@ class GovernedContextLoader:
         self,
         route: Any,
         requirement: ContextRequirement,
+        timings: list[tuple[str, float]],
     ) -> list[ContextItem]:
         kind = str(getattr(route, "target_kind", "") or "")
         target = str(getattr(route, "target_id", "") or "")
@@ -213,19 +324,38 @@ class GovernedContextLoader:
             ]
 
         if kind == "dataset":
-            dataset = self.repo.dataset_context(target)
+            dataset = self._measure(
+                timings,
+                "metadata.repository_lookup",
+                self.repo.dataset_context,
+                target,
+            )
             if dataset is None:
                 return [self._metadata_missing(target, required=True)]
 
             payload: dict[str, Any] = {"dataset": dataset}
             if intent == "LINEAGE_QUERY":
-                direction = "downstream" if "downstream" in str(getattr(route, "question", "")).casefold() or "下游" in str(getattr(route, "question", "")) else "upstream"
-                payload["lineage"] = self.repo.static_lineage(
+                direction = (
+                    "downstream"
+                    if "downstream" in str(getattr(route, "question", "")).casefold()
+                    or "下游" in str(getattr(route, "question", ""))
+                    else "upstream"
+                )
+                payload["lineage"] = self._measure(
+                    timings,
+                    "metadata.lineage_lookup",
+                    self.repo.static_lineage,
                     target,
                     direction=direction,
                     max_hops=min(2, requirement.max_items),
                 )
 
+            estimated_tokens = self._measure(
+                timings,
+                "metadata.token_estimate",
+                self.budget.estimate,
+                payload,
+            )
             return [
                 ContextItem(
                     source=ContextSource.METADATA,
@@ -235,14 +365,26 @@ class GovernedContextLoader:
                     payload=payload,
                     authority="governed_metadata",
                     evidence_mode="STATIC_CONTRACT",
-                    estimated_tokens=self.budget.estimate(payload),
+                    estimated_tokens=estimated_tokens,
                 )
             ]
 
         if kind == "entity":
-            entity = self.repo.entity_context(target)
+            entity = self._measure(
+                timings,
+                "metadata.repository_lookup",
+                self.repo.entity_context,
+                target,
+            )
             if entity is None:
                 return [self._metadata_missing(target, required=True)]
+
+            estimated_tokens = self._measure(
+                timings,
+                "metadata.token_estimate",
+                self.budget.estimate,
+                entity,
+            )
             return [
                 ContextItem(
                     source=ContextSource.METADATA,
@@ -252,7 +394,7 @@ class GovernedContextLoader:
                     payload=entity,
                     authority="dbt_metricflow+governed_metadata",
                     evidence_mode="STATIC_CONTRACT",
-                    estimated_tokens=self.budget.estimate(entity),
+                    estimated_tokens=estimated_tokens,
                 )
             ]
 
@@ -271,8 +413,14 @@ class GovernedContextLoader:
         self,
         route: Any,
         requirement: ContextRequirement,
+        timings: list[tuple[str, float]],
     ) -> ContextItem:
-        resolution = self.skills.resolve(route)
+        resolution = self._measure(
+            timings,
+            "skill.resolve",
+            self.skills.resolve,
+            route,
+        )
         if (
             resolution.status is not SkillResolutionStatus.RESOLVED
             or resolution.skill is None
@@ -308,6 +456,12 @@ class GovernedContextLoader:
             "authority": dict(skill.authority),
             "source_path": skill.source_path,
         }
+        estimated_tokens = self._measure(
+            timings,
+            "skill.token_estimate",
+            self.budget.estimate,
+            payload,
+        )
         return ContextItem(
             source=ContextSource.SKILL,
             key=f"skill:{skill.skill_id}",
@@ -316,7 +470,7 @@ class GovernedContextLoader:
             payload=payload,
             authority="governed_skill_registry",
             evidence_mode="STATIC_SKILL_CONTRACT",
-            estimated_tokens=self.budget.estimate(payload),
+            estimated_tokens=estimated_tokens,
         )
 
     def _executor_owned(

@@ -83,10 +83,17 @@ class ToolPlan:
 
 @dataclass
 class PlanExecution:
+    """受治理 ToolPlan 的执行结果。
+
+    `substage_timings` 只供内部 Observability/Audit 使用，不进入 `to_dict()`，
+    避免把工具内部性能结构变成公共业务响应的一部分。
+    """
+
     plan: ToolPlan
     status: ExecutionStatus
     results: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    substage_timings: tuple[tuple[str, float], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {

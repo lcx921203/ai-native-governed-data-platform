@@ -75,11 +75,11 @@ def test_real_deterministic_runtime_records_stage_durations(monkeypatch):
     assert result.observability.cost.total_duration_ms + 1.0 >= measured_sum
 
 
-def test_runtime_audit_persists_only_structured_stage_name_and_duration(
+def test_runtime_audit_decomposes_context_loader_and_executor_without_double_count(
     monkeypatch,
     tmp_path,
 ):
-    """Audit Stage Timing 不得携带 Prompt、Answer 或 Stage Detail。"""
+    """Audit 用 Child + Residual 替换父阶段，避免 Parent/Child 双计时。"""
 
     audit_path = tmp_path / "audit.jsonl"
     monkeypatch.setenv("AGENT_AUDIT_MODE", "jsonl")
@@ -101,15 +101,39 @@ def test_runtime_audit_persists_only_structured_stage_name_and_duration(
     row = next(item for item in rows if item["event_type"] == "RUNTIME")
 
     assert row["stage_timings"]
-    assert {
+    stage_names = {
         item["stage"]
         for item in row["stage_timings"]
-    }.issuperset({"router", "context_loader", "executor", "renderer"})
+    }
+
+    assert {"router", "renderer"}.issubset(stage_names)
+    assert any(
+        name.startswith("context_loader.")
+        for name in stage_names
+    )
+    assert any(
+        name.startswith("executor.")
+        for name in stage_names
+    )
+
+    # 有 Substage 时父阶段不再重复写入 Timing；状态仍保留在 stage_statuses。
+    assert "context_loader" not in stage_names
+    assert "executor" not in stage_names
+    assert "context_loader:READY" in row["stage_statuses"]
+    assert "executor:COMPLETE" in row["stage_statuses"]
+
     assert all(
         set(item) == {"stage", "duration_ms"}
         and item["duration_ms"] >= 0
         for item in row["stage_timings"]
     )
+
+    # Child + Residual 应保持可加和，不得因为分解而超过 Runtime Total。
+    timing_sum = sum(
+        item["duration_ms"]
+        for item in row["stage_timings"]
+    )
+    assert row["duration_ms"] + 2.0 >= timing_sum
 
     serialized = json.dumps(row, ensure_ascii=False)
     assert QUESTION not in serialized
@@ -118,7 +142,7 @@ def test_runtime_audit_persists_only_structured_stage_name_and_duration(
 
 
 def test_e2e_load_correlates_runtime_audit_without_uploading_raw_trace_or_audit():
-    """E2E Evidence 只保留聚合 Stage Percentile 和 Coverage。"""
+    """E2E Evidence 只保留聚合 Stage/Substage Percentile 和 Coverage。"""
 
     text = (
         ROOT
@@ -138,7 +162,7 @@ def test_e2e_load_correlates_runtime_audit_without_uploading_raw_trace_or_audit(
 
 
 def test_stage_breakdown_policy_remains_lab_evidence_not_production_slo():
-    """阶段拆解帮助定位瓶颈，但不能自动晋升生产 SLO。"""
+    """子阶段拆解帮助定位瓶颈，但不能自动晋升生产 SLO。"""
 
     policy = yaml.safe_load(
         (
@@ -147,10 +171,28 @@ def test_stage_breakdown_policy_remains_lab_evidence_not_production_slo():
         ).read_text(encoding="utf-8")
     )
 
-    assert policy["version"] == 3
+    assert policy["version"] == 4
     assert (
         policy["principles"][
             "api_e2e_records_internal_runtime_stage_latency"
+        ]
+        is True
+    )
+    assert (
+        policy["principles"][
+            "context_loader_substage_latency_is_recorded"
+        ]
+        is True
+    )
+    assert (
+        policy["principles"][
+            "executor_substage_latency_is_recorded"
+        ]
+        is True
+    )
+    assert (
+        policy["principles"][
+            "decomposed_parent_is_replaced_by_children_plus_residual"
         ]
         is True
     )

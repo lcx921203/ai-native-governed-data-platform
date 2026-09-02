@@ -76,6 +76,11 @@ class ContextBundle:
     `EXECUTOR_OWNED` 不代表缺失：
     它表示该 Context 必须由后续受治理 Tool 在运行时获取，
     不能为了“上下文完整”而提前做重复查询。
+
+    `substage_timings` 只供内部 Observability/Audit 使用：
+    - 只包含固定子阶段名称 + duration_ms；
+    - 不进入 `to_dict()`，避免随着 Runtime Result 暴露到业务响应；
+    - 默认空值保持旧调用方兼容。
     """
 
     context_plan: ContextPlan
@@ -84,6 +89,7 @@ class ContextBundle:
     estimated_tokens: int = 0
     expansion_count: int = 0
     warnings: tuple[str, ...] = ()
+    substage_timings: tuple[tuple[str, float], ...] = ()
 
     def items_for(self, source: ContextSource) -> tuple[ContextItem, ...]:
         return tuple(item for item in self.items if item.source is source)

@@ -1,4 +1,4 @@
-version: 2
+version: 3
 contract: governed_agent_runtime_audit
 mode: append_only_structured_audit
 
@@ -15,10 +15,18 @@ principles:
   trace_id_is_primary_correlation_key: true
   cost_and_usage_are_recorded: true
 
-  # Stage Timing 只保存有限 Stage Name + duration_ms，禁止写入 Stage Detail。
+  # V3：Stage Timing 支持固定层级子阶段，但仍只保存 Name + duration_ms。
   structured_stage_timing_is_recorded: true
+  hierarchical_substage_timing_is_recorded: true
+  context_loader_substages_are_internal_only: true
+  executor_substages_are_internal_only: true
+  substage_name_never_contains_prompt_or_payload: true
   stage_timing_detail_is_not_persisted: true
   stage_timing_is_internal_observability_not_public_api: true
+
+  # Parent 被分解成 Child + unattributed，避免 E2E Percentile 计算时 Parent/Child 双计时。
+  decomposed_parent_is_not_double_counted: true
+  decomposed_stage_has_unattributed_residual: true
 
   production_audit_failure_fails_closed: true
   library_default_is_disabled_for_tests_and_local_tools: true
