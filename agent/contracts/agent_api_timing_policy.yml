@@ -1,0 +1,41 @@
+version: 1
+contract: governed_agent_api_phase_timing
+mode: internal_diagnostic_audit
+
+principles:
+  timing_is_internal_observability_not_public_api: true
+  public_response_has_no_timing_header_or_body: true
+
+  fixed_phase_names_only: true
+  prompt_answer_payload_are_never_recorded: true
+  bearer_token_and_jwt_claims_are_never_recorded: true
+  redis_url_and_credentials_are_never_recorded: true
+
+  detailed_timing_default_is_disabled: true
+  timing_requires_core_audit_store_enabled: true
+  timing_write_happens_after_http_response_send: true
+  timing_write_failure_does_not_rewrite_sent_response: true
+
+  runtime_core_duration_comes_from_runtime_observability: true
+  runtime_post_observer_audit_is_measured_outside_runtime_core: true
+  api_server_unattributed_is_residual_not_single_component: true
+  client_after_server_is_residual_not_single_component: true
+
+runtime:
+  mode_env: AGENT_API_PHASE_TIMING_MODE
+  allowed_modes: [disabled, audit]
+  default_mode: disabled
+
+phases:
+  - auth.jwt_verification
+  - auth.request_context_mapping
+  - admission.shared_guard
+  - threadpool.queue_wait
+  - runtime.post_observer_audit
+  - lease.release
+  - endpoint.response_build
+
+calibration:
+  enabled_mode: audit
+  evidence_only: true
+  production_slo_authority: false

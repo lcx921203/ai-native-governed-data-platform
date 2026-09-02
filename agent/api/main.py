@@ -30,6 +30,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Request,
     Response,
     Security,
 )
@@ -65,6 +66,11 @@ from .traffic import (
     TrafficGuardConfigurationError,
     TrafficGuardUnavailable,
     build_traffic_guard_from_env,
+)
+from .timing import (
+    GovernedAPITimingMiddleware,
+    bind_api_request_context,
+    record_api_phase,
 )
 
 
@@ -170,6 +176,7 @@ def get_jwt_verifier() -> JWKSJWTVerifier:
 
 
 def get_request_context(
+    request: Request,
     credentials: (
         HTTPAuthorizationCredentials
         | None
@@ -181,7 +188,7 @@ def get_request_context(
         get_identity_mapper
     ),
 ) -> RequestContext:
-    """验证 Bearer JWT，并只把最小受控身份信息下传给 Agent。"""
+    """验证 Bearer JWT，并记录不含 Token/Claims 的认证阶段耗时。"""
 
     if (
         credentials is None
@@ -198,17 +205,12 @@ def get_request_context(
             },
         )
 
+    verify_started = perf_counter()
     try:
         verified = verifier.verify(
             credentials.credentials
         )
-        return mapper.map(
-            verified
-        )
-    except (
-        JWTVerificationError,
-        AgentAPIIdentityError,
-    ):
+    except JWTVerificationError:
         raise HTTPException(
             status_code=401,
             detail=(
@@ -218,6 +220,40 @@ def get_request_context(
                 "WWW-Authenticate": "Bearer"
             },
         ) from None
+    finally:
+        record_api_phase(
+            request,
+            "auth.jwt_verification",
+            (perf_counter() - verify_started) * 1000,
+        )
+
+    mapping_started = perf_counter()
+    try:
+        request_context = mapper.map(
+            verified
+        )
+    except AgentAPIIdentityError:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Invalid bearer token or identity claims"
+            ),
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        ) from None
+    finally:
+        record_api_phase(
+            request,
+            "auth.request_context_mapping",
+            (perf_counter() - mapping_started) * 1000,
+        )
+
+    bind_api_request_context(
+        request,
+        request_context,
+    )
+    return request_context
 
 
 def _authorization_blocked(
@@ -340,6 +376,64 @@ def _release_when_task_finishes(
     )
 
 
+def _run_runtime_with_api_timing(
+    runtime,
+    question: str,
+    request_context: RequestContext,
+    scheduled_at: float,
+):
+    """在线程池执行 Runtime，并拆出 Queue 与 Observer/Audit 的外部耗时。"""
+
+    worker_started = perf_counter()
+    queue_wait_ms = max(
+        0.0,
+        (worker_started - scheduled_at) * 1000,
+    )
+
+    result = runtime.run(
+        question,
+        request_context,
+    )
+    worker_wall_ms = max(
+        0.0,
+        (perf_counter() - worker_started) * 1000,
+    )
+
+    observability = getattr(
+        result,
+        "observability",
+        None,
+    )
+    cost = getattr(
+        observability,
+        "cost",
+        None,
+    )
+    runtime_core_ms = max(
+        0.0,
+        float(
+            getattr(
+                cost,
+                "total_duration_ms",
+                0.0,
+            )
+            or 0.0
+        ),
+    )
+
+    # GovernedAgentRuntime 在 Core Timer 结束后才执行 Observer.attach；
+    # 因此这里会捕获 Cost Aggregation + Runtime Audit JSONL/fsync 等后置成本。
+    post_observer_audit_ms = max(
+        0.0,
+        worker_wall_ms - runtime_core_ms,
+    )
+    return (
+        result,
+        queue_wait_ms,
+        post_observer_audit_ms,
+    )
+
+
 def create_app() -> FastAPI:
     """创建默认关闭交互式文档的生产 Agent API。"""
 
@@ -355,6 +449,13 @@ def create_app() -> FastAPI:
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
+    )
+
+    # 详细 Phase Timing 默认关闭；SLO Calibration 通过受治理 Env 显式开启。
+    # Pure ASGI Middleware 不向 Public Response 注入任何 Timing 字段。
+    app.add_middleware(
+        GovernedAPITimingMiddleware,
+        project_root=ROOT,
     )
 
     @app.exception_handler(
@@ -421,6 +522,7 @@ def create_app() -> FastAPI:
     async def query_agent(
         payload: AgentQueryRequest,
         response: Response,
+        request: Request,
         request_context: RequestContext = Depends(
             get_request_context
         ),
@@ -437,12 +539,23 @@ def create_app() -> FastAPI:
         """在可信身份、共享 Admission、Concurrency Lease 与 Timeout 下执行 Runtime。"""
 
         request_started = perf_counter()
+        admission_started = perf_counter()
 
         try:
             lease = await traffic_guard.acquire(
                 request_context
             )
+            record_api_phase(
+                request,
+                "admission.shared_guard",
+                (perf_counter() - admission_started) * 1000,
+            )
         except AdmissionRejected as rejected:
+            record_api_phase(
+                request,
+                "admission.shared_guard",
+                (perf_counter() - admission_started) * 1000,
+            )
             trace_id = str(
                 uuid4()
             )
@@ -476,6 +589,11 @@ def create_app() -> FastAPI:
                 },
             ) from None
         except TrafficGuardUnavailable:
+            record_api_phase(
+                request,
+                "admission.shared_guard",
+                (perf_counter() - admission_started) * 1000,
+            )
             trace_id = str(
                 uuid4()
             )
@@ -510,22 +628,39 @@ def create_app() -> FastAPI:
         # shield(task) 的关键作用：
         # API 可以先 504，但 Python Worker Thread 不会被伪装成已经终止。
         # Timeout Path 不立即 Release Lease；而是等 Worker 真结束后再释放。
+        scheduled_at = perf_counter()
         task = asyncio.create_task(
             run_in_threadpool(
-                runtime.run,
+                _run_runtime_with_api_timing,
+                runtime,
                 payload.question,
                 request_context,
+                scheduled_at,
             )
         )
 
         try:
-            result = await asyncio.wait_for(
+            (
+                result,
+                queue_wait_ms,
+                post_observer_audit_ms,
+            ) = await asyncio.wait_for(
                 asyncio.shield(
                     task
                 ),
                 timeout=(
                     traffic_guard.request_timeout_seconds
                 ),
+            )
+            record_api_phase(
+                request,
+                "threadpool.queue_wait",
+                queue_wait_ms,
+            )
+            record_api_phase(
+                request,
+                "runtime.post_observer_audit",
+                post_observer_audit_ms,
             )
         except asyncio.TimeoutError:
             task.add_done_callback(
@@ -641,8 +776,14 @@ def create_app() -> FastAPI:
                 },
             )
 
+        release_started = perf_counter()
         await _safe_release_lease(
             lease
+        )
+        record_api_phase(
+            request,
+            "lease.release",
+            (perf_counter() - release_started) * 1000,
         )
 
         trace_id = _trace_id(
@@ -710,7 +851,8 @@ def create_app() -> FastAPI:
                 ),
             )
 
-        return AgentQueryResponse(
+        response_build_started = perf_counter()
+        public_response = AgentQueryResponse(
             status=status,
             answer=str(
                 getattr(
@@ -729,6 +871,12 @@ def create_app() -> FastAPI:
             ),
             trace_id=trace_id,
         )
+        record_api_phase(
+            request,
+            "endpoint.response_build",
+            (perf_counter() - response_build_started) * 1000,
+        )
+        return public_response
 
     return app
 

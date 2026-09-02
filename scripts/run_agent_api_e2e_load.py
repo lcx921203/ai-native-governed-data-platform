@@ -64,16 +64,38 @@ def main() -> int:
             if ranked
             else "none"
         )
+
+        api_phase_map = breakdown["api_phase_latency_ms"]
+        api_ranked = sorted(
+            (
+                (phase, values.get("p95"))
+                for phase, values in api_phase_map.items()
+                if values.get("p95") is not None
+            ),
+            key=lambda pair: float(pair[1]),
+            reverse=True,
+        )
+        top_api_phase = (
+            f"{api_ranked[0][0]}:{api_ranked[0][1]}ms"
+            if api_ranked
+            else "none"
+        )
+
         print(
             f"- {item['scenario']['name']}: "
             f"attempts={result['attempts']} "
             f"status={result['status_counts']} "
             f"rejections={result['rejection_counts']} "
             f"http_p95_ms={latency['p95']} "
+            f"server_p95_ms={breakdown['api_server_total_latency_ms']['p95']} "
             f"runtime_p95_ms={breakdown['runtime_total_latency_ms']['p95']} "
             f"outside_runtime_p95_ms={breakdown['http_outside_runtime_latency_ms']['p95']} "
+            f"top_api_phase={top_api_phase} "
+            f"server_unattributed_p95_ms={breakdown['api_server_unattributed_latency_ms']['p95']} "
+            f"client_residual_p95_ms={breakdown['client_after_server_residual_latency_ms']['p95']} "
             f"top_runtime_stage={top_stage} "
             f"stage_coverage={breakdown['stage_timing_coverage']} "
+            f"api_timing_coverage={breakdown['api_timing_coverage']} "
             f"correctness={result['correctness_pass']}"
         )
 

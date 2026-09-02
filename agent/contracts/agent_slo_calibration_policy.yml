@@ -1,4 +1,4 @@
-version: 4
+version: 5
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
@@ -31,6 +31,15 @@ principles:
   hierarchical_substage_labels_are_bounded: true
   substage_latency_is_diagnostic_not_latency_gate: true
 
+  # V5：拆 HTTP Outside Runtime，区分认证、Admission、线程调度、Runtime 后置 Audit 与 Server Residual。
+  api_outside_runtime_phase_latency_is_recorded: true
+  api_server_total_comes_from_pure_asgi_middleware: true
+  api_timing_audit_is_written_after_response_send: true
+  runtime_post_observer_audit_is_explicit_phase: true
+  api_server_unattributed_is_residual_not_single_component: true
+  client_after_server_is_residual_not_single_component: true
+  api_phase_timing_is_internal_only: true
+
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
   benchmark_report_never_contains_redis_url_or_credentials: true
@@ -43,7 +52,7 @@ principles:
   guardrail_promotion_requires_human_review: true
 
 evidence:
-  schema_version: 2
+  schema_version: 3
   calibration_status: LAB_OBSERVED_NOT_PROMOTED
 
   kinds:
@@ -68,7 +77,12 @@ evidence:
     - executor_substage_p50_p95_p99_max
     - http_outside_runtime_p50_p95_p99_max
     - runtime_unattributed_p50_p95_p99_max
+    - api_server_total_p50_p95_p99_max
+    - api_phase_p50_p95_p99_max
+    - api_server_unattributed_p50_p95_p99_max
+    - client_after_server_residual_p50_p95_p99_max
     - stage_timing_coverage
+    - api_timing_coverage
 
 profiles:
   ci_smoke:
@@ -77,13 +91,14 @@ profiles:
     production_slo_authority: false
 
   api_e2e_ci_smoke:
-    purpose: authenticated_agent_api_correctness_and_substage_breakdown_under_bounded_load
+    purpose: authenticated_agent_api_correctness_and_outside_runtime_breakdown_under_bounded_load
     latency_gate: false
     production_slo_authority: false
     live_llm: false
     live_metricflow: false
     live_trino: false
     audit_mode: jsonl_fail_closed
+    api_phase_timing_mode: audit
 
   lab:
     purpose: repeatable_redis_admission_layer_baseline
@@ -91,13 +106,14 @@ profiles:
     production_slo_authority: false
 
   api_e2e_lab:
-    purpose: repeatable_authenticated_agent_api_substage_breakdown_baseline
+    purpose: repeatable_authenticated_agent_api_outside_runtime_breakdown_baseline
     latency_gate: false
     production_slo_authority: false
     live_llm: false
     live_metricflow: false
     live_trino: false
     audit_mode: jsonl_fail_closed
+    api_phase_timing_mode: audit
 
 promotion:
   current_production_slo_status: UNCALIBRATED

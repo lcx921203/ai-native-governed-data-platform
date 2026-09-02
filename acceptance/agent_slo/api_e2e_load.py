@@ -378,6 +378,7 @@ def _server_env(
             "AGENT_AUDIT_MODE": "jsonl",
             "AGENT_AUDIT_PATH": str(audit_path),
             "AGENT_AUDIT_FAILURE_MODE": "fail_closed",
+            "AGENT_API_PHASE_TIMING_MODE": "audit",
         }
     )
 
@@ -503,17 +504,57 @@ def _latency(values: list[float]) -> dict[str, float | int | None]:
     }
 
 
+
+def _wait_for_audit_event_count(
+    audit_path: Path,
+    *,
+    event_type: str,
+    expected: int,
+    timeout_seconds: float = 3.0,
+) -> None:
+    """等待 Response-send 后的异步 Timing Audit 完成，避免关停 Uvicorn 时产生覆盖率竞态。"""
+
+    if expected <= 0:
+        return
+
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        observed = 0
+        if audit_path.exists():
+            for line in audit_path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if str(row.get("event_type") or "") == event_type:
+                    observed += 1
+        if observed >= expected:
+            return
+        time.sleep(0.02)
+
+    raise RuntimeError(
+        f"Timed out waiting for {event_type} audit records: "
+        f"expected={expected}."
+    )
+
 def _runtime_stage_breakdown(
     audit_path: Path,
-    successful_samples: list[tuple[str, float]],
+    trace_samples: list[tuple[str, float, int]],
 ) -> dict[str, object]:
-    """按 Trace ID 把 HTTP 200 与内部 Runtime Audit 关联，并聚合 Stage Percentile。
+    """关联 Client HTTP、API_TIMING 与 Runtime Audit，并聚合多层 Percentile。
 
-    Raw Audit 只在临时目录中存在。最终 Evidence 只保留聚合统计，不保存 Trace ID、
-    Tenant、Subject、Prompt、Answer 或 Stage Detail。
+    ``trace_samples`` 只在当前进程内保存 ``trace_id``；最终 Evidence 只输出聚合值。
+    API_TIMING Record 由纯 ASGI Middleware 在 Response Body 发送完成后写入，因此：
+    - ``api_server_total`` 覆盖 FastAPI/ASGI Server 端完整请求生命周期；
+    - Timing Audit 自己的 fsync 不计入 ``api_server_total``；
+    - ``client_after_server`` 是 Client HTTP Total - Server Total 的残差，主要表示
+      loopback/client receive/clock-boundary 开销，不应解释成单一网络组件。
     """
 
     runtime_rows: dict[str, dict] = {}
+    api_rows: dict[str, dict] = {}
     if audit_path.exists():
         for line in audit_path.read_text(encoding="utf-8").splitlines():
             if not line.strip():
@@ -522,25 +563,48 @@ def _runtime_stage_breakdown(
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if str(row.get("event_type") or "RUNTIME") != "RUNTIME":
-                continue
+
             trace_id = str(row.get("trace_id") or "")
-            if trace_id:
+            if not trace_id:
+                continue
+
+            event_type = str(row.get("event_type") or "RUNTIME")
+            if event_type == "RUNTIME":
                 runtime_rows[trace_id] = row
+            elif event_type == "API_TIMING":
+                api_rows[trace_id] = row
+
+    successful_samples = [
+        (trace_id, http_total_ms)
+        for trace_id, http_total_ms, status
+        in trace_samples
+        if status == 200
+    ]
 
     runtime_total_values: list[float] = []
     outside_runtime_values: list[float] = []
     runtime_unattributed_values: list[float] = []
-    stage_values: defaultdict[str, list[float]] = defaultdict(list)
-    matched = 0
+    runtime_stage_values: defaultdict[str, list[float]] = defaultdict(list)
 
+    api_server_total_values: list[float] = []
+    api_server_unattributed_values: list[float] = []
+    client_after_server_values: list[float] = []
+    api_phase_values: defaultdict[str, list[float]] = defaultdict(list)
+
+    matched_runtime = 0
+    matched_api = 0
+
+    # Runtime Breakdown 仍只对 HTTP 200 有意义。
     for trace_id, http_total_ms in successful_samples:
         row = runtime_rows.get(trace_id)
         if row is None:
             continue
 
-        matched += 1
-        runtime_total_ms = max(0.0, float(row.get("duration_ms") or 0.0))
+        matched_runtime += 1
+        runtime_total_ms = max(
+            0.0,
+            float(row.get("duration_ms") or 0.0),
+        )
         runtime_total_values.append(runtime_total_ms)
         outside_runtime_values.append(
             max(0.0, float(http_total_ms) - runtime_total_ms)
@@ -551,45 +615,128 @@ def _runtime_stage_breakdown(
             stage = str(item.get("stage") or "").strip()
             if not stage:
                 continue
-            duration_ms = max(0.0, float(item.get("duration_ms") or 0.0))
-            stage_values[stage].append(duration_ms)
+            duration_ms = max(
+                0.0,
+                float(item.get("duration_ms") or 0.0),
+            )
+            runtime_stage_values[stage].append(duration_ms)
             stage_sum_ms += duration_ms
 
         runtime_unattributed_values.append(
             max(0.0, runtime_total_ms - stage_sum_ms)
         )
 
-    expected = len(successful_samples)
-    coverage = (
+    # API Timing 覆盖 HTTP 200 与带 Trace ID 的 429。
+    for trace_id, http_total_ms, status in trace_samples:
+        row = api_rows.get(trace_id)
+        if row is None:
+            continue
+
+        matched_api += 1
+        server_total_ms = max(
+            0.0,
+            float(row.get("duration_ms") or 0.0),
+        )
+        api_server_total_values.append(server_total_ms)
+        client_after_server_values.append(
+            max(0.0, float(http_total_ms) - server_total_ms)
+        )
+
+        phase_sum_ms = 0.0
+        for item in row.get("stage_timings") or []:
+            phase = str(item.get("stage") or "").strip()
+            if not phase:
+                continue
+            duration_ms = max(
+                0.0,
+                float(item.get("duration_ms") or 0.0),
+            )
+            api_phase_values[phase].append(duration_ms)
+            phase_sum_ms += duration_ms
+
+        runtime_total_ms = 0.0
+        if status == 200:
+            runtime_row = runtime_rows.get(trace_id)
+            if runtime_row is not None:
+                runtime_total_ms = max(
+                    0.0,
+                    float(runtime_row.get("duration_ms") or 0.0),
+                )
+
+        # API_TIMING phases 全部属于 Runtime Core 外部；再扣除 Runtime Core，
+        # 剩余部分主要是 FastAPI dependency orchestration / serialization / ASGI overhead。
+        api_server_unattributed_values.append(
+            max(
+                0.0,
+                server_total_ms
+                - runtime_total_ms
+                - phase_sum_ms,
+            )
+        )
+
+    expected_runtime = len(successful_samples)
+    runtime_coverage = (
         1.0
-        if expected == 0
-        else round(matched / expected, 6)
+        if expected_runtime == 0
+        else round(
+            matched_runtime / expected_runtime,
+            6,
+        )
+    )
+
+    expected_api = len(trace_samples)
+    api_coverage = (
+        1.0
+        if expected_api == 0
+        else round(
+            matched_api / expected_api,
+            6,
+        )
     )
 
     return {
-        "expected_runtime_records": expected,
-        "matched_runtime_records": matched,
-        "stage_timing_coverage": coverage,
+        "expected_runtime_records": expected_runtime,
+        "matched_runtime_records": matched_runtime,
+        "stage_timing_coverage": runtime_coverage,
+        "expected_api_timing_records": expected_api,
+        "matched_api_timing_records": matched_api,
+        "api_timing_coverage": api_coverage,
         "runtime_total_latency_ms": _latency(runtime_total_values),
         "http_outside_runtime_latency_ms": _latency(outside_runtime_values),
         "runtime_unattributed_latency_ms": _latency(runtime_unattributed_values),
         "runtime_stage_latency_ms": {
             stage: _latency(values)
-            for stage, values in sorted(stage_values.items())
+            for stage, values in sorted(runtime_stage_values.items())
         },
+        "api_server_total_latency_ms": _latency(api_server_total_values),
+        "api_phase_latency_ms": {
+            phase: _latency(values)
+            for phase, values in sorted(api_phase_values.items())
+        },
+        "api_server_unattributed_latency_ms": _latency(
+            api_server_unattributed_values
+        ),
+        "client_after_server_residual_latency_ms": _latency(
+            client_after_server_values
+        ),
         "residual_semantics": {
             "http_outside_runtime": (
-                "HTTP total minus measured GovernedAgentRuntime duration; includes JWT/JWKS, "
-                "RequestContext mapping, Redis admission, threadpool scheduling, audit persistence, "
-                "lease release, FastAPI serialization, and loopback transport."
+                "Client HTTP total minus measured GovernedAgentRuntime Core duration."
             ),
             "runtime_unattributed": (
-                "Runtime total minus measured stage calls; includes orchestration/context-manager/"
-                "observer preparation overhead not assigned to one governed stage."
+                "Runtime Core total minus measured governed stage calls."
+            ),
+            "api_server_unattributed": (
+                "ASGI server total minus Runtime Core and measured API phases; includes FastAPI "
+                "dependency orchestration, response validation/serialization, and other bounded "
+                "server overhead not assigned to one phase."
+            ),
+            "client_after_server": (
+                "Client HTTP total minus ASGI server total; loopback/client receive/clock-boundary "
+                "residual, not a single network component latency."
             ),
         },
     }
-
 
 def _run_scenario(
     project_root: Path,
@@ -653,7 +800,7 @@ def _run_scenario(
             status_counts: Counter[int] = Counter()
             code_counts: Counter[str] = Counter()
             latencies: list[float] = []
-            successful_samples: list[tuple[str, float]] = []
+            trace_samples: list[tuple[str, float, int]] = []
             contract_failures = 0
             unexpected_errors: Counter[str] = Counter()
 
@@ -699,9 +846,12 @@ def _run_scenario(
                     if not contract_ok:
                         contract_failures += 1
 
-                    if status == 200 and trace_id:
-                        successful_samples.append((trace_id, elapsed_ms))
-                    elif status == 429:
+                    if trace_id and status in {200, 429}:
+                        trace_samples.append(
+                            (trace_id, elapsed_ms, status)
+                        )
+
+                    if status == 429:
                         detail = payload.get("detail") or {}
                         code_counts[str(detail.get("code") or "UNKNOWN_429")] += 1
                     elif status != 200:
@@ -713,7 +863,7 @@ def _run_scenario(
                 "status_counts": status_counts,
                 "code_counts": code_counts,
                 "latencies": latencies,
-                "successful_samples": successful_samples,
+                "trace_samples": trace_samples,
                 "contract_failures": contract_failures,
                 "unexpected_errors": unexpected_errors,
             }
@@ -740,6 +890,17 @@ def _run_scenario(
                 0.000001,
                 perf_counter() - started,
             )
+
+            expected_api_timing_records = sum(
+                int(item["status_counts"].get(200, 0))
+                + int(item["status_counts"].get(429, 0))
+                for item in worker_results
+            )
+            _wait_for_audit_event_count(
+                audit_path,
+                event_type="API_TIMING",
+                expected=expected_api_timing_records,
+            )
         finally:
             _stop_agent_api(process)
 
@@ -747,7 +908,7 @@ def _run_scenario(
         code_counts: Counter[str] = Counter()
         unexpected_errors: Counter[str] = Counter()
         latencies: list[float] = []
-        successful_samples: list[tuple[str, float]] = []
+        trace_samples: list[tuple[str, float, int]] = []
         contract_failures = 0
 
         for item in worker_results:
@@ -755,12 +916,12 @@ def _run_scenario(
             code_counts.update(item["code_counts"])
             unexpected_errors.update(item["unexpected_errors"])
             latencies.extend(item["latencies"])
-            successful_samples.extend(item["successful_samples"])
+            trace_samples.extend(item["trace_samples"])
             contract_failures += int(item["contract_failures"])
 
         stage_breakdown = _runtime_stage_breakdown(
             audit_path,
-            successful_samples,
+            trace_samples,
         )
 
         observed = sum(status_counts.values()) + sum(unexpected_errors.values())
@@ -799,6 +960,13 @@ def _run_scenario(
             int(stage_breakdown["matched_runtime_records"])
             == status_counts.get(200, 0)
         )
+        api_timing_coverage_ok = (
+            int(stage_breakdown["matched_api_timing_records"])
+            == (
+                status_counts.get(200, 0)
+                + status_counts.get(429, 0)
+            )
+        )
 
         correctness_pass = bool(
             observed == scenario.attempts
@@ -810,6 +978,7 @@ def _run_scenario(
             and all_200_ok
             and status_counts.get(200, 0) > 0
             and stage_coverage_ok
+            and api_timing_coverage_ok
         )
 
         # TemporaryDirectory 退出后 Raw Audit 自动删除；Evidence 只保留聚合值。
@@ -838,6 +1007,7 @@ def _run_scenario(
                     2,
                 ),
                 "stage_timing_coverage_pass": stage_coverage_ok,
+                "api_timing_coverage_pass": api_timing_coverage_ok,
                 "correctness_pass": correctness_pass,
             },
             "http_total_latency_ms": _latency(latencies),
@@ -901,7 +1071,7 @@ def run_api_e2e_profile(
         authority.close()
 
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "evidence_kind": "AUTHENTICATED_AGENT_API_E2E_LOAD_OBSERVATION",
         "calibration_status": "LAB_OBSERVED_NOT_PROMOTED",
         "production_slo_authority": False,
@@ -928,6 +1098,8 @@ def run_api_e2e_profile(
             "includes_deterministic_renderer": True,
             "includes_answer_validator": True,
             "includes_internal_stage_timing_audit": True,
+            "includes_internal_api_phase_timing_audit": True,
+            "api_phase_timing_is_public_response_data": False,
             "raw_audit_uploaded": False,
             "includes_live_llm": False,
             "includes_live_metricflow": False,
