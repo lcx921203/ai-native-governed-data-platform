@@ -1,4 +1,4 @@
-version: 5
+version: 6
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
@@ -40,6 +40,17 @@ principles:
   client_after_server_is_residual_not_single_component: true
   api_phase_timing_is_internal_only: true
 
+  # V6：Audit Persistence Breakdown + Group Commit Efficiency。
+  audit_persistence_breakdown_is_recorded: true
+  audit_serialize_append_lock_append_and_durability_wait_are_additive: true
+  audit_batch_coalesce_and_sync_are_non_additive_diagnostics: true
+  audit_runtime_receipt_coverage_is_required_for_http_200: true
+  group_commit_unique_batch_ids_are_aggregated_only: true
+  raw_group_commit_batch_ids_are_not_uploaded: true
+  group_commit_efficiency_is_diagnostic_not_latency_gate: true
+  audit_persistence_instrumentation_overhead_is_included: true
+  single_github_runner_run_cannot_select_final_group_commit_window: true
+
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
   benchmark_report_never_contains_redis_url_or_credentials: true
@@ -52,7 +63,7 @@ principles:
   guardrail_promotion_requires_human_review: true
 
 evidence:
-  schema_version: 3
+  schema_version: 4
   calibration_status: LAB_OBSERVED_NOT_PROMOTED
 
   kinds:
@@ -81,6 +92,16 @@ evidence:
     - api_phase_p50_p95_p99_max
     - api_server_unattributed_p50_p95_p99_max
     - client_after_server_residual_p50_p95_p99_max
+    - audit_serialize_p50_p95_p99_max
+    - audit_append_lock_wait_p50_p95_p99_max
+    - audit_append_p50_p95_p99_max
+    - audit_durability_wait_p50_p95_p99_max
+    - audit_batch_coalesce_p50_p95_p99_max
+    - audit_batch_sync_p50_p95_p99_max
+    - audit_runtime_receipt_coverage
+    - audit_unique_sync_batches
+    - audit_runtime_records_per_sync
+    - audit_grouped_runtime_record_fraction
     - stage_timing_coverage
     - api_timing_coverage
 
@@ -91,7 +112,7 @@ profiles:
     production_slo_authority: false
 
   api_e2e_ci_smoke:
-    purpose: authenticated_agent_api_correctness_and_outside_runtime_breakdown_under_bounded_load
+    purpose: authenticated_agent_api_correctness_outside_runtime_and_audit_persistence_breakdown_under_bounded_load
     latency_gate: false
     production_slo_authority: false
     live_llm: false
@@ -106,7 +127,7 @@ profiles:
     production_slo_authority: false
 
   api_e2e_lab:
-    purpose: repeatable_authenticated_agent_api_outside_runtime_breakdown_baseline
+    purpose: repeatable_authenticated_agent_api_audit_persistence_breakdown_baseline
     latency_gate: false
     production_slo_authority: false
     live_llm: false

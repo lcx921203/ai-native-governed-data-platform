@@ -171,7 +171,7 @@ def test_stage_breakdown_policy_remains_lab_evidence_not_production_slo():
         ).read_text(encoding="utf-8")
     )
 
-    assert policy["version"] == 5
+    assert policy["version"] == 6
     assert (
         policy["principles"][
             "api_e2e_records_internal_runtime_stage_latency"

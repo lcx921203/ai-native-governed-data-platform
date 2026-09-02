@@ -70,6 +70,7 @@ from .traffic import (
 from .timing import (
     GovernedAPITimingMiddleware,
     bind_api_request_context,
+    record_api_metric,
     record_api_phase,
 )
 
@@ -427,11 +428,159 @@ def _run_runtime_with_api_timing(
         0.0,
         worker_wall_ms - runtime_core_ms,
     )
+    audit_persistence = getattr(
+        observability,
+        "audit_persistence",
+        None,
+    )
     return (
         result,
         queue_wait_ms,
         post_observer_audit_ms,
+        audit_persistence,
     )
+
+
+def _audit_receipt_value(
+    receipt: Any,
+    field: str,
+) -> float:
+    """安全读取内部 Audit Receipt 的非负数值字段。"""
+
+    return max(
+        0.0,
+        float(
+            getattr(
+                receipt,
+                field,
+                0.0,
+            )
+            or 0.0
+        ),
+    )
+
+
+def _record_runtime_post_observer_breakdown(
+    request: Request,
+    *,
+    post_observer_total_ms: float,
+    audit_receipt: Any,
+) -> None:
+    """把 Runtime Core 之后的 Observer/Audit 拆成可加和 Phase + 非加和 Metric。
+
+    可加和 Phase：
+    - observer_non_audit
+    - audit.serialize
+    - audit.append_lock_wait
+    - audit.append
+    - audit.durability_wait
+    - audit.writer_residual
+
+    Group Commit 的 Batch Size / Sync Duration 与每请求 Durability Wait 存在重叠，
+    因此只作为 Numeric Metric，不加入 Phase Sum，避免 Server Residual 双扣。
+    """
+
+    post_total = max(
+        0.0,
+        float(post_observer_total_ms),
+    )
+
+    if audit_receipt is None:
+        record_api_phase(
+            request,
+            "runtime.observer_non_audit",
+            post_total,
+        )
+        return
+
+    audit_total_ms = _audit_receipt_value(
+        audit_receipt,
+        "total_ms",
+    )
+    observer_non_audit_ms = max(
+        0.0,
+        post_total - audit_total_ms,
+    )
+
+    record_api_phase(
+        request,
+        "runtime.observer_non_audit",
+        observer_non_audit_ms,
+    )
+
+    for phase, field in (
+        (
+            "runtime.audit.serialize",
+            "serialize_ms",
+        ),
+        (
+            "runtime.audit.append_lock_wait",
+            "append_lock_wait_ms",
+        ),
+        (
+            "runtime.audit.append",
+            "append_ms",
+        ),
+        (
+            "runtime.audit.durability_wait",
+            "durability_wait_ms",
+        ),
+        (
+            "runtime.audit.writer_residual",
+            "writer_residual_ms",
+        ),
+    ):
+        record_api_phase(
+            request,
+            phase,
+            _audit_receipt_value(
+                audit_receipt,
+                field,
+            ),
+        )
+
+    for metric, field in (
+        (
+            "runtime.audit.batch_id",
+            "batch_id",
+        ),
+        (
+            "runtime.audit.batch_total_records",
+            "batch_total_records",
+        ),
+        (
+            "runtime.audit.batch_runtime_records",
+            "batch_runtime_records",
+        ),
+        (
+            "runtime.audit.batch_api_guard_records",
+            "batch_api_guard_records",
+        ),
+        (
+            "runtime.audit.batch_api_timing_records",
+            "batch_api_timing_records",
+        ),
+        (
+            "runtime.audit.batch_other_records",
+            "batch_other_records",
+        ),
+        (
+            "runtime.audit.batch_coalesce_ms",
+            "batch_coalesce_ms",
+        ),
+        (
+            "runtime.audit.batch_sync_ms",
+            "batch_sync_ms",
+        ),
+    ):
+        record_api_metric(
+            request,
+            metric,
+            _audit_receipt_value(
+                audit_receipt,
+                field,
+            ),
+        )
 
 
 def create_app() -> FastAPI:
@@ -644,6 +793,7 @@ def create_app() -> FastAPI:
                 result,
                 queue_wait_ms,
                 post_observer_audit_ms,
+                audit_persistence,
             ) = await asyncio.wait_for(
                 asyncio.shield(
                     task
@@ -657,10 +807,14 @@ def create_app() -> FastAPI:
                 "threadpool.queue_wait",
                 queue_wait_ms,
             )
-            record_api_phase(
+            _record_runtime_post_observer_breakdown(
                 request,
-                "runtime.post_observer_audit",
-                post_observer_audit_ms,
+                post_observer_total_ms=(
+                    post_observer_audit_ms
+                ),
+                audit_receipt=(
+                    audit_persistence
+                ),
             )
         except asyncio.TimeoutError:
             task.add_done_callback(

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 contract: governed_agent_api_phase_timing
 mode: internal_diagnostic_audit
 
@@ -7,6 +7,7 @@ principles:
   public_response_has_no_timing_header_or_body: true
 
   fixed_phase_names_only: true
+  fixed_numeric_metric_names_only: true
   prompt_answer_payload_are_never_recorded: true
   bearer_token_and_jwt_claims_are_never_recorded: true
   redis_url_and_credentials_are_never_recorded: true
@@ -17,7 +18,22 @@ principles:
   timing_write_failure_does_not_rewrite_sent_response: true
 
   runtime_core_duration_comes_from_runtime_observability: true
-  runtime_post_observer_audit_is_measured_outside_runtime_core: true
+
+  # V2：旧 runtime.post_observer_audit 父阶段被可加和子阶段替代，避免重复计时。
+  runtime_post_observer_parent_is_replaced_by_additive_children: true
+  audit_serialize_is_additive_phase: true
+  audit_append_lock_wait_is_additive_phase: true
+  audit_append_is_additive_phase: true
+  audit_durability_wait_is_additive_phase: true
+  audit_writer_residual_is_additive_phase: true
+  observer_non_audit_is_additive_phase: true
+
+  # Batch Coalesce / Sync Duration 与每请求 Durability Wait 时间重叠，
+  # 因而只能作为 Numeric Diagnostic，不能加入 API Phase Sum。
+  group_commit_batch_metrics_are_non_additive_diagnostics: true
+  batch_id_is_internal_correlation_only: true
+  raw_batch_ids_are_not_uploaded_as_evidence: true
+
   api_server_unattributed_is_residual_not_single_component: true
   client_after_server_is_residual_not_single_component: true
 
@@ -31,9 +47,26 @@ phases:
   - auth.request_context_mapping
   - admission.shared_guard
   - threadpool.queue_wait
-  - runtime.post_observer_audit
+
+  - runtime.observer_non_audit
+  - runtime.audit.serialize
+  - runtime.audit.append_lock_wait
+  - runtime.audit.append
+  - runtime.audit.durability_wait
+  - runtime.audit.writer_residual
+
   - lease.release
   - endpoint.response_build
+
+numeric_metrics:
+  - runtime.audit.batch_id
+  - runtime.audit.batch_total_records
+  - runtime.audit.batch_runtime_records
+  - runtime.audit.batch_api_guard_records
+  - runtime.audit.batch_api_timing_records
+  - runtime.audit.batch_other_records
+  - runtime.audit.batch_coalesce_ms
+  - runtime.audit.batch_sync_ms
 
 calibration:
   enabled_mode: audit

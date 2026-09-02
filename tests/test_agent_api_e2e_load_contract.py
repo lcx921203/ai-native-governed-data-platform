@@ -75,7 +75,7 @@ def test_api_e2e_evidence_is_explicitly_not_production_slo_authority():
         ).read_text(encoding="utf-8")
     )
 
-    assert policy["version"] == 5
+    assert policy["version"] == 6
     assert (
         policy["principles"][
             "authenticated_api_e2e_benchmark_is_not_production_slo"
@@ -159,3 +159,5 @@ def test_api_e2e_report_source_forbids_prompt_and_runtime_endpoints():
     assert '"includes_live_llm": False' in text
     assert '"includes_live_metricflow": False' in text
     assert '"includes_live_trino": False' in text
+    assert '"includes_audit_persistence_breakdown": True' in text
+    assert '"raw_group_commit_batch_ids_uploaded": False' in text

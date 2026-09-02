@@ -128,13 +128,21 @@ def test_concurrent_records_share_one_durable_sync(monkeypatch, tmp_path):
         assert sink.sync_count == 1
         assert sink.append_count == 8
         assert all(
-            receipt.durable
+            int(receipt["batch"].batch_id) == 1
             for receipt in receipts
         )
         assert {
-            receipt.generation
+            int(receipt["generation"])
             for receipt in receipts
         } == set(range(1, 9))
+        assert {
+            int(receipt["batch"].total_records)
+            for receipt in receipts
+        } == {8}
+        assert {
+            int(receipt["batch"].runtime_records)
+            for receipt in receipts
+        } == {8}
     finally:
         sink.close()
 
@@ -272,7 +280,7 @@ def test_audit_policy_preserves_durable_fail_closed_semantics():
         )
     )
 
-    assert policy["version"] == 4
+    assert policy["version"] == 5
 
     principles = policy[
         "principles"
@@ -286,6 +294,11 @@ def test_audit_policy_preserves_durable_fail_closed_semantics():
         "process_reuses_one_append_fd_per_audit_path",
         "first_file_creation_fsyncs_parent_directory",
         "rotation_requires_copytruncate_or_process_restart",
+        "persistence_receipt_is_internal_numeric_only",
+        "persistence_receipt_is_not_public_api",
+        "persistence_breakdown_records_serialize_append_wait_and_sync",
+        "group_commit_batch_id_is_internal_diagnostic_only",
+        "raw_group_commit_batch_ids_are_not_uploaded",
     ):
         assert principles[key] is True
 

@@ -70,6 +70,10 @@ class RunTrace:
     cost: CostSummary
     audit_status: str = "DISABLED"
 
+    # 仅供内部 API Timing / SLO Evidence 使用；不进入 ``to_dict()``，
+    # 因而不会随着 Runtime Result 或 Public API 暴露。
+    audit_persistence: Any | None = None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "trace_id": self.trace_id,

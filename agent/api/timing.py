@@ -16,6 +16,7 @@
 
 边界：
 - Timing 只保存固定阶段名 + duration_ms；
+- Group Commit 诊断只保存 Policy 固定 Metric Name + 数值；
 - 不保存 Prompt、Answer、Bearer Token、JWT Claims、Redis URL 或内部 Payload；
 - Public API 不返回 Timing Header / Timing Body；
 - 详细 API Timing 默认关闭，仅在受控诊断 / SLO Calibration 时启用；
@@ -60,10 +61,12 @@ def _timing_write_done(task: asyncio.Task) -> None:
 
 @dataclass
 class APITimingTrace:
-    """一次 HTTP Request 的固定阶段耗时累加器。"""
+    """一次 HTTP Request 的固定阶段耗时与数值诊断累加器。"""
 
     allowed_phases: frozenset[str]
+    allowed_metrics: frozenset[str] = frozenset()
     phases: dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
 
     def add(self, phase: str, duration_ms: float) -> None:
         """累加一个 bounded phase；未知 Label 直接拒绝。"""
@@ -75,12 +78,32 @@ class APITimingTrace:
             float(duration_ms),
         )
 
+    def add_metric(self, metric: str, value: float) -> None:
+        """记录 bounded numeric metric；未知 Label 直接拒绝。"""
+
+        if metric not in self.allowed_metrics:
+            raise ValueError(
+                f"Unsupported Agent API timing metric: {metric!r}"
+            )
+        self.metrics[metric] = max(
+            0.0,
+            float(value),
+        )
+
     def as_tuple(self) -> tuple[tuple[str, float], ...]:
-        """按名称稳定排序，便于 Audit / Evidence 做确定性聚合。"""
+        """按名称稳定排序 Timing Phase。"""
 
         return tuple(
             (name, self.phases[name])
             for name in sorted(self.phases)
+        )
+
+    def metrics_tuple(self) -> tuple[tuple[str, float], ...]:
+        """按名称稳定排序 Numeric Diagnostic。"""
+
+        return tuple(
+            (name, self.metrics[name])
+            for name in sorted(self.metrics)
         )
 
 
@@ -119,6 +142,13 @@ class GovernedAPITimingAuditor:
             str(item)
             for item in self.policy["phases"]
         )
+        self.allowed_metrics = frozenset(
+            str(item)
+            for item in self.policy.get(
+                "numeric_metrics",
+                (),
+            )
+        )
         self.writer = writer or GovernedAuditWriter(self.root)
 
     @property
@@ -131,7 +161,8 @@ class GovernedAPITimingAuditor:
         """为一次 Request 创建只接受固定 Label 的 Timing Trace。"""
 
         return APITimingTrace(
-            allowed_phases=self.allowed_phases
+            allowed_phases=self.allowed_phases,
+            allowed_metrics=self.allowed_metrics,
         )
 
     def build_record(
@@ -142,6 +173,7 @@ class GovernedAPITimingAuditor:
         http_status: int,
         server_total_ms: float,
         phase_timings: tuple[tuple[str, float], ...],
+        numeric_metrics: tuple[tuple[str, float], ...] = (),
     ) -> AgentAuditRecord:
         """构造不含业务自由文本的 API_TIMING Audit Record。"""
 
@@ -160,6 +192,7 @@ class GovernedAPITimingAuditor:
             answer_validated=False,
             stage_statuses=("api_timing:OBSERVED",),
             stage_timings=phase_timings,
+            numeric_metrics=numeric_metrics,
             duration_ms=max(0.0, float(server_total_ms)),
             estimated_context_tokens=0,
             tool_result_count=0,
@@ -244,6 +277,7 @@ class GovernedAPITimingMiddleware:
                     http_status=response_status,
                     server_total_ms=server_total_ms,
                     phase_timings=timing.as_tuple(),
+                    numeric_metrics=timing.metrics_tuple(),
                 )
                 # Response Body 已经发送；异步调度 Audit fsync 后立即结束当前 ASGI Request。
                 # 这样同一 HTTP/1.1 Connection 的下一次请求不会被诊断写盘串行阻塞。
@@ -275,6 +309,26 @@ def record_api_phase(
         trace.add(
             phase,
             duration_ms,
+        )
+
+
+
+def record_api_metric(
+    request: Any,
+    metric: str,
+    value: float,
+) -> None:
+    """把固定数值诊断写入 Request State；不接受自由文本 Metric Name。"""
+
+    trace = getattr(
+        getattr(request, "state", None),
+        _STATE_TIMING_KEY,
+        None,
+    )
+    if isinstance(trace, APITimingTrace):
+        trace.add_metric(
+            metric,
+            value,
         )
 
 

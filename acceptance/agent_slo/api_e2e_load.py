@@ -52,6 +52,7 @@ from .redis_load import percentile
 
 QUESTION = "activity_net_sales 是什么意思？"
 METRIC = "activity_net_sales"
+AUDIT_GROUP_COMMIT_WINDOW_MS = 1.0
 
 
 @dataclass(frozen=True)
@@ -378,6 +379,9 @@ def _server_env(
             "AGENT_AUDIT_MODE": "jsonl",
             "AGENT_AUDIT_PATH": str(audit_path),
             "AGENT_AUDIT_FAILURE_MODE": "fail_closed",
+            "AGENT_AUDIT_GROUP_COMMIT_WINDOW_MS": str(
+                AUDIT_GROUP_COMMIT_WINDOW_MS
+            ),
             "AGENT_API_PHASE_TIMING_MODE": "audit",
         }
     )
@@ -484,9 +488,13 @@ def _request_once(
     return response.status, payload, elapsed_ms, contract_ok, trace_id
 
 
-def _latency(values: list[float]) -> dict[str, float | int | None]:
-    """把 HTTP Total Latency 收敛成有限 Percentile Evidence。"""
+def _latency(values: Iterable[float]) -> dict[str, float | int | None]:
+    """把有限数值序列收敛成 P50/P95/P99/Max Evidence。"""
 
+    values = [
+        float(value)
+        for value in values
+    ]
     if not values:
         return {
             "count": 0,
@@ -591,6 +599,15 @@ def _runtime_stage_breakdown(
     client_after_server_values: list[float] = []
     api_phase_values: defaultdict[str, list[float]] = defaultdict(list)
 
+    # Runtime Audit Receipt 只存在于成功进入 Runtime 的 HTTP 200。
+    audit_runtime_batch_ids: list[int] = []
+    audit_runtime_records_in_batch: list[float] = []
+    audit_batch_total_records_by_id: dict[int, float] = {}
+    audit_batch_runtime_records_by_id: dict[int, float] = {}
+    audit_batch_coalesce_by_id: dict[int, float] = {}
+    audit_batch_sync_by_id: dict[int, float] = {}
+    matched_audit_receipts = 0
+
     matched_runtime = 0
     matched_api = 0
 
@@ -654,6 +671,66 @@ def _runtime_stage_breakdown(
             api_phase_values[phase].append(duration_ms)
             phase_sum_ms += duration_ms
 
+        request_metrics: dict[str, float] = {}
+        for item in row.get("numeric_metrics") or []:
+            metric = str(item.get("metric") or "").strip()
+            if not metric:
+                continue
+            value = max(
+                0.0,
+                float(item.get("value") or 0.0),
+            )
+            request_metrics[metric] = value
+
+        # Batch ID 只在当前聚合函数内做去重；最终 Evidence 不输出原始 ID。
+        if status == 200:
+            batch_id = int(
+                request_metrics.get(
+                    "runtime.audit.batch_id",
+                    0.0,
+                )
+            )
+            if batch_id > 0:
+                matched_audit_receipts += 1
+                audit_runtime_batch_ids.append(batch_id)
+
+                batch_total_records = request_metrics.get(
+                    "runtime.audit.batch_total_records",
+                    0.0,
+                )
+                batch_runtime_records = request_metrics.get(
+                    "runtime.audit.batch_runtime_records",
+                    0.0,
+                )
+                audit_runtime_records_in_batch.append(
+                    batch_runtime_records
+                )
+
+                # 同一个 Durable Batch 可能覆盖多个 Runtime Record。
+                # 物理 Sync/Coalesce 的分布按 Batch ID 去重，不能按 Request 重复加权。
+                audit_batch_total_records_by_id.setdefault(
+                    batch_id,
+                    batch_total_records,
+                )
+                audit_batch_runtime_records_by_id.setdefault(
+                    batch_id,
+                    batch_runtime_records,
+                )
+                audit_batch_coalesce_by_id.setdefault(
+                    batch_id,
+                    request_metrics.get(
+                        "runtime.audit.batch_coalesce_ms",
+                        0.0,
+                    ),
+                )
+                audit_batch_sync_by_id.setdefault(
+                    batch_id,
+                    request_metrics.get(
+                        "runtime.audit.batch_sync_ms",
+                        0.0,
+                    ),
+                )
+
         runtime_total_ms = 0.0
         if status == 200:
             runtime_row = runtime_rows.get(trace_id)
@@ -694,6 +771,116 @@ def _runtime_stage_breakdown(
         )
     )
 
+    expected_audit_receipts = len(successful_samples)
+    audit_receipt_coverage = (
+        1.0
+        if expected_audit_receipts == 0
+        else round(
+            matched_audit_receipts / expected_audit_receipts,
+            6,
+        )
+    )
+
+    unique_sync_batches = len(
+        set(audit_runtime_batch_ids)
+    )
+    runtime_records_per_sync = (
+        round(
+            matched_audit_receipts / unique_sync_batches,
+            6,
+        )
+        if unique_sync_batches
+        else 0.0
+    )
+    grouped_runtime_record_fraction = (
+        round(
+            sum(
+                1
+                for value in audit_runtime_records_in_batch
+                if value > 1.0
+            )
+            / matched_audit_receipts,
+            6,
+        )
+        if matched_audit_receipts
+        else 0.0
+    )
+
+    audit_persistence = {
+        "configured_group_commit_window_ms": AUDIT_GROUP_COMMIT_WINDOW_MS,
+        "expected_runtime_audit_receipts": expected_audit_receipts,
+        "matched_runtime_audit_receipts": matched_audit_receipts,
+        "runtime_audit_receipt_coverage": audit_receipt_coverage,
+        "serialize_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.audit.serialize",
+                [],
+            )
+        ),
+        "append_lock_wait_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.audit.append_lock_wait",
+                [],
+            )
+        ),
+        "append_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.audit.append",
+                [],
+            )
+        ),
+        "durability_wait_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.audit.durability_wait",
+                [],
+            )
+        ),
+        "writer_residual_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.audit.writer_residual",
+                [],
+            )
+        ),
+        "observer_non_audit_latency_ms": _latency(
+            api_phase_values.get(
+                "runtime.observer_non_audit",
+                [],
+            )
+        ),
+        "batch_coalesce_latency_ms": _latency(
+            audit_batch_coalesce_by_id.values()
+        ),
+        "batch_sync_latency_ms": _latency(
+            audit_batch_sync_by_id.values()
+        ),
+        "observed_batch_total_records": _latency(
+            audit_batch_total_records_by_id.values()
+        ),
+        "observed_batch_runtime_records": _latency(
+            audit_batch_runtime_records_by_id.values()
+        ),
+        "unique_sync_batches": unique_sync_batches,
+        "runtime_records_per_sync": runtime_records_per_sync,
+        "grouped_runtime_record_fraction": grouped_runtime_record_fraction,
+        "batch_semantics": {
+            "batch_total_records": (
+                "All audit event types sharing the durable sync; API_TIMING diagnostic "
+                "records can be included when calibration mode is enabled."
+            ),
+            "batch_runtime_records": (
+                "RUNTIME audit records covered by the same durable sync."
+            ),
+            "batch_sync_latency": (
+                "Physical fdatasync/fsync duration for the shared batch; it overlaps "
+                "per-request durability_wait and is therefore non-additive."
+            ),
+            "batch_coalesce_latency": (
+                "Actual leader coalescing wait for the shared batch; it overlaps "
+                "per-request durability_wait and is therefore non-additive."
+            ),
+        },
+    }
+
     return {
         "expected_runtime_records": expected_runtime,
         "matched_runtime_records": matched_runtime,
@@ -701,6 +888,7 @@ def _runtime_stage_breakdown(
         "expected_api_timing_records": expected_api,
         "matched_api_timing_records": matched_api,
         "api_timing_coverage": api_coverage,
+        "audit_persistence": audit_persistence,
         "runtime_total_latency_ms": _latency(runtime_total_values),
         "http_outside_runtime_latency_ms": _latency(outside_runtime_values),
         "runtime_unattributed_latency_ms": _latency(runtime_unattributed_values),
@@ -967,6 +1155,17 @@ def _run_scenario(
                 + status_counts.get(429, 0)
             )
         )
+        audit_persistence = stage_breakdown[
+            "audit_persistence"
+        ]
+        audit_receipt_coverage_ok = (
+            int(
+                audit_persistence[
+                    "matched_runtime_audit_receipts"
+                ]
+            )
+            == status_counts.get(200, 0)
+        )
 
         correctness_pass = bool(
             observed == scenario.attempts
@@ -979,6 +1178,7 @@ def _run_scenario(
             and status_counts.get(200, 0) > 0
             and stage_coverage_ok
             and api_timing_coverage_ok
+            and audit_receipt_coverage_ok
         )
 
         # TemporaryDirectory 退出后 Raw Audit 自动删除；Evidence 只保留聚合值。
@@ -1008,6 +1208,7 @@ def _run_scenario(
                 ),
                 "stage_timing_coverage_pass": stage_coverage_ok,
                 "api_timing_coverage_pass": api_timing_coverage_ok,
+                "audit_receipt_coverage_pass": audit_receipt_coverage_ok,
                 "correctness_pass": correctness_pass,
             },
             "http_total_latency_ms": _latency(latencies),
@@ -1071,7 +1272,7 @@ def run_api_e2e_profile(
         authority.close()
 
     report = {
-        "schema_version": 3,
+        "schema_version": 4,
         "evidence_kind": "AUTHENTICATED_AGENT_API_E2E_LOAD_OBSERVATION",
         "calibration_status": "LAB_OBSERVED_NOT_PROMOTED",
         "production_slo_authority": False,
@@ -1099,7 +1300,10 @@ def run_api_e2e_profile(
             "includes_answer_validator": True,
             "includes_internal_stage_timing_audit": True,
             "includes_internal_api_phase_timing_audit": True,
+            "includes_audit_persistence_breakdown": True,
+            "includes_group_commit_efficiency_aggregation": True,
             "api_phase_timing_is_public_response_data": False,
+            "raw_group_commit_batch_ids_uploaded": False,
             "raw_audit_uploaded": False,
             "includes_live_llm": False,
             "includes_live_metricflow": False,
@@ -1138,10 +1342,22 @@ def run_api_e2e_profile(
             "Secret/runtime endpoint/prompt must never appear in Agent API E2E evidence."
         )
 
-    # Trace ID 只用于进程内 Correlation；最终 Evidence 只能保留聚合 Coverage/Percentile。
+    # Trace ID / Group Commit Batch ID 只用于进程内 Correlation；
+    # 最终 Evidence 只能保留聚合 Coverage/Percentile/Unique Count。
     for item in report["scenario_results"]:
-        if "trace_id" in json.dumps(item, ensure_ascii=False, sort_keys=True):
-            raise RuntimeError("Raw trace IDs must never appear in Agent API E2E evidence.")
+        serialized_item = json.dumps(
+            item,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if "trace_id" in serialized_item:
+            raise RuntimeError(
+                "Raw trace IDs must never appear in Agent API E2E evidence."
+            )
+        if "runtime.audit.batch_id" in serialized_item:
+            raise RuntimeError(
+                "Raw group commit batch IDs must never appear in Agent API E2E evidence."
+            )
 
     output.parent.mkdir(
         parents=True,

@@ -1,23 +1,22 @@
 """Append-only JSONL Agent Audit Writer（追加式审计写入器）。
 
-V2：Synchronous Durable Group Commit（同步持久化组提交）。
+V3：Durable Group Commit + Internal Persistence Breakdown（持久化组提交 + 内部耗时拆解）。
 
-目标不是“把 Audit 异步丢到后台”：
-- 生产默认仍是 Fail Closed；
-- ``write()`` 返回前，本条 Record 必须已经进入一次成功的 durable sync；
-- 多个并发请求可以共享同一次 ``fdatasync/fsync``；
-- 因此降低高并发下“每条记录一次独立 fsync”的放大成本，同时不牺牲 durable ACK。
+生产安全边界保持不变：
+- ``write()`` 返回前，本条 Record 必须已经被一次成功 durable sync 覆盖；
+- 多个并发请求允许共享同一次 ``fdatasync/fsync``；
+- durable sync 失败后 Sink 进入不可用状态，Fail-Closed 调用方不能继续返回答案。
 
-实现边界：
-- 每个 Record 仍然一次 ``os.write``，文件保持 ``O_APPEND``；
-- 一个进程 / Audit Path 复用一个文件描述符（FD）；
-- 首次创建文件时 fsync Parent Directory，避免只持久化文件数据却丢失目录项；
-- 优先 ``fdatasync``，平台不支持时回退 ``fsync``；
-- Group Commit Window 很小且受 Policy 上限约束；
-- Rotation 必须使用 copytruncate，或在 rename/replace 后重启进程以重新打开 FD；
-- 不缓存 Prompt / Answer / Bearer / JWT / Provider Raw Response。
+V3 只增加数值型内部 Receipt：
+- serialize_ms：JSON 序列化；
+- append_lock_wait_ms：等待共享 Append Lock；
+- append_ms：单次 ``os.write``；
+- durability_wait_ms：从 Append 后到 Durable ACK 的每请求等待；
+- batch_coalesce_ms：该 Durable Batch 的实际聚合窗口；
+- batch_sync_ms：该 Durable Batch 的真实 fdatasync/fsync；
+- batch_*_records：该 Batch 内不同 Event Type 数量。
 
-Library 默认 disabled；生产 Runtime 通过环境变量显式启用 jsonl。
+这些字段不包含 Prompt / Answer / Bearer / JWT / Provider Raw Response。
 """
 
 from __future__ import annotations
@@ -25,11 +24,11 @@ from __future__ import annotations
 import atexit
 import json
 import os
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition, RLock
 from time import perf_counter, sleep
-from typing import Any
 
 import yaml
 
@@ -41,18 +40,44 @@ class AuditWriteError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class AuditWriteReceipt:
-    """一次 Audit Write 的内部性能收据。
+class _DurableBatchReceipt:
+    """一次共享 Durable Sync 的内部批次结果。"""
 
-    仅包含数值耗时，不包含 Audit Payload。
-    现有调用方可以继续忽略 ``write()`` 返回值。
+    batch_id: int
+    total_records: int
+    runtime_records: int
+    api_guard_records: int
+    api_timing_records: int
+    other_records: int
+    coalesce_ms: float
+    sync_ms: float
+
+
+@dataclass(frozen=True)
+class AuditWriteReceipt:
+    """一次 Audit Write 的内部数值收据。
+
+    现有调用方可以继续忽略返回值；只有内部性能诊断会读取这些字段。
     """
 
+    serialize_ms: float
+    append_lock_wait_ms: float
     append_ms: float
     durability_wait_ms: float
+    writer_residual_ms: float
     total_ms: float
+
     durable: bool
     generation: int
+
+    batch_id: int
+    batch_total_records: int
+    batch_runtime_records: int
+    batch_api_guard_records: int
+    batch_api_timing_records: int
+    batch_other_records: int
+    batch_coalesce_ms: float
+    batch_sync_ms: float
 
 
 def _durable_sync_fd(fd: int) -> None:
@@ -82,15 +107,13 @@ def _fsync_parent_directory(path: Path) -> None:
 class _ProcessDurableAuditSink:
     """一个进程内、一个 Audit Path 对应的共享 Durable Sink。
 
-    并发语义：
-    1. 所有 Record 仍通过独立 ``os.write`` 进入 O_APPEND FD；
-    2. 第一个需要 durable ACK 的调用者成为 Sync Leader；
-    3. Leader 在极小 Coalesce Window 内允许其他线程追加；
-    4. Leader 捕获当前 generation 后执行一次 durable sync；
-    5. generation <= target 的所有等待者一起收到 ACK；
-    6. sync 期间追加的更晚 generation 保守地进入下一轮 sync。
-
-    因此不会把“可能已被同一次 sync 顺便刷下去”的新记录提前标记为 durable。
+    Group Commit 语义：
+    1. 每条 Record 仍单独 ``os.write`` 到 ``O_APPEND`` FD；
+    2. 第一个等待 Durable ACK 的线程成为 Sync Leader；
+    3. Leader 在很小的 Coalesce Window 内允许其他线程继续 Append；
+    4. 一个 durable sync 可以一次确认多个 generation；
+    5. 每个 generation 都拿到它所属 Batch 的同一份数值元数据；
+    6. sync 期间才 Append 的更晚 generation 保守进入下一 Batch。
     """
 
     def __init__(
@@ -119,6 +142,9 @@ class _ProcessDurableAuditSink:
         self._sync_count = 0
         self._append_count = 0
 
+        self._generation_event_types: dict[int, str] = {}
+        self._batch_receipts: dict[int, _DurableBatchReceipt] = {}
+
         self.path.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -144,8 +170,6 @@ class _ProcessDurableAuditSink:
                 self.file_mode,
             )
 
-            # 文件创建成功但 Parent Directory Entry 未持久化时，
-            # 仅对 File FD 做 fdatasync 并不能覆盖掉电后的目录项丢失风险。
             if not existed_before_open:
                 _fsync_parent_directory(
                     self.path
@@ -184,12 +208,23 @@ class _ProcessDurableAuditSink:
     def append(
         self,
         payload: bytes,
-    ) -> AuditWriteReceipt:
-        """Append 一条完整 JSONL，并在返回前等待 durable ACK。"""
+        *,
+        event_type: str = "RUNTIME",
+    ) -> dict[str, object]:
+        """Append 一条 JSONL，并返回 Sink 内部数值耗时。"""
 
         total_started = perf_counter()
+        append_lock_started = perf_counter()
 
         with self._condition:
+            append_lock_wait_ms = max(
+                0.0,
+                (
+                    perf_counter()
+                    - append_lock_started
+                )
+                * 1000,
+            )
             self._raise_if_unavailable_locked()
 
             append_started = perf_counter()
@@ -226,15 +261,43 @@ class _ProcessDurableAuditSink:
 
             self._append_count += 1
             self._write_generation += 1
-            generation = (
-                self._write_generation
+            generation = self._write_generation
+            self._generation_event_types[generation] = (
+                str(event_type or "RUNTIME")
             )
 
         durability_started = perf_counter()
+
         if self.durable_sync:
-            self._await_durable(
+            batch = self._await_durable(
                 generation
             )
+        else:
+            batch = _DurableBatchReceipt(
+                batch_id=0,
+                total_records=1,
+                runtime_records=(
+                    1 if event_type == "RUNTIME" else 0
+                ),
+                api_guard_records=(
+                    1 if event_type == "API_GUARD" else 0
+                ),
+                api_timing_records=(
+                    1 if event_type == "API_TIMING" else 0
+                ),
+                other_records=(
+                    0
+                    if event_type in {
+                        "RUNTIME",
+                        "API_GUARD",
+                        "API_TIMING",
+                    }
+                    else 1
+                ),
+                coalesce_ms=0.0,
+                sync_ms=0.0,
+            )
+
         durability_wait_ms = max(
             0.0,
             (
@@ -244,12 +307,11 @@ class _ProcessDurableAuditSink:
             * 1000,
         )
 
-        return AuditWriteReceipt(
-            append_ms=append_ms,
-            durability_wait_ms=(
-                durability_wait_ms
-            ),
-            total_ms=max(
+        return {
+            "append_lock_wait_ms": append_lock_wait_ms,
+            "append_ms": append_ms,
+            "durability_wait_ms": durability_wait_ms,
+            "sink_total_ms": max(
                 0.0,
                 (
                     perf_counter()
@@ -257,15 +319,15 @@ class _ProcessDurableAuditSink:
                 )
                 * 1000,
             ),
-            durable=self.durable_sync,
-            generation=generation,
-        )
+            "generation": generation,
+            "batch": batch,
+        }
 
     def _await_durable(
         self,
         generation: int,
-    ) -> None:
-        """等待本 generation 被某次成功 durable sync 覆盖。"""
+    ) -> _DurableBatchReceipt:
+        """等待本 generation 被成功 Durable Batch 覆盖，并返回该 Batch 元数据。"""
 
         while True:
             leader = False
@@ -277,7 +339,20 @@ class _ProcessDurableAuditSink:
                     self._durable_generation
                     >= generation
                 ):
-                    return
+                    receipt = self._batch_receipts.pop(
+                        generation,
+                        None,
+                    )
+                    if receipt is None:
+                        failure = RuntimeError(
+                            "missing durable batch receipt"
+                        )
+                        self._failure = failure
+                        self._condition.notify_all()
+                        raise AuditWriteError(
+                            "Agent audit durable receipt is unavailable."
+                        ) from failure
+                    return receipt
 
                 if not self._sync_in_progress:
                     self._sync_in_progress = True
@@ -289,23 +364,44 @@ class _ProcessDurableAuditSink:
             if not leader:
                 continue
 
-            # 不持锁等待：其他线程可以继续 append，随后等待同一轮 ACK。
+            coalesce_started = perf_counter()
             if self.group_commit_window_ms > 0:
                 sleep(
                     self.group_commit_window_ms
                     / 1000.0
                 )
+            coalesce_ms = max(
+                0.0,
+                (
+                    perf_counter()
+                    - coalesce_started
+                )
+                * 1000,
+            )
 
             with self._condition:
                 self._raise_if_unavailable_locked()
 
-                # 只承诺 sync 开始前已经观察到的 generation。
-                # sync 期间更晚的 append 不会被提前 ACK。
+                previous_durable = (
+                    self._durable_generation
+                )
                 target_generation = (
                     self._write_generation
                 )
                 fd = self._fd
 
+                event_types = [
+                    self._generation_event_types.get(
+                        item,
+                        "OTHER",
+                    )
+                    for item in range(
+                        previous_durable + 1,
+                        target_generation + 1,
+                    )
+                ]
+
+            sync_started = perf_counter()
             try:
                 _durable_sync_fd(
                     fd
@@ -319,8 +415,62 @@ class _ProcessDurableAuditSink:
                     "Agent audit durable sync failed."
                 ) from exc
 
+            sync_ms = max(
+                0.0,
+                (
+                    perf_counter()
+                    - sync_started
+                )
+                * 1000,
+            )
+
             with self._condition:
                 self._sync_count += 1
+                batch_id = self._sync_count
+
+                counts = Counter(event_types)
+                known_count = (
+                    counts.get("RUNTIME", 0)
+                    + counts.get("API_GUARD", 0)
+                    + counts.get("API_TIMING", 0)
+                )
+                total_records = len(event_types)
+
+                batch = _DurableBatchReceipt(
+                    batch_id=batch_id,
+                    total_records=total_records,
+                    runtime_records=counts.get(
+                        "RUNTIME",
+                        0,
+                    ),
+                    api_guard_records=counts.get(
+                        "API_GUARD",
+                        0,
+                    ),
+                    api_timing_records=counts.get(
+                        "API_TIMING",
+                        0,
+                    ),
+                    other_records=max(
+                        0,
+                        total_records - known_count,
+                    ),
+                    coalesce_ms=coalesce_ms,
+                    sync_ms=sync_ms,
+                )
+
+                for item in range(
+                    previous_durable + 1,
+                    target_generation + 1,
+                ):
+                    self._batch_receipts[
+                        item
+                    ] = batch
+                    self._generation_event_types.pop(
+                        item,
+                        None,
+                    )
+
                 self._durable_generation = max(
                     self._durable_generation,
                     target_generation,
@@ -538,7 +688,6 @@ class GovernedAuditWriter:
                 "Audit group commit window is outside governed bounds."
             )
 
-        # Sink Lazy Init：Audit disabled 时不创建目录/文件/FD。
         self._sink: (
             _ProcessDurableAuditSink
             | None
@@ -587,16 +736,15 @@ class GovernedAuditWriter:
         self,
         record: AgentAuditRecord,
     ) -> AuditWriteReceipt | None:
-        """写入一条 JSONL；生产默认在 durable ACK 后才返回。
-
-        返回 ``AuditWriteReceipt`` 只用于内部性能验证。
-        现有 Runtime / Guard / Timing 调用方无需消费返回值。
-        """
+        """写入一条 JSONL；生产默认在 Durable ACK 后才返回。"""
 
         if not self.enabled:
             return None
 
+        total_started = perf_counter()
+
         try:
+            serialize_started = perf_counter()
             payload = (
                 json.dumps(
                     record.to_dict(),
@@ -611,9 +759,105 @@ class GovernedAuditWriter:
             ).encode(
                 "utf-8"
             )
+            serialize_ms = max(
+                0.0,
+                (
+                    perf_counter()
+                    - serialize_started
+                )
+                * 1000,
+            )
 
-            return self._get_sink().append(
-                payload
+            sink_result = self._get_sink().append(
+                payload,
+                event_type=str(
+                    record.event_type
+                    or "RUNTIME"
+                ),
+            )
+            batch = sink_result["batch"]
+            if not isinstance(
+                batch,
+                _DurableBatchReceipt,
+            ):
+                raise AuditWriteError(
+                    "Agent audit batch receipt is invalid."
+                )
+
+            total_ms = max(
+                0.0,
+                (
+                    perf_counter()
+                    - total_started
+                )
+                * 1000,
+            )
+            append_lock_wait_ms = float(
+                sink_result[
+                    "append_lock_wait_ms"
+                ]
+            )
+            append_ms = float(
+                sink_result[
+                    "append_ms"
+                ]
+            )
+            durability_wait_ms = float(
+                sink_result[
+                    "durability_wait_ms"
+                ]
+            )
+
+            writer_residual_ms = max(
+                0.0,
+                total_ms
+                - serialize_ms
+                - append_lock_wait_ms
+                - append_ms
+                - durability_wait_ms,
+            )
+
+            return AuditWriteReceipt(
+                serialize_ms=serialize_ms,
+                append_lock_wait_ms=(
+                    append_lock_wait_ms
+                ),
+                append_ms=append_ms,
+                durability_wait_ms=(
+                    durability_wait_ms
+                ),
+                writer_residual_ms=(
+                    writer_residual_ms
+                ),
+                total_ms=total_ms,
+                durable=self.durable_sync,
+                generation=int(
+                    sink_result[
+                        "generation"
+                    ]
+                ),
+                batch_id=batch.batch_id,
+                batch_total_records=(
+                    batch.total_records
+                ),
+                batch_runtime_records=(
+                    batch.runtime_records
+                ),
+                batch_api_guard_records=(
+                    batch.api_guard_records
+                ),
+                batch_api_timing_records=(
+                    batch.api_timing_records
+                ),
+                batch_other_records=(
+                    batch.other_records
+                ),
+                batch_coalesce_ms=(
+                    batch.coalesce_ms
+                ),
+                batch_sync_ms=(
+                    batch.sync_ms
+                ),
             )
         except AuditWriteError:
             raise

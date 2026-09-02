@@ -1,4 +1,4 @@
-version: 4
+version: 5
 contract: governed_agent_runtime_audit
 mode: append_only_structured_audit
 
@@ -46,6 +46,15 @@ principles:
 
   # Persistent FD 与 rename-and-replace rotation 的边界必须显式。
   rotation_requires_copytruncate_or_process_restart: true
+
+  # V5：只增加 Numeric Persistence Receipt，用于证明 Group Commit 到底有没有合并。
+  persistence_receipt_is_internal_numeric_only: true
+  persistence_receipt_is_not_public_api: true
+  persistence_receipt_never_contains_audit_payload: true
+  persistence_breakdown_records_serialize_append_wait_and_sync: true
+  group_commit_batch_id_is_internal_diagnostic_only: true
+  raw_group_commit_batch_ids_are_not_uploaded: true
+  group_commit_efficiency_is_evidence_not_slo: true
 
 runtime:
   mode_env: AGENT_AUDIT_MODE

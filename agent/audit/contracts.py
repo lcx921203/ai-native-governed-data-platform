@@ -53,6 +53,10 @@ class AgentAuditRecord:
     # Default 空值保持旧 API Guard / 测试构造代码向后兼容。
     stage_timings: tuple[tuple[str, float], ...] = ()
 
+    # 仅用于内部诊断的固定 Numeric Metric；不保存自由文本 Payload。
+    # Default 空值保持旧 Runtime / Guard 构造代码向后兼容。
+    numeric_metrics: tuple[tuple[str, float], ...] = ()
+
     # 向后兼容：旧 Runtime 构造代码不传该字段时仍默认为 RUNTIME。
     event_type: str = "RUNTIME"
 
@@ -80,6 +84,13 @@ class AgentAuditRecord:
                     "duration_ms": round(max(0.0, float(duration_ms)), 3),
                 }
                 for stage, duration_ms in self.stage_timings
+            ],
+            "numeric_metrics": [
+                {
+                    "metric": str(metric),
+                    "value": round(max(0.0, float(value)), 6),
+                }
+                for metric, value in self.numeric_metrics
             ],
             "duration_ms": round(self.duration_ms, 3),
             "estimated_context_tokens": self.estimated_context_tokens,

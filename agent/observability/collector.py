@@ -128,7 +128,7 @@ class GovernedRunObserver:
             return result
 
         try:
-            self.audit_writer.write(
+            audit_receipt = self.audit_writer.write(
                 self._audit_record(
                     result,
                     request_context,
@@ -148,6 +148,7 @@ class GovernedRunObserver:
         result.observability = replace(
             trace,
             audit_status="WRITTEN",
+            audit_persistence=audit_receipt,
         )
         return result
 

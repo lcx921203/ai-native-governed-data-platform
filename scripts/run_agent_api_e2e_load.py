@@ -81,6 +81,14 @@ def main() -> int:
             else "none"
         )
 
+        audit = breakdown["audit_persistence"]
+        audit_wait_p95 = audit[
+            "durability_wait_latency_ms"
+        ]["p95"]
+        audit_sync_p95 = audit[
+            "batch_sync_latency_ms"
+        ]["p95"]
+
         print(
             f"- {item['scenario']['name']}: "
             f"attempts={result['attempts']} "
@@ -96,6 +104,13 @@ def main() -> int:
             f"top_runtime_stage={top_stage} "
             f"stage_coverage={breakdown['stage_timing_coverage']} "
             f"api_timing_coverage={breakdown['api_timing_coverage']} "
+            f"audit_receipt_coverage={audit['runtime_audit_receipt_coverage']} "
+            f"audit_group_window_ms={audit['configured_group_commit_window_ms']} "
+            f"audit_wait_p95_ms={audit_wait_p95} "
+            f"audit_batch_sync_p95_ms={audit_sync_p95} "
+            f"audit_unique_sync_batches={audit['unique_sync_batches']} "
+            f"audit_runtime_records_per_sync={audit['runtime_records_per_sync']} "
+            f"audit_grouped_fraction={audit['grouped_runtime_record_fraction']} "
             f"correctness={result['correctness_pass']}"
         )
 
