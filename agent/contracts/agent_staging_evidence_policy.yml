@@ -1,0 +1,80 @@
+version: 1
+contract: governed_agent_representative_staging_evidence
+status: MANIFEST_VALIDATION_ONLY
+
+principles:
+  environment_label_alone_is_not_representative_evidence: true
+  manifest_must_match_calibration_git_sha: true
+  manifest_must_match_calibration_environment_label: true
+  manifest_candidate_window_must_match_review_candidate: true
+  shared_redis_admission_is_required_for_multi_process_staging: true
+  live_agent_authorities_are_required: true
+  trino_is_not_required_for_agent_dynamic_analysis: true
+  tenant_isolation_probe_is_required: true
+  full_runtime_audit_receipt_coverage_is_required: true
+  manifest_contains_no_credentials_prompts_or_raw_trace_ids: true
+  valid_manifest_does_not_grant_production_authority: true
+  explicit_human_approval_remains_required: true
+
+manifest:
+  schema_version: 1
+  evidence_kind: REPRESENTATIVE_STAGING_EVIDENCE_MANIFEST_V1
+  template: acceptance/agent_slo/representative_staging_evidence_manifest.template.yml
+  environment_label_prefix: representative-staging
+  git_sha_length: 40
+
+topology:
+  minimum_api_replicas: 2
+  minimum_workers_per_replica: 1
+  minimum_total_api_processes: 2
+  required_traffic_backend: redis
+  shared_capacity_budget_required: true
+  persistent_audit_storage_required: true
+  audit_fail_closed_required: true
+
+dependencies:
+  required_live_authorities:
+    - llm_renderer
+    - metricflow
+    - datahub
+    - knowledge_rag
+    - dagster_runtime_evidence
+  trino_required_for_agent_dynamic_analysis: false
+
+workload:
+  minimum_total_requests: 100
+  required_intents:
+    - METRIC_QUERY
+    - METADATA_LOOKUP
+    - KNOWLEDGE
+    - ANALYSIS
+  minimum_requests_per_required_intent: 1
+  timeout_probe_required: true
+  admission_saturation_probe_required: true
+
+tenancy:
+  minimum_tenants: 2
+  minimum_subjects: 4
+  cross_tenant_isolation_probe_required: true
+
+audit:
+  allowed_group_commit_windows_ms: [0.0, 0.5, 1.0, 2.0, 5.0]
+  required_runtime_audit_receipt_coverage: 1.0
+
+privacy:
+  forbidden_manifest_keys:
+    - bearer_token
+    - access_token
+    - refresh_token
+    - password
+    - private_key
+    - redis_url
+    - raw_prompt
+    - raw_trace_id
+    - credentials
+
+promotion:
+  production_slo_authority: false
+  automatic_production_promotion: false
+  production_default_auto_update: false
+  explicit_human_approval_required: true

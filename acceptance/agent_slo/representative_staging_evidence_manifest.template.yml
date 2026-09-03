@@ -1,0 +1,44 @@
+# Representative Staging Evidence Manifest V1 模板。
+# 复制后替换 ${...}，不要把模板本身作为运行证据。
+schema_version: 1
+evidence_kind: REPRESENTATIVE_STAGING_EVIDENCE_MANIFEST_V1
+
+environment:
+  label: representative-staging-${ENVIRONMENT_NAME}
+  deployment_id: ${DEPLOYMENT_ID}
+  captured_at: ${CAPTURED_AT_ISO8601}
+  git_sha: ${FULL_40_CHARACTER_GIT_SHA}
+
+topology:
+  api_replicas: 2
+  workers_per_replica: 1
+  traffic_backend: redis
+  shared_capacity_budget: true
+  persistent_audit_storage: true
+  audit_fail_closed: true
+
+dependencies:
+  llm_renderer: live
+  metricflow: live
+  datahub: live
+  knowledge_rag: live
+  dagster_runtime_evidence: live
+  trino: not_in_agent_dynamic_path
+
+workload:
+  intent_request_counts:
+    METRIC_QUERY: 40
+    METADATA_LOOKUP: 20
+    KNOWLEDGE: 20
+    ANALYSIS: 20
+  timeout_probe_passed: true
+  admission_saturation_probe_passed: true
+
+tenancy:
+  tenant_count: 2
+  subject_count: 4
+  cross_tenant_isolation_probe_passed: true
+
+audit:
+  group_commit_window_ms: 5.0
+  runtime_audit_receipt_coverage: 1.0

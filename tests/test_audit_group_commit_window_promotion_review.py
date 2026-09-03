@@ -12,7 +12,6 @@ from acceptance.agent_slo.audit_window_promotion_review import (
     build_promotion_review,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -70,6 +69,18 @@ def _review(reports: list[dict]) -> dict:
     )
 
 
+def _manifest_validation(*, valid: bool = True) -> dict:
+    """构造与三份 Staging Calibration Evidence 一致的去敏验证结果。"""
+
+    return {
+        "valid": valid,
+        "errors": [] if valid else ["LIVE_AUTHORITIES_INCOMPLETE"],
+        "environment_label": "representative-staging-shared-redis",
+        "git_sha": "99136c692834eae98ade6dfba5ee49442a91f681",
+        "audit_group_commit_window_ms": 5.0,
+    }
+
+
 def test_three_lab_runs_produce_review_only_without_default_update():
     """三次一致的 GitHub Lab 结果只能形成实验室评审，不得晋升生产。"""
 
@@ -96,7 +107,13 @@ def test_representative_staging_is_ready_only_for_human_approval():
         _report(str(run_id), label="representative-staging-shared-redis")
         for run_id in (201, 202, 203)
     ]
-    review = _review(reports)
+    review = build_promotion_review(
+        reports,
+        minimum_evidence_count=3,
+        representative_staging_label_prefix="representative-staging",
+        require_same_git_sha=True,
+        staging_manifest_validation=_manifest_validation(),
+    )
 
     assert (
         review["review_status"]
@@ -104,6 +121,30 @@ def test_representative_staging_is_ready_only_for_human_approval():
     )
     assert review["representative_staging"] is True
     assert review["decision"]["production_slo_authority"] is False
+
+
+def test_staging_label_without_valid_manifest_cannot_enter_human_approval():
+    """Staging Label 只是声明；缺清单或清单失败都不能进入人工批准阶段。"""
+
+    reports = [
+        _report(str(run_id), label="representative-staging-shared-redis")
+        for run_id in (211, 212, 213)
+    ]
+
+    missing = _review(reports)
+    assert missing["review_status"] == "STAGING_MANIFEST_REQUIRED"
+
+    invalid = build_promotion_review(
+        reports,
+        minimum_evidence_count=3,
+        representative_staging_label_prefix="representative-staging",
+        require_same_git_sha=True,
+        staging_manifest_validation=_manifest_validation(valid=False),
+    )
+    assert invalid["review_status"] == "STAGING_MANIFEST_REQUIRED"
+    assert invalid["staging_manifest"]["errors"] == [
+        "LIVE_AUTHORITIES_INCOMPLETE"
+    ]
 
 
 def test_conflicting_candidate_is_not_ready():
@@ -131,8 +172,8 @@ def test_duplicate_run_or_mixed_method_fails_closed():
         _review(reports)
 
 
-def test_v8_policy_locks_review_gate_and_preserves_production_default():
-    """V8 契约固定三份证据、同 SHA、代表性 Staging 与人工批准门禁。"""
+def test_v9_policy_locks_review_and_staging_manifest_gates():
+    """V9 契约固定三份证据、同 SHA、Staging 清单与人工批准门禁。"""
 
     policy = yaml.safe_load(
         (
@@ -141,12 +182,16 @@ def test_v8_policy_locks_review_gate_and_preserves_production_default():
         ).read_text(encoding="utf-8")
     )
     review = policy["audit_group_commit_window_promotion_review_v1"]
-    assert policy["version"] == 8
+    assert policy["version"] == 9
     assert review["minimum_calibration_evidence_files"] == 3
     assert review["require_same_git_sha"] is True
     assert review["candidate_consensus_ratio"] == 1.0
     assert review["automatic_production_promotion"] is False
     assert review["explicit_human_approval_required"] is True
+    assert review["representative_staging_manifest_required"] is True
+    assert review["representative_staging_manifest_policy"].endswith(
+        "agent_staging_evidence_policy.yml"
+    )
 
     audit_policy = yaml.safe_load(
         (ROOT / "agent/contracts/agent_audit_policy.yml").read_text(

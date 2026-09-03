@@ -75,7 +75,7 @@ def test_api_e2e_evidence_is_explicitly_not_production_slo_authority():
         ).read_text(encoding="utf-8")
     )
 
-    assert policy["version"] == 8
+    assert policy["version"] == 9
     assert (
         policy["principles"][
             "authenticated_api_e2e_benchmark_is_not_production_slo"

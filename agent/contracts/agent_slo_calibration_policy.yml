@@ -1,4 +1,4 @@
-version: 8
+version: 9
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
@@ -65,6 +65,10 @@ principles:
   promotion_review_requires_stable_candidate_consensus: true
   github_lab_evidence_cannot_become_production_authority: true
   mechanical_review_never_changes_production_default: true
+
+  # V9：Staging 名称必须附带通过校验的环境证据清单，不能只靠 Label 自证。
+  representative_staging_requires_validated_manifest: true
+  staging_manifest_must_match_environment_git_sha_and_candidate_window: true
 
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
@@ -189,6 +193,8 @@ audit_group_commit_window_promotion_review_v1:
   automatic_production_promotion: false
   production_default_auto_update: false
   production_slo_authority: false
+  representative_staging_manifest_policy: agent/contracts/agent_staging_evidence_policy.yml
+  representative_staging_manifest_required: true
 
 promotion:
   current_production_slo_status: UNCALIBRATED

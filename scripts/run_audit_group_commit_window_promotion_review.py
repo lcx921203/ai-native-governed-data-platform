@@ -7,7 +7,6 @@ import argparse
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 root_text = str(ROOT)
 if root_text not in sys.path:
@@ -29,12 +28,18 @@ def main() -> int:
         help="Calibration V1 汇总 JSON；至少传入治理策略要求的数量。",
     )
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--staging-manifest",
+        default=None,
+        help="可选的 Representative Staging Evidence Manifest V1。",
+    )
     args = parser.parse_args()
 
     review = run_promotion_review(
         ROOT,
         evidence_paths=args.evidence,
         output_path=args.output,
+        staging_manifest_path=args.staging_manifest,
     )
     print("Audit Group Commit Window Promotion Review:", args.output)
     print("Review status:", review["review_status"])
@@ -43,7 +48,15 @@ def main() -> int:
         review["candidate_consensus"]["window_ms"],
     )
     print("Automatic production promotion: false")
-    return 0 if review["review_status"] != "NOT_READY" else 1
+    return (
+        0
+        if review["review_status"]
+        in {
+            "LAB_REVIEW_ONLY",
+            "STAGING_EVIDENCE_READY_FOR_HUMAN_APPROVAL",
+        }
+        else 1
+    )
 
 
 if __name__ == "__main__":
