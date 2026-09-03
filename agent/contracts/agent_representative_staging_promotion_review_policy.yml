@@ -1,0 +1,44 @@
+version: 1
+contract: governed_agent_representative_staging_promotion_review
+status: HUMAN_APPROVAL_GATE_ONLY
+
+principles:
+  base_audit_window_promotion_review_remains_authoritative_for_lab_candidate_consensus: true
+  representative_staging_manifest_is_necessary_but_not_sufficient: true
+  representative_staging_calibration_runs_are_required_before_human_approval: true
+  staging_runs_must_match_manifest_environment_deployment_git_sha_and_candidate_window: true
+  staging_runs_must_be_repeated_and_distinct: true
+  staging_runs_must_use_comparable_workload_signatures: true
+  live_llm_and_tool_coverage_must_be_complete: true
+  runtime_audit_and_persistence_receipt_coverage_must_be_complete: true
+  timeout_admission_and_cross_tenant_probes_must_pass: true
+  mechanical_review_never_updates_production_default: true
+  explicit_human_approval_remains_required: true
+
+review:
+  required_staging_calibration_kind: REPRESENTATIVE_STAGING_CALIBRATION_RUN_V1
+  required_staging_calibration_schema_version: 1
+  required_staging_calibration_status: REPRESENTATIVE_STAGING_PASS
+  minimum_representative_staging_evidence_files: 3
+  require_distinct_evidence_identities: true
+  require_same_environment_label: true
+  require_same_deployment_id: true
+  require_same_git_sha: true
+  require_candidate_window_match: true
+  require_comparable_workload_signature: true
+  require_request_count_matches_manifest: true
+  required_workload_coverage: 1.0
+  required_runtime_audit_coverage: 1.0
+  required_persistence_receipt_coverage: 1.0
+  required_probes:
+    - timeout
+    - admission_saturation
+    - cross_tenant_isolation
+
+promotion:
+  ready_status: STAGING_EVIDENCE_READY_FOR_HUMAN_APPROVAL
+  missing_or_invalid_staging_run_status: STAGING_CALIBRATION_EVIDENCE_REQUIRED
+  explicit_human_approval_required: true
+  automatic_production_promotion: false
+  production_default_auto_update: false
+  production_slo_authority: false
