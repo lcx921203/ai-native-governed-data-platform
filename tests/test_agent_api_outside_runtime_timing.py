@@ -224,7 +224,7 @@ def test_outside_runtime_timing_policy_is_diagnostic_not_production_slo_authorit
         is False
     )
 
-    assert slo_policy["version"] == 7
+    assert slo_policy["version"] == 8
     assert slo_policy["evidence"]["schema_version"] == 4
     assert (
         slo_policy["principles"][

@@ -1,4 +1,4 @@
-version: 7
+version: 8
 contract: governed_agent_slo_calibration
 status: LAB_EVIDENCE_ONLY
 
@@ -58,6 +58,13 @@ principles:
   candidate_requires_correctness_and_full_audit_receipt_coverage: true
   smallest_window_on_efficiency_plateau_is_preferred: true
   lab_candidate_does_not_update_production_default: true
+
+  # V8：跨运行证据只能形成评审结论；代表性 Staging 仍需人工批准。
+  promotion_review_requires_distinct_calibration_evidence: true
+  promotion_review_requires_comparable_methods: true
+  promotion_review_requires_stable_candidate_consensus: true
+  github_lab_evidence_cannot_become_production_authority: true
+  mechanical_review_never_changes_production_default: true
 
   ci_load_smoke_is_correctness_gate_not_latency_gate: true
   performance_percentiles_are_recorded_as_evidence: true
@@ -166,6 +173,22 @@ audit_group_commit_window_calibration_v1:
   production_default_auto_update: false
   production_slo_authority: false
   staging_repetition_and_human_approval_required: true
+
+audit_group_commit_window_promotion_review_v1:
+  evidence_kind: AUDIT_GROUP_COMMIT_WINDOW_PROMOTION_REVIEW_V1
+  required_calibration_kind: AUDIT_GROUP_COMMIT_WINDOW_CALIBRATION_V1
+  required_calibration_schema_version: 1
+  minimum_calibration_evidence_files: 3
+  require_distinct_evidence_identities: true
+  require_comparable_methods: true
+  require_same_git_sha: true
+  candidate_consensus_ratio: 1.0
+  representative_staging_label_prefix: representative-staging
+  full_runtime_audit_receipt_coverage_required: true
+  explicit_human_approval_required: true
+  automatic_production_promotion: false
+  production_default_auto_update: false
+  production_slo_authority: false
 
 promotion:
   current_production_slo_status: UNCALIBRATED

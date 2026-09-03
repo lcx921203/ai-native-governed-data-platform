@@ -103,8 +103,8 @@ def test_incomplete_or_failed_candidate_is_not_eligible():
     assert report["selection"]["lab_candidate_window_ms"] == 2.0
 
 
-def test_v7_policy_and_manual_workflow_lock_the_calibration_matrix():
-    """候选矩阵、重复次数和只读手工 Workflow 必须进入版本化契约。"""
+def test_policy_keeps_v7_calibration_matrix_after_later_contract_versions():
+    """后续契约升级仍须保留 V7 候选矩阵和只读手工 Workflow。"""
 
     policy = yaml.safe_load(
         (
@@ -113,7 +113,7 @@ def test_v7_policy_and_manual_workflow_lock_the_calibration_matrix():
         ).read_text(encoding="utf-8")
     )
     calibration = policy["audit_group_commit_window_calibration_v1"]
-    assert policy["version"] == 7
+    assert policy["version"] >= 7
     assert calibration["candidate_windows_ms"] == [0.0, 0.5, 1.0, 2.0, 5.0]
     assert calibration["minimum_repeated_runs"] == 3
     assert calibration["efficiency_plateau_ratio"] == 0.95
