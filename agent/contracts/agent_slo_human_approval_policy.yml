@@ -1,0 +1,87 @@
+version: 1
+contract: governed_agent_slo_human_approval_record
+status: HUMAN_APPROVAL_EVIDENCE_ONLY
+
+principles:
+  promotion_review_must_be_ready_before_decision: true
+  approval_binds_exact_canonical_review_sha256: true
+  approval_binds_candidate_window_git_sha_and_environment: true
+  approver_must_be_authenticated_human_operator: true
+  approver_identity_source_must_be_trusted: true
+  external_approval_reference_is_required: true
+  approval_record_is_not_identity_signature: true
+  approval_record_is_not_production_execution: true
+  approval_does_not_update_production_default: true
+  approval_binds_exact_target_policy_sha256_and_current_value: true
+  evidence_or_target_policy_change_invalidates_execution_eligibility: true
+  rejected_decision_never_authorizes_change: true
+  approved_noop_does_not_create_a_fake_change: true
+  approval_authorization_is_time_bounded: true
+
+review:
+  required_evidence_kind: AUDIT_GROUP_COMMIT_WINDOW_PROMOTION_REVIEW_V1
+  required_ready_status: STAGING_EVIDENCE_READY_FOR_HUMAN_APPROVAL
+  require_representative_staging: true
+  require_representative_staging_calibration_valid: true
+  require_human_approval_required: true
+  require_automatic_production_promotion_false: true
+  require_production_default_updated_false: true
+  require_production_slo_authority_false: true
+  require_single_environment_label: true
+  git_sha_length: 40
+
+decision:
+  schema_version: 1
+  decision_kind: AGENT_SLO_HUMAN_APPROVAL_DECISION_V1
+  allowed_decisions:
+    - APPROVED
+    - REJECTED
+  allowed_reason_codes:
+    APPROVED:
+      - EVIDENCE_REVIEWED_AND_ACCEPTED
+    REJECTED:
+      - EVIDENCE_REVIEWED_AND_REJECTED
+  required_actor_type: HUMAN_OPERATOR
+  trusted_identity_sources:
+    - AUTHENTICATED_UPSTREAM
+  subject_id_pattern: '^[A-Za-z0-9._:@-]{1,128}$'
+  external_decision_id_pattern: '^[A-Za-z0-9._:@/-]{1,160}$'
+  require_authenticated: true
+  require_decision_not_before_review: true
+  approval_ttl_minutes: 1440
+
+record:
+  schema_version: 1
+  evidence_kind: AGENT_SLO_HUMAN_APPROVAL_RECORD_V1
+  approved_status: HUMAN_APPROVAL_GRANTED
+  rejected_status: HUMAN_APPROVAL_REJECTED
+  fingerprint_algorithm: sha256
+  fingerprint_is_identity_signature: false
+
+target:
+  change_kind: AUDIT_GROUP_COMMIT_WINDOW_DEFAULT_V1
+  policy_path: agent/contracts/agent_audit_policy.yml
+  field_path: runtime.default_group_commit_window_ms
+  numeric_value_required: true
+  exact_policy_file_sha256_required: true
+  current_value_match_required_before_application: true
+
+privacy:
+  forbidden_record_keys:
+    - raw_prompt
+    - question
+    - answer
+    - bearer_token
+    - access_token
+    - refresh_token
+    - private_key
+    - password
+    - credentials
+    - trace_id
+    - raw_group_commit_batch_id
+
+promotion:
+  next_consumer: VERSIONED_PRODUCTION_GUARDRAIL_CHANGE_V1
+  automatic_application: false
+  production_default_updated: false
+  production_slo_authority: false

@@ -1,0 +1,23 @@
+# Human Approval Decision V1 模板。
+# 实际 Decision 应由受信任的审批渠道生成或填写；不要把 Bearer Token / Credential 放进文件。
+schema_version: 1
+decision_kind: AGENT_SLO_HUMAN_APPROVAL_DECISION_V1
+decision: APPROVED
+reason_code: EVIDENCE_REVIEWED_AND_ACCEPTED
+
+approver:
+  subject_id: ${APPROVER_SUBJECT_ID}
+  actor_type: HUMAN_OPERATOR
+  authenticated: true
+  identity_source: AUTHENTICATED_UPSTREAM
+
+approval:
+  external_decision_id: ${EXTERNAL_APPROVAL_ID}
+  decided_at: ${DECIDED_AT_ISO8601_WITH_TIMEZONE}
+
+# Human Decision 必须显式绑定机械评审输出，而不是只引用一个文件名。
+review:
+  fingerprint_sha256: ${PROMOTION_REVIEW_CANONICAL_SHA256}
+  candidate_window_ms: ${CANDIDATE_WINDOW_MS}
+  git_sha: ${REVIEWED_GIT_SHA}
+  environment_label: ${REPRESENTATIVE_STAGING_ENVIRONMENT_LABEL}

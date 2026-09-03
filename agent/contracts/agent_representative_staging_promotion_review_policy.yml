@@ -42,3 +42,4 @@ promotion:
   automatic_production_promotion: false
   production_default_auto_update: false
   production_slo_authority: false
+  next_consumer: AGENT_SLO_HUMAN_APPROVAL_RECORD_V1
