@@ -35,6 +35,12 @@ def main() -> int:
         "--environment-label",
         default="local-api-e2e",
     )
+    parser.add_argument(
+        "--audit-group-commit-window-ms",
+        type=float,
+        default=1.0,
+        help="受治理的 Audit Group Commit Window，允许范围为 0-5 ms。",
+    )
     args = parser.parse_args()
 
     report = run_api_e2e_profile(
@@ -42,6 +48,9 @@ def main() -> int:
         profile=args.profile,
         output_path=Path(args.output),
         environment_label=args.environment_label,
+        audit_group_commit_window_ms=(
+            args.audit_group_commit_window_ms
+        ),
     )
 
     print("Agent API E2E load evidence:", args.output)

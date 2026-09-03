@@ -72,6 +72,8 @@ def test_manual_slo_calibration_lab_is_read_only_and_separate_from_push_ci():
     assert "redis:7.4.0-alpine" in text
     assert "--profile lab" in text
     assert "redis-admission-load-lab.json" in text
+    assert "run_audit_group_commit_window_calibration.py" in text
+    assert "audit-group-commit-window-calibration-v1.json" in text
     assert "actions/upload-artifact@v7" in text
 
 

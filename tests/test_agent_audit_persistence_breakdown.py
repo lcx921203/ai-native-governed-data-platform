@@ -288,7 +288,7 @@ def test_v6_policies_keep_breakdown_diagnostic_and_production_slo_uncalibrated()
 
     assert audit_policy["version"] == 5
     assert timing_policy["version"] == 2
-    assert slo_policy["version"] == 6
+    assert slo_policy["version"] == 7
     assert (
         slo_policy["evidence"][
             "schema_version"

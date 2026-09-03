@@ -80,6 +80,12 @@ jobs:
             --environment-label github-hosted-lab \
             --output .runtime/slo/agent-api-e2e-load-lab.json
 
+      - name: Run Audit Group Commit Window Calibration V1
+        run: |
+          python scripts/run_audit_group_commit_window_calibration.py \
+            --environment-label github-hosted-lab \
+            --output .runtime/slo/audit-group-commit-window-calibration-v1.json
+
       - name: Upload load evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -88,5 +94,7 @@ jobs:
           path: |
             .runtime/slo/redis-admission-load-lab.json
             .runtime/slo/agent-api-e2e-load-lab.json
+            .runtime/slo/audit-group-commit-window-calibration-v1.json
+            .runtime/slo/audit-group-commit-window-calibration-v1-runs/*.json
           if-no-files-found: error
           retention-days: 30

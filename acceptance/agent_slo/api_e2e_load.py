@@ -52,7 +52,7 @@ from .redis_load import percentile
 
 QUESTION = "activity_net_sales 是什么意思？"
 METRIC = "activity_net_sales"
-AUDIT_GROUP_COMMIT_WINDOW_MS = 1.0
+DEFAULT_AUDIT_GROUP_COMMIT_WINDOW_MS = 1.0
 
 
 @dataclass(frozen=True)
@@ -351,6 +351,7 @@ def _server_env(
     audit_path: Path,
     authority: LocalJWTAuthority,
     scenario: APIE2EScenario,
+    audit_group_commit_window_ms: float,
 ) -> dict[str, str]:
     """构造每个 Scenario 独立的 Agent API Production-like Env。"""
 
@@ -380,7 +381,7 @@ def _server_env(
             "AGENT_AUDIT_PATH": str(audit_path),
             "AGENT_AUDIT_FAILURE_MODE": "fail_closed",
             "AGENT_AUDIT_GROUP_COMMIT_WINDOW_MS": str(
-                AUDIT_GROUP_COMMIT_WINDOW_MS
+                audit_group_commit_window_ms
             ),
             "AGENT_API_PHASE_TIMING_MODE": "audit",
         }
@@ -550,6 +551,8 @@ def _wait_for_audit_event_count(
 def _runtime_stage_breakdown(
     audit_path: Path,
     trace_samples: list[tuple[str, float, int]],
+    *,
+    audit_group_commit_window_ms: float,
 ) -> dict[str, object]:
     """关联 Client HTTP、API_TIMING 与 Runtime Audit，并聚合多层 Percentile。
 
@@ -807,7 +810,7 @@ def _runtime_stage_breakdown(
     )
 
     audit_persistence = {
-        "configured_group_commit_window_ms": AUDIT_GROUP_COMMIT_WINDOW_MS,
+        "configured_group_commit_window_ms": audit_group_commit_window_ms,
         "expected_runtime_audit_receipts": expected_audit_receipts,
         "matched_runtime_audit_receipts": matched_audit_receipts,
         "runtime_audit_receipt_coverage": audit_receipt_coverage,
@@ -933,6 +936,7 @@ def _run_scenario(
     namespace_prefix: str,
     authority: LocalJWTAuthority,
     scenario: APIE2EScenario,
+    audit_group_commit_window_ms: float,
 ) -> dict:
     """运行一个真实 HTTP/JWT/Redis/Runtime Scenario，并形成 Stage Breakdown。"""
 
@@ -975,6 +979,7 @@ def _run_scenario(
             audit_path=audit_path,
             authority=authority,
             scenario=scenario,
+            audit_group_commit_window_ms=audit_group_commit_window_ms,
         )
         process = _start_agent_api(
             project_root=project_root,
@@ -1110,6 +1115,7 @@ def _run_scenario(
         stage_breakdown = _runtime_stage_breakdown(
             audit_path,
             trace_samples,
+            audit_group_commit_window_ms=audit_group_commit_window_ms,
         )
 
         observed = sum(status_counts.values()) + sum(unexpected_errors.values())
@@ -1239,11 +1245,28 @@ def run_api_e2e_profile(
     profile: str,
     output_path: Path | str,
     environment_label: str,
+    audit_group_commit_window_ms: float = DEFAULT_AUDIT_GROUP_COMMIT_WINDOW_MS,
 ) -> dict:
     """运行真实 Authenticated Agent API Load，并写入隐私受控 JSON Evidence。"""
 
     root = Path(project_root).resolve()
     output = Path(output_path)
+    audit_policy = yaml.safe_load(
+        (
+            root
+            / "agent/contracts/agent_audit_policy.yml"
+        ).read_text(encoding="utf-8")
+    )
+    max_window_ms = float(
+        audit_policy["runtime"]["max_group_commit_window_ms"]
+    )
+    audit_group_commit_window_ms = float(
+        audit_group_commit_window_ms
+    )
+    if not 0.0 <= audit_group_commit_window_ms <= max_window_ms:
+        raise ValueError(
+            "Audit group commit calibration window is outside governed bounds."
+        )
     redis_url = os.getenv(
         "AGENT_API_REDIS_URL",
         "",
@@ -1265,6 +1288,7 @@ def run_api_e2e_profile(
                 namespace_prefix=f"{base_namespace}:{profile}",
                 authority=authority,
                 scenario=scenario,
+                audit_group_commit_window_ms=audit_group_commit_window_ms,
             )
             for scenario in build_api_e2e_scenarios(profile)
         ]
