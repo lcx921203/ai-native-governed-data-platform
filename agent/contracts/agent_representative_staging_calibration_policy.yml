@@ -1,0 +1,93 @@
+version: 1
+contract: governed_agent_representative_staging_calibration
+status: REPRESENTATIVE_STAGING_EVIDENCE_ONLY
+
+principles:
+  manifest_must_validate_before_execution: true
+  runner_targets_deployed_agent_api_not_local_ephemeral_api: true
+  live_llm_is_required_for_successful_workload_requests: true
+  live_tool_authorities_are_attested_by_manifest_and_exercised_by_routed_workload: true
+  runtime_intent_is_verified_from_internal_audit_not_public_api: true
+  multi_tenant_identity_is_verified_from_internal_audit: true
+  timeout_admission_and_cross_tenant_probes_are_executed_not_self_attested: true
+  raw_prompt_token_endpoint_trace_id_and_batch_id_are_not_evidence: true
+  representative_staging_run_does_not_update_production_default: true
+  representative_staging_run_does_not_grant_production_slo_authority: true
+  explicit_human_approval_remains_required: true
+
+runner:
+  schema_version: 1
+  evidence_kind: REPRESENTATIVE_STAGING_CALIBRATION_RUN_V1
+  plan_schema_version: 1
+  plan_kind: REPRESENTATIVE_STAGING_CALIBRATION_PLAN_V1
+  endpoint_path: /api/v1/agent/query
+  require_https: true
+  minimum_workers: 1
+  maximum_workers: 32
+  default_workers: 8
+  minimum_request_timeout_seconds: 1.0
+  maximum_request_timeout_seconds: 120.0
+  default_request_timeout_seconds: 30.0
+
+workload:
+  logical_intent_runtime_mapping:
+    METRIC_QUERY: [METRIC_QUERY]
+    # Manifest V1 使用逻辑工作负载名 METADATA_LOOKUP；Runtime 的真实 Intent 名称如下。
+    METADATA_LOOKUP:
+      - METADATA_DISCOVERY
+      - ENTITY_CONTEXT
+      - DATASET_GOVERNANCE
+      - LINEAGE_QUERY
+    # Manifest V1 使用逻辑工作负载名 KNOWLEDGE；Runtime 真实 Intent 为 KNOWLEDGE_QUERY。
+    KNOWLEDGE: [KNOWLEDGE_QUERY]
+    ANALYSIS: [ANALYSIS]
+  require_http_200: true
+  require_answer_validated: true
+  required_runtime_audit_coverage: 1.0
+  required_audit_persistence_receipt_coverage: 1.0
+  required_live_llm_call_coverage: 1.0
+  required_tool_result_coverage: 1.0
+
+probes:
+  timeout:
+    expected_http_status: 504
+    expected_error_code: AGENT_REQUEST_TIMEOUT
+  admission_saturation:
+    expected_http_status: 429
+    allowed_error_codes:
+      - GLOBAL_CONCURRENCY_LIMIT
+      - TENANT_CONCURRENCY_LIMIT
+      - SUBJECT_RATE_LIMITED
+      - TENANT_RATE_LIMITED
+    minimum_burst_requests: 2
+    maximum_burst_requests: 128
+  cross_tenant_isolation:
+    expected_http_status: 403
+    expected_error_code: AGENT_AUTHORIZATION_DENIED
+
+privacy:
+  forbidden_plan_keys:
+    - bearer_token
+    - access_token
+    - refresh_token
+    - password
+    - private_key
+    - credentials
+  unresolved_placeholder_prefix: "${"
+  evidence_forbids:
+    - raw_prompt
+    - question
+    - answer
+    - bearer_token
+    - access_token
+    - endpoint_url
+    - audit_path
+    - trace_id
+    - raw_group_commit_batch_id
+
+promotion:
+  production_slo_authority: false
+  automatic_production_promotion: false
+  production_default_auto_update: false
+  explicit_human_approval_required: true
+  next_consumer: AUDIT_GROUP_COMMIT_WINDOW_PROMOTION_REVIEW

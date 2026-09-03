@@ -1,0 +1,58 @@
+# Representative Staging Calibration Plan V1 模板。
+# 这是运行输入，不是 Evidence；Bearer Token 只通过环境变量读取，不得写入本文件。
+schema_version: 1
+plan_kind: REPRESENTATIVE_STAGING_CALIBRATION_PLAN_V1
+
+endpoint:
+  base_url_env: AGENT_REPRESENTATIVE_STAGING_BASE_URL
+  audit_path_env: AGENT_REPRESENTATIVE_STAGING_AUDIT_PATH
+  workers: 8
+  request_timeout_seconds: 30
+
+# 至少覆盖 Manifest 声明的 tenant_count / subject_count。
+identities:
+  - id: tenant-a-subject-1
+    tenant_id: ${TENANT_A_ID}
+    subject: ${TENANT_A_SUBJECT_1}
+    bearer_token_env: AGENT_STAGING_TOKEN_TENANT_A_SUBJECT_1
+  - id: tenant-a-subject-2
+    tenant_id: ${TENANT_A_ID}
+    subject: ${TENANT_A_SUBJECT_2}
+    bearer_token_env: AGENT_STAGING_TOKEN_TENANT_A_SUBJECT_2
+  - id: tenant-b-subject-1
+    tenant_id: ${TENANT_B_ID}
+    subject: ${TENANT_B_SUBJECT_1}
+    bearer_token_env: AGENT_STAGING_TOKEN_TENANT_B_SUBJECT_1
+  - id: tenant-b-subject-2
+    tenant_id: ${TENANT_B_ID}
+    subject: ${TENANT_B_SUBJECT_2}
+    bearer_token_env: AGENT_STAGING_TOKEN_TENANT_B_SUBJECT_2
+
+# 每类至少给一个可真实命中对应 Runtime Intent 的问题；Runner 会按 Manifest 次数循环取样。
+workloads:
+  METRIC_QUERY:
+    - id: metric-query-activity-net-sales
+      question: "2026-08-05 activity_net_sales 是多少？"
+  METADATA_LOOKUP:
+    - id: metadata-lineage-orders
+      question: "orders 的上游和下游血缘是什么？"
+  KNOWLEDGE:
+    - id: knowledge-cdc-design
+      question: "为什么 MySQL CDC 需要先做 Source Normalize？"
+  ANALYSIS:
+    - id: analysis-activity-net-sales
+      question: "activity_net_sales 为什么下降？"
+
+# 三个 Probe 必须真实执行。请把问题改成当前 Staging 能稳定触发目标边界的受治理用例。
+probes:
+  timeout:
+    identity: tenant-a-subject-1
+    question: ${TIMEOUT_PROBE_QUESTION}
+  admission_saturation:
+    identity: tenant-a-subject-1
+    question: ${ADMISSION_SATURATION_PROBE_QUESTION}
+    concurrent_requests: 32
+  cross_tenant_isolation:
+    identity: tenant-a-subject-1
+    target_tenant_id: ${TENANT_B_ID}
+    question: ${CROSS_TENANT_DENIAL_PROBE_QUESTION}
