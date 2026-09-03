@@ -4,6 +4,11 @@ from pathlib import Path
 
 import yaml
 
+from scripts.check_dependency_locks import (
+    declared_requirement_names,
+    validate_lock,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_COMPONENTS = {
     "agent",
@@ -114,6 +119,46 @@ def test_lock_script_preserves_runtime_boundaries_and_optional_redis_lock():
     assert "--generate-hashes" in text
     assert "--exclude-newer" in text
     assert "x86_64-unknown-linux-gnu" in text
+
+
+def test_agent_lock_covers_every_current_direct_runtime_dependency():
+    """防止 Requirements 已更新、已提交 Lock 却仍静默缺包。"""
+
+    requirement_path = ROOT / "requirements-agent.txt"
+    lock_path = (
+        ROOT
+        / "requirements/locks/agent-py311-linux.lock.txt"
+    )
+    assert declared_requirement_names(requirement_path) == {
+        "fastapi",
+        "openai",
+        "pyjwt",
+        "pyyaml",
+        "uvicorn",
+    }
+    assert validate_lock(lock_path, requirement_path) == []
+
+
+def test_lock_validation_rejects_stale_direct_requirement_coverage(tmp_path):
+    """即使旧 Lock 含 Hash，也必须拒绝缺少新直接依赖的陈旧文件。"""
+
+    requirement_path = tmp_path / "requirements.txt"
+    requirement_path.write_text(
+        "fastapi>=0.128,<1.0\nuvicorn>=0.35,<1.0\n",
+        encoding="utf-8",
+    )
+    lock_path = tmp_path / "runtime.lock.txt"
+    lock_path.write_text(
+        "# uv pip compile\n"
+        "uvicorn==0.52.4 \\\n"
+        "    --hash=sha256:" + "a" * 64 + "\n",
+        encoding="utf-8",
+    )
+
+    errors = validate_lock(lock_path, requirement_path)
+    assert len(errors) == 1
+    assert "missing direct requirements" in errors[0]
+    assert "fastapi" in errors[0]
 
 
 def test_dependency_lock_workflow_generates_and_validates_all_default_locks():
