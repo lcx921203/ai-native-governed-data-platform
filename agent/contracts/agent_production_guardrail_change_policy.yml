@@ -1,0 +1,71 @@
+version: 1
+contract: governed_agent_versioned_production_guardrail_change
+status: CHANGE_PACKAGE_ONLY
+
+principles:
+  valid_human_approval_record_is_required: true
+  approval_record_is_revalidated_at_package_generation_time: true
+  promotion_review_binding_must_still_match: true
+  exact_target_policy_hash_and_current_value_must_still_match: true
+  approved_target_value_must_match_candidate_window: true
+  approved_target_value_must_remain_within_governed_bounds: true
+  approved_target_value_must_remain_in_calibration_candidate_set: true
+  only_the_approved_field_may_change: true
+  target_yaml_comments_and_unrelated_bytes_should_be_preserved: true
+  generated_change_package_does_not_overwrite_repository_target: true
+  generated_change_package_is_not_production_execution: true
+  automatic_application_is_forbidden: true
+  explicit_human_operated_change_management_is_required: true
+  package_fingerprint_is_for_tamper_detection_not_identity_signature: true
+  no_change_required_does_not_generate_fake_policy_mutation: true
+
+approval:
+  policy_path: agent/contracts/agent_slo_human_approval_policy.yml
+  required_record_kind: AGENT_SLO_HUMAN_APPROVAL_RECORD_V1
+  required_status: HUMAN_APPROVAL_GRANTED
+  required_next_consumer: VERSIONED_PRODUCTION_GUARDRAIL_CHANGE_V1
+  require_versioned_change_authorized: true
+  require_not_expired: true
+
+target:
+  change_kind: AUDIT_GROUP_COMMIT_WINDOW_DEFAULT_V1
+  policy_path: agent/contracts/agent_audit_policy.yml
+  field_path: runtime.default_group_commit_window_ms
+  maximum_field_path: runtime.max_group_commit_window_ms
+  minimum_value_ms: 0.0
+  numeric_value_required: true
+  exact_before_file_sha256_required: true
+  exact_before_value_required: true
+
+calibration:
+  policy_path: agent/contracts/agent_slo_calibration_policy.yml
+  candidate_values_path: audit_group_commit_window_calibration_v1.candidate_windows_ms
+  approved_value_must_be_candidate: true
+
+package:
+  schema_version: 1
+  evidence_kind: VERSIONED_PRODUCTION_GUARDRAIL_CHANGE_V1
+  ready_status: CHANGE_PACKAGE_READY_FOR_MANUAL_APPLICATION
+  no_change_status: NO_CHANGE_REQUIRED
+  record_file_name: versioned-production-guardrail-change-v1.json
+  proposal_root: proposed
+  fingerprint_algorithm: sha256
+  automatic_application: false
+  repository_target_overwritten: false
+  production_default_updated: false
+  production_slo_authority: false
+  manual_application_required: true
+
+privacy:
+  forbidden_record_keys:
+    - raw_prompt
+    - question
+    - answer
+    - bearer_token
+    - access_token
+    - refresh_token
+    - password
+    - private_key
+    - credentials
+    - trace_id
+    - raw_group_commit_batch_id
